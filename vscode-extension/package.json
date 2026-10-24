@@ -1,0 +1,65 @@
+{
+  "name": "autopatch-ai",
+  "displayName": "AutoPatch AI: Surgical Security & Crash Patcher",
+  "description": "Zero-noise autonomous security inspector, vulnerability highlighter, and 1-click surgical patcher for Python, JavaScript, and C++.",
+  "version": "1.0.0",
+  "publisher": "rajrajak99",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Security"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:python",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:cpp",
+    "onLanguage:c"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "autopatch.scanFile",
+        "title": "AutoPatch AI: Scan Current File",
+        "category": "AutoPatch"
+      },
+      {
+        "command": "autopatch.healFile",
+        "title": "AutoPatch AI: Self-Heal File (Apply Patches & Run Tests)",
+        "category": "AutoPatch"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "autopatch.scanFile",
+          "group": "autopatch@1"
+        },
+        {
+          "command": "autopatch.healFile",
+          "group": "autopatch@2"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "AutoPatch AI Configuration",
+      "properties": {
+        "autopatch.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically inspect files for security flaws and crashes upon save."
+        },
+        "autopatch.testCommand": {
+          "type": "string",
+          "default": "pytest",
+          "description": "Command run during self-healing test verification."
+        }
+      }
+    }
+  }
+}

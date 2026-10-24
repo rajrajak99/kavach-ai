@@ -1,0 +1,21 @@
+# samples\test_network.cpp line 7: Hardcoded Secret / Token in C++
+```suggestion
+    const char* safe_secret = std::getenv("API_KEY");
+```
+
+# samples\test_network.cpp line 11: Unbounded Buffer Copy (Buffer Overflow Hazard)
+```suggestion
+    strncpy(buffer, user_input, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+```
+
+# samples\test_network.cpp line 14: Format String Vulnerability in printf()
+```suggestion
+    printf("%s\n", buffer);
+```
+
+# samples\test_network.cpp line 18: Arbitrary Command Injection via system()
+```suggestion
+    // Avoid system(); use posix_spawn or execv with isolated arguments
+    // posix_spawnp(&pid, "command", nullptr, nullptr, args, environ);
+```
