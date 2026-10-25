@@ -1,123 +1,106 @@
-# 🚀 AutoPatch AI — Official Launch & Distribution Kit
-*Author: [rajrajak99](https://github.com/rajrajak99) | Project: AutoPatch AI*
+# 🚀 Kavach AI (कवच) — Official Launch & Distribution Kit
+*Author: [Raja Rajak (@rajrajak99)](https://github.com/rajrajak99) | Live Production: [kavach-ai.streamlit.app](https://kavach-ai.streamlit.app)*
 
 ---
 
-## 📌 1. High-Converting LinkedIn Post (Viral Founder/Engineer Tone)
+## 📌 1. High-Converting LinkedIn Post (Viral 16-Year-Old Founder Story)
 
-> **Copy-paste this directly on LinkedIn with the screenshot from your dashboard!**
-
----
-
-Most static code scanners drown engineering teams in 500+ lines of stylistic noise and false positives. Developers end up muting them.
-
-At 18, I decided to tackle this problem head-on. 
-
-Over the past few weeks, I engineered **AutoPatch AI** — an autonomous, zero-noise Pull Request security inspector and 1-click patch generator designed for real production workflows.
-
-Instead of generic alerts like *"SQL Injection detected"*, AutoPatch does something different:
-It identifies the exact line, calculates the CVSS 3.1 threat severity, and generates an immediate, native GitHub 1-click suggestion block (` ```suggestion `) that team leads can merge directly inside GitHub.
-
-### ⚡ Key Technical Highlights:
-1. **Multi-Language Deterministic Engine:** Supports Python, Node.js/JavaScript, and C++ (catches Buffer Overflows, Format String bugs, OS Command Injections, and Secret Leaks in `< 0.02s` without cloud latency).
-2. **Autonomous CI/CD PR Bot:** Runs as a native GitHub Action on pull requests, blocking merge on Critical CWEs and commenting suggestions inline without spamming.
-3. **Hybrid AI Threat Intelligence:** Combines an instant offline expert threat base with an optional Gemini/Ollama live reasoning layer for exploit simulation.
-4. **Packaged Globally:** Available as a standalone CLI on PyPI (`pip install autopatch-ai`) and as a luxury Raycast/Linear-style dark dashboard.
-
-The entire codebase is open-source, tested with a 100% passing Pytest suite, and ready for use.
-
-🔗 **GitHub Repository:** https://github.com/rajrajak99/autopatch-ai
-📦 **PyPI Package:** `autopatch-ai`
-
-I’d love feedback from engineering leads, AppSec professionals, and open-source developers! What security rules should we add next?
-
-#OpenSource #CyberSecurity #DevSecOps #Python #Cpp #SoftwareEngineering #BuildInPublic #AI
+> **Copy-paste this directly on LinkedIn with a screenshot or 15-second video of your live app!**
 
 ---
 
-## 🐦 2. Twitter / X Viral Tech Thread
+Most static code security scanners drown developers in 500+ lines of stylistic noise and false alarms. Engineers end up muting them, and that's how real vulnerabilities slip into production.
 
-### Tweet 1 (Hook)
-Most security scanners (SonarQube, Snyk) suffer from one fatal flaw: **Noise Fatigue**.
+I'm 16 years old (Class 11 in India), and while balancing school, I decided to build a real solution.
 
-They dump 200 stylistic warnings on your PR, so developers ignore the 1 critical SQL injection.
+Meet **🛡️ Kavach AI (कवच)** — an autonomous, zero-noise code security inspector, 1-click surgical patcher, and self-healing test engine.
 
-I built **AutoPatch AI** to solve this with zero noise and 1-click surgical patches in < 0.02s. 🧵👇
+Instead of writing essays like *"SQL Injection detected at line 14"*, Kavach AI does something surgical:
+1. It analyzes code via deterministic AST in **0.02 seconds** (100% offline, zero cloud latency).
+2. It catches critical CWEs across **Python, JavaScript/Node.js, and C++** (Buffer Overflows, Command Injections, Secret Leaks, SQLi).
+3. It generates an immediate, native GitHub 1-click patch suggestion (` ```suggestion `).
+4. **Autonomous Self-Healing:** It tests the fix with Pytest in the background. If a test fails, it automatically rolls back atomically so production never breaks!
 
-*(Attach dashboard screenshot)*
+### ⚡ Technical Architecture:
+• **Deterministic AST Engine:** 0ms external network dependency, pure mathematical code parsing.
+• **Hybrid AI Reasoner:** Instant offline expert rule base with optional LLM exploit simulation (Gemini / Ollama).
+• **Autonomous CI/CD & VS Code:** Works in the browser, in the terminal, and inside VS Code.
+• **100% Free Live Cloud Demo:** Hosted and accessible 24/7 globally.
 
-### Tweet 2 (Core Architecture)
-How it works under the hood:
-1. Filters lockfiles, assets, and minified bundles automatically.
-2. Runs high-speed deterministic AST & static analysis across Python, JavaScript, and C++.
-3. Zero API token overhead for core detection — 0ms external network dependency.
+Try it live right now in your browser:
+🌐 **Live Web App:** https://kavach-ai.streamlit.app
+⭐ **GitHub Repository:** https://github.com/rajrajak99/kavach-ai
+
+I would love feedback from senior engineers, security researchers, and startup founders! What security rules should we add next?
+
+#CyberSecurity #DevSecOps #OpenSource #Python #BuildInPublic #SoftwareEngineering #AI #Startup #TechInnovation
+
+---
+
+## 🐦 2. Twitter / X Viral Launch Thread
+
+### Tweet 1 (The Hook)
+Most security scanners (SonarQube, Snyk) suffer from **Noise Fatigue**.
+
+They dump 300 stylistic warnings on your PR, so developers ignore the 1 critical exploit.
+
+I'm 16 years old, and I built **🛡️ Kavach AI** to solve this: zero noise, 0.02s AST inspection, and 1-click self-healing patches. 🧵👇
+
+*(Attach screenshot of https://kavach-ai.streamlit.app)*
+
+### Tweet 2 (The Problem)
+Traditional SAST tools don't write fixes — they write complaints.
+Developers waste 2 hours rewriting code and reading CVE documentation.
+
+Kavach AI doesn't just complain; it generates the exact drop-in surgical patch ready to merge.
 
 ### Tweet 3 (Multi-Language Coverage)
-It doesn't just look for typos:
-• 🐍 **Python:** Raw SQLi, shell command injections, credential leaks.
-• 🌐 **Node.js:** `eval()` arbitrary code execution, unescaped template queries.
-• ⚡ **C++:** Stack buffer overflows (`strcpy`), format string memory dumps (`printf`), unmanaged shell executions (`system`).
+0.02s deterministic detection without cloud lag:
+• 🐍 **Python:** Raw SQLi, shell command injection, leaked tokens.
+• 🌐 **Node.js:** Arbitrary `eval()`, unescaped database interpolations.
+• ⚡ **C++:** Stack buffer overflows (`strcpy`), format string dumps (`printf`), unmanaged `system()` calls.
 
-### Tweet 4 (1-Click Merges)
-Instead of vague documentation links, it generates native GitHub markdown suggestion blocks.
+### Tweet 4 (Autonomous Self-Healing)
+What happens if the patch breaks an existing feature?
+Kavach AI includes a **Self-Healing Test Runner**:
+1. Creates an atomic backup in memory.
+2. Applies the surgical fix.
+3. Runs the test suite (`pytest`).
+4. Automatically rolls back if tests fail!
 
-A reviewer doesn't need to rewrite code manually. They just click **"Commit suggestion"** directly inside the GitHub PR UI.
+### Tweet 5 (Try It Live)
+100% free, no login required to test:
+🌐 Live Dashboard: https://kavach-ai.streamlit.app
+⭐ GitHub: https://github.com/rajrajak99/kavach-ai
 
-### Tweet 5 (CI/CD + CLI)
-Available everywhere developers work:
-• GitHub Action: `uses: rajrajak99/autopatch-ai@v1`
-• Terminal CLI: `pip install autopatch-ai` -> `autopatch ./my-repo --explain`
-• Web Workstation: Streamlit luxury Linear dark UI.
-
-### Tweet 6 (CTA)
-Built by an 18-year-old developer passionate about DevSecOps infrastructure.
-
-Check out the code, star the repo, or try it on your own pull requests:
-⭐ GitHub: https://github.com/rajrajak99/autopatch-ai
-
-RTs appreciated! 🚀
+If you find it useful, leave a star on GitHub! Retweets are hugely appreciated! 🚀
 
 ---
 
-## 🎬 3. 60-Second Video Demo Script (Loom / Screen Recording)
+## 🎬 3. 20-Second Phone / Screen Recording Script
 
-*Record your screen with the AutoPatch dashboard open at http://localhost:8502 and terminal open on the side.*
+*Record your screen on your phone or laptop with https://kavach-ai.streamlit.app open:*
 
-| Timestamp | Screen Action | Voiceover / Script |
+| Time | Screen Action | Voiceover / Text Overlay |
 | :--- | :--- | :--- |
-| **0:00 - 0:10** | Show dashboard top header & Linear dark theme | *"Hey everyone, this is AutoPatch AI — an autonomous PR security inspector that stops critical vulnerabilities before they hit production."* |
-| **0:10 - 0:25** | Click "Clear Code", paste C++ snippet with `strcpy` and `system`, click **"Inspect Code & Generate Fixes"** | *"Watch this: I'll paste raw vulnerable C++ code containing a buffer overflow and command injection. In just 0.02 seconds, the engine blocks the merge and flags every hazard with exact CWE classifications."* |
-| **0:25 - 0:40** | Scroll to Line 11 (Buffer Overflow) and show side-by-side replacement with `strncpy` | *"Notice that instead of giving vague advice, it generates an exact surgical replacement using bounded strncpy that developers can merge in one click."* |
-| **0:40 - 0:50** | Click on "Deep AI Threat Intelligence" expander | *"We also built a hybrid AI threat layer that models the hacker's attack vector and calculates CVSS 3.1 ratings with zero external latency."* |
-| **0:50 - 1:00** | Switch to Terminal, show `autopatch samples/ --explain` and show GitHub Action workflow | *"It's available as a PyPI package and as a GitHub Action bot for your PRs. Check out the link below and let me know your thoughts!"* |
+| **0:00 - 0:05** | Open `https://kavach-ai.streamlit.app` | *"This is Kavach AI — an autonomous code security inspector running at 0.02s latency."* |
+| **0:05 - 0:12** | Select `Pre-Configured Scenarios` -> Choose "Raw SQL Injection", click **Inspect Code** | *"Watch: In 0.02s, it blocks the PR and flags the critical SQL injection with zero false alarms."* |
+| **0:12 - 0:17** | Scroll to the Green 1-Click Patch Box | *"And instead of just complaining, it generates the exact parameterized fix ready to merge."* |
+| **0:17 - 0:20** | Show Header and GitHub link | *"Free and live now at kavach-ai.streamlit.app!"* |
 
 ---
 
 ## 📄 4. High-Impact Resume & Portfolio Bullets
 
-Use these exact bullets on your Resume / CV under **Projects**:
+Use these exact bullets on your Resume / LinkedIn under **Projects**:
 
-### **AutoPatch AI — Autonomous Pull Request Security Reviewer & Auto-Patcher**
-*(Python, C++, JavaScript, AST, Git Internal Protocol, GitHub Actions, PyPI)*
-- Engineered an autonomous static code security review engine supporting **Python, JavaScript, and C++**, catching critical CWE vulnerabilities (CWE-798, CWE-89, CWE-120, CWE-78) with **0.02s deterministic latency**.
-- Designed a noise-elimination diff parser that ignores lockfiles, assets, and minified bundles, generating **1-click native GitHub suggestion blocks** for instant PR remediation.
-- Built and published an official **GitHub Actions PR Review Bot** that automatically inspects pull request changesets and blocks unsafe merges under strict CI branch protection rules.
-- Packaged the tool as a globally distributable CLI tool via **PyPI (`pip install autopatch-ai`)** and integrated an **offline-first hybrid AI threat modeling engine** for CVSS 3.1 exploit simulations.
+### **Kavach AI — Autonomous Code Security Inspector & Self-Healing Patcher**
+*(Python, AST Analysis, DevSecOps, Pytest, GitHub Actions, Streamlit)*
+- Engineered an autonomous static code security engine supporting **Python, JavaScript, and C++**, detecting high-severity CWEs (CWE-89, CWE-78, CWE-120, CWE-798) with **0.02s deterministic latency**.
+- Built a **Self-Healing Test Runner** that applies AST surgical patches and executes regression test suites, incorporating atomic rollback mechanisms to prevent build breakage.
+- Designed an interactive dark OLED command center deployed globally at **[kavach-ai.streamlit.app](https://kavach-ai.streamlit.app)** with multi-platform support (Web, CLI, and VS Code extension).
+- Published open-source codebase to GitHub (**rajrajak99/kavach-ai**) with complete test coverage.
 
----
-
-## 🎯 5. Product Hunt / Show HN Launch Pitch
-
-**Tagline:** Autonomous zero-noise PR security reviewer with 1-click surgical patches in < 0.02s.
-
-**Description:**
-Static code analysis is broken because of false positive fatigue. Developers get tired of linting warnings and miss critical security breaches.
-
-AutoPatch AI takes an opinionated, zero-noise approach:
-1. Ignores formatting, lockfiles, and documentation style warnings.
-2. Only flags real critical security hazards (Secrets, SQL Injections, Buffer Overflows, Command Injections).
-3. Produces drop-in, ready-to-commit code suggestions rather than essay explanations.
-4. Operates 100% locally or inside your CI pipeline with zero cloud dependencies.
 
 ---
 
