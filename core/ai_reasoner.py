@@ -30,21 +30,21 @@ class AIReasoner:
             "cvss_score": 9.8,
             "attack_vector": "Writing unbounded input buffer data past allocated stack memory bounds overwrites return address register ($RIP/$EIP), leading to arbitrary shellcode execution or segmentation crash.",
             "business_impact": "Full process takeover, root/admin shell escalation, memory corruption, and remote code execution.",
-            "exploit_scenario": "1. Attacker sends 512 bytes into 64-byte buffer.\\n2. Return address overwritten with shellcode pointer.\\n3. Arbitrary native instructions executed.",
+            "exploit_scenario": "1. Attacker sends 512 bytes into 64-byte buffer.\n2. Return address overwritten with shellcode pointer.\n3. Arbitrary native instructions executed.",
             "verification_step": "Compile with AddressSanitizer (-fsanitize=address) and test with inputs exceeding target buffer capacity."
         },
         "CWE-676": {
             "cvss_score": 9.8,
             "attack_vector": "Using gets() cannot be bounded by any buffer length parameter, guaranteeing stack smashing upon receiving oversized input.",
             "business_impact": "Remote code execution, memory integrity loss, and immediate service crash.",
-            "exploit_scenario": "1. Attacker sends oversized line via stdin.\\n2. Buffer overflows adjacent stack variables.\\n3. Hijacked execution flow.",
+            "exploit_scenario": "1. Attacker sends oversized line via stdin.\n2. Buffer overflows adjacent stack variables.\n3. Hijacked execution flow.",
             "verification_step": "Replace with fgets() specifying exact buffer bound."
         },
         "CWE-134": {
             "cvss_score": 8.6,
             "attack_vector": "Directly passing untrusted strings as format parameter to printf() allows attackers to read arbitrary stack memory (%x, %p) or write to memory using %n specifier.",
             "business_impact": "Information disclosure (leaking ASLR canary and heap pointers), arbitrary memory corruption, and code execution.",
-            "exploit_scenario": "1. Attacker supplies input: `%x %x %x %n`.\\n2. Process reads secret stack values and writes to memory address.\\n3. Denial of service or privilege escalation achieved.",
+            "exploit_scenario": "1. Attacker supplies input: `%x %x %x %n`.\n2. Process reads secret stack values and writes to memory address.\n3. Denial of service or privilege escalation achieved.",
             "verification_step": "Submit string inputs containing %x and %n tokens and verify literal string printing without format interpretation."
         },
         "CWE-798": {
