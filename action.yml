@@ -1,9 +1,9 @@
-name: 'AutoPatch AI PR Security Inspector'
-description: 'Autonomous zero-noise pull request security reviewer and 1-click surgical patch generator'
-author: 'rajrajak99'
+name: '🛡️ Kavach AI - Autonomous PR Security Gate'
+description: 'Autonomous zero-noise PR security reviewer, self-healing test runner, and 1-click surgical patcher'
+author: 'Raja Rajak (@rajrajak99)'
 inputs:
   github-token:
-    description: 'GitHub Token for posting PR review comments'
+    description: 'GitHub Token for posting PR review comments with 1-click suggestions'
     required: false
     default: ''
   scan-path:
@@ -11,9 +11,17 @@ inputs:
     required: false
     default: '.'
   fail-on:
-    description: 'Severity threshold to block merge (CRITICAL, HIGH, ALL, NONE)'
+    description: 'Severity threshold to block PR merge (CRITICAL, HIGH, ALL, NONE)'
     required: false
     default: 'CRITICAL'
+  heal:
+    description: 'Run self-healing regression test verification on patches'
+    required: false
+    default: 'true'
+  test-cmd:
+    description: 'Test command to execute for regression safety (e.g. pytest, npm test)'
+    required: false
+    default: 'pytest'
 runs:
   using: 'composite'
   steps:
@@ -21,12 +29,16 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    - name: Run AutoPatch CI Bot
+    - name: Run Kavach AI CI Gate
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        python ci_bot.py --path "${{ inputs.scan-path }}" --fail-on "${{ inputs.fail-on }}"
+        HEAL_FLAG=""
+        if [ "${{ inputs.heal }}" = "true" ]; then
+          HEAL_FLAG="--heal --test-cmd '${{ inputs.test-cmd }}'"
+        fi
+        python ci_bot.py --path "${{ inputs.scan-path }}" --fail-on "${{ inputs.fail-on }}" $HEAL_FLAG
 branding:
   icon: 'shield'
   color: 'blue'

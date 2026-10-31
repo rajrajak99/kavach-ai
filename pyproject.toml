@@ -3,16 +3,16 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autopatch-ai"
-version = "1.0.0"
-description = "Autonomous Zero-Noise Pull Request Security Inspector & 1-Click Surgical Patcher"
+name = "kavach-ai"
+version = "1.2.0"
+description = "Autonomous Zero-Noise Code Security Inspector & 1-Click Surgical Patcher"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "rajrajak99", email = "rajrajak99@users.noreply.github.com"}
+    {name = "Raja Rajak (@rajrajak99)", email = "founder@kavach.ai"}
 ]
-keywords = ["security", "code-review", "git", "diff", "cwe", "ast", "cli", "devsecops"]
+keywords = ["security", "code-review", "git", "diff", "cwe", "ast", "cli", "devsecops", "self-healing"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -22,17 +22,21 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance"
 ]
 dependencies = [
-    "requests>=2.28.0",
-    "streamlit>=1.30.0",
-    "pandas>=2.0.0"
+    "requests>=2.28.0"
 ]
 
+[project.optional-dependencies]
+ui = ["streamlit>=1.35.0", "pandas>=2.0.0"]
+dev = ["pytest>=8.0.0"]
+
 [project.urls]
-Homepage = "https://github.com/rajrajak99/autopatch-ai"
-Repository = "https://github.com/rajrajak99/autopatch-ai"
-"Bug Tracker" = "https://github.com/rajrajak99/autopatch-ai/issues"
+Homepage = "https://kavach-ai.streamlit.app"
+Repository = "https://github.com/rajrajak99/kavach-ai"
+"Bug Tracker" = "https://github.com/rajrajak99/kavach-ai/issues"
 
 [project.scripts]
+kavach = "cli:main"
+kavach-ci = "ci_bot:main"
 autopatch = "cli:main"
 autopatch-ci = "ci_bot:main"
 

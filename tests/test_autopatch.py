@@ -42,9 +42,9 @@ def test_ci_bot_markdown_generation():
     
     report = build_github_markdown_report(analysis, total_files=1)
     assert BOT_SIGNATURE in report
-    assert "AutoPatch AI Security & Code Health Review" in report
+    assert "Kavach AI" in report
     assert "```suggestion" in report
-    assert "Critical Runtime Crashes" in report
+    assert "Critical Exploits" in report
 
 def test_ai_hybrid_reasoner():
     reasoner = AIReasoner(provider="offline")
