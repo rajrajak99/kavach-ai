@@ -322,7 +322,7 @@ def main():
     perf = metrics['performance']
 
     should_fail = False
-    if args.fail_on == "CRITICAL" and crit > 0:
+    if args.fail_on == "CRITICAL" and (crit > 0 or sec > 0):
         should_fail = True
     elif args.fail_on == "HIGH" and (crit > 0 or sec > 0):
         should_fail = True
