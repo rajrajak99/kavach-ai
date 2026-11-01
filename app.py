@@ -1,10 +1,17 @@
+import sys
+import os
+from pathlib import Path
+
+# Explicitly ensure repository root is at index 0 of sys.path (critical for Linux / Streamlit Cloud)
+ROOT_DIR = Path(__file__).resolve().parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 import streamlit as st
 import pandas as pd
 import requests
 import html
 import base64
-import os
-from pathlib import Path
 
 from core.diff_parser import DiffParser
 from core.surgical_analyzer import SurgicalAnalyzer
