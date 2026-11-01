@@ -547,9 +547,9 @@ st.markdown("<div style='border-bottom: 1px solid #161b26; margin: 12px 0 20px 0
 
 # ----------------- CLEAN 3-TAB SUITE -----------------
 tab_scan, tab_pricing, tab_setup = st.tabs([
-    "🔍 Scan Code (कोड स्कैन करें)",
-    "💎 Plans & Licensing (सब्सक्रिप्शन प्लान्स - $0 / $1 / $99)",
-    "🔌 GitHub Setup (गिटहब इंटीग्रेशन)"
+    "🔍 Code Inspector",
+    "💎 Plans & Licensing ($0 / $1 / $99)",
+    "🔌 GitHub Integration"
 ])
 
 # ================= TAB 1: CODE INSPECTOR WORKSPACE =================
@@ -669,7 +669,7 @@ with tab_scan:
 
                     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
                     st.button(
-                        f"🪄 1-Click Apply Patch to Code Box (कोड ऑटोमैटिक ठीक करें)",
+                        f"🪄 1-Click Apply Patch to Code Box",
                         key=f"btn_apply_fix_{i}",
                         type="primary",
                         on_click=apply_patch_to_editor,

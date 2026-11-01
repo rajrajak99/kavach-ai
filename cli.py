@@ -50,7 +50,7 @@ def scan_path(
 
     if not as_json:
         print("\n=======================================================")
-        print("  🛡️ Kavach AI (कवच) - Autonomous Security Inspector")
+        print("  🛡️ Kavach AI - Autonomous Security Inspector")
         print("=======================================================")
         print(f"Target: {path.resolve()}")
         print(f"Files to inspect: {len(files_to_scan)}")

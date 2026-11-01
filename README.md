@@ -2,7 +2,7 @@
   <img src="assets/logo.png" width="120" height="120" alt="Kavach AI Logo" style="border-radius:20px; box-shadow: 0 0 25px rgba(0,229,255,0.4);" />
 </p>
 
-# 🛡️ Kavach AI (कवच)
+# 🛡️ Kavach AI
 
 > **Autonomous High-Precision Code Armor & 1-Click Surgical Patcher**
 
@@ -12,7 +12,7 @@
 [![PyPI: v1.2.1](https://img.shields.io/badge/PyPI-v1.2.1-blue.svg)](https://pypi.org/project/kavach-ai/)
 [![Web Console](https://img.shields.io/badge/Web%20Console-Live-brightgreen.svg)](https://kavach-ai.streamlit.app)
 
-Kavach AI (कवच) is an autonomous, high-speed static security inspector and surgical code repair engine. Operating like an impenetrable armor across your **GitHub Pull Requests (CI/CD)**, local CLI, VS Code editor, and Web Console, it eliminates critical security hazards (CWE-89 SQLi, CWE-798 Secret Leaks, CWE-120 Buffer Overflows) and generates **1-click ready-to-merge patches** with zero-regression self-healing verification.
+Kavach AI is an autonomous, high-speed static security inspector and surgical code repair engine. Operating like an impenetrable armor across your **GitHub Pull Requests (CI/CD)**, local CLI, VS Code editor, and Web Console, it eliminates critical security hazards (CWE-89 SQLi, CWE-798 Secret Leaks, CWE-120 Buffer Overflows) and generates **1-click ready-to-merge patches** with zero-regression self-healing verification.
 
 ---
 
@@ -20,7 +20,7 @@ Kavach AI (कवच) is an autonomous, high-speed static security inspector and
 
 Most static code scanners overwhelm developers with hundreds of stylistic warnings (missing docstrings, trailing whitespace). Developers end up ignoring them.
 
-AutoPatch operates on a **strict zero-noise policy**:
+Kavach AI operates on a **strict zero-noise policy**:
 1. **Ignores Noise:** Lockfiles (`package-lock.json`, `poetry.lock`), minified bundles, images, and formatting diffs are discarded automatically.
 2. **Flags Real Hazards Only:**
    - 🛡️ **Hardcoded Credentials & Tokens (CWE-798):** AWS keys, GitHub PATs, OpenAI/Stripe secret keys in Python and JavaScript.
@@ -28,16 +28,16 @@ AutoPatch operates on a **strict zero-noise policy**:
    - 🛡️ **Arbitrary OS Command Injection (CWE-78):** Untrusted shell inputs via `os.system` / `child_process.exec`.
    - 🔴 **Fatal Runtime Exceptions (CWE-369, CWE-95):** ZeroDivisionError crashes, dynamic `eval()` execution.
    - ⚡ **Resource Descriptors Leaks (CWE-775):** Unmanaged `open()` handles missing `with` context managers.
-3. **Generates Instant Patches:** AutoPatch outputs native GitHub markdown ` ```suggestion ` blocks that team leads can merge in 1 click right inside the GitHub UI.
+3. **Generates Instant Patches:** Kavach AI outputs native GitHub markdown ` ```suggestion ` blocks that team leads can merge in 1 click right inside the GitHub UI.
 
 ---
 
 ## 🤖 GitHub Action Setup (Automated PR Reviews)
 
-Add AutoPatch to any GitHub repository in **30 seconds** by creating `.github/workflows/autopatch.yml`:
+Add Kavach AI to any GitHub repository in **30 seconds** by creating `.github/workflows/kavach.yml`:
 
 ```yaml
-name: AutoPatch Security Review
+name: Kavach AI Security Review
 
 on:
   pull_request:
@@ -51,7 +51,7 @@ permissions:
   issues: write
 
 jobs:
-  autopatch-ci:
+  kavach-ci:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -64,7 +64,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: AutoPatch PR Reviewer
+      - name: Kavach AI PR Reviewer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -120,18 +120,18 @@ jobs:
 ### 1. Installation
 Clone the repository and install requirements:
 ```bash
-git clone https://github.com/rajrajak99/autopatch-ai.git
-cd autopatch-ai
+git clone https://github.com/rajrajak99/kavach-ai.git
+cd kavach-ai
 pip install -r requirements.txt
 ```
 
 ### 2. Standalone Terminal CLI (Scan 10,000+ Files Locally)
 ```bash
 # Scan a directory and generate unified .patch
-python cli.py ./my-project --patch autopatch.patch
+python cli.py ./my-project --patch kavach.patch
 
 # Apply patch directly via git
-git apply autopatch.patch
+git apply kavach.patch
 ```
 
 ### 3. Launch Local Review Workstation (Raycast / Linear Dark UI)
@@ -150,7 +150,7 @@ pytest -o pythonpath=. tests/
 ## 📂 Project Structure
 
 ```
-autopatch-ai/
+kavach-ai/
 ├── action.yml                  # GitHub Action specification (Composite)
 ├── ci_bot.py                   # Automated CI/CD PR Reviewer & Commenter
 ├── cli.py                      # Standalone high-speed Terminal CLI scanner
@@ -168,7 +168,7 @@ autopatch-ai/
 │   └── test_autopatch.py       # Comprehensive pytest test suite (4/4 passing)
 ├── .github/
 │   └── workflows/
-│       └── autopatch.yml       # Production CI workflow configuration
+│       └── kavach.yml          # Production CI workflow configuration
 ├── .streamlit/
 │   └── config.toml             # Raycast/Linear Obsidian theme configuration
 ├── requirements.txt            # Minimal production dependencies
@@ -180,7 +180,7 @@ autopatch-ai/
 
 ## 🛡️ Supported CWE Vulnerability Matrix
 
-| CWE ID | Vulnerability Class | Language | Severity | AutoPatch Remediation |
+| CWE ID | Vulnerability Class | Language | Severity | Kavach AI Remediation |
 |---|---|---|---|---|
 | **CWE-798** | Hardcoded Credentials & Tokens | Python / JS | Critical | Moves secrets to environment variables |
 | **CWE-89** | SQL Injection (Raw formatting) | Python / JS | Critical | Converts to parameterized queries |

@@ -1,4 +1,4 @@
-# 🚀 Kavach AI (कवच) — Official Launch & Distribution Kit
+# 🚀 Kavach AI — Official Launch & Distribution Kit
 *Author: [Raja Rajak (@rajrajak99)](https://github.com/rajrajak99) | Live Production: [kavach-ai.streamlit.app](https://kavach-ai.streamlit.app)*
 
 ---
@@ -13,7 +13,7 @@ Most static code security scanners drown developers in 500+ lines of stylistic n
 
 I'm 16 years old (Class 11 in India), and while balancing school, I decided to build a real solution.
 
-Meet **🛡️ Kavach AI (कवच)** — an autonomous, zero-noise code security inspector, 1-click surgical patcher, and self-healing test engine.
+Meet **🛡️ Kavach AI** — an autonomous, zero-noise code security inspector, 1-click surgical patcher, and self-healing test engine.
 
 Instead of writing essays like *"SQL Injection detected at line 14"*, Kavach AI does something surgical:
 1. It analyzes code via deterministic AST in **0.02 seconds** (100% offline, zero cloud latency).

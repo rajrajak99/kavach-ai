@@ -122,7 +122,7 @@ def build_github_markdown_report(
         lines.append("No zero-day vulnerabilities, secret leaks, or fatal unhandled exceptions detected in this pull request.")
         lines.append("")
         lines.append("---")
-        lines.append("*Protected by [Kavach AI (कवच)](https://github.com/rajrajak99/kavach-ai) • [Live Dashboard](https://kavach-ai.streamlit.app)*")
+        lines.append("*Protected by [Kavach AI](https://github.com/rajrajak99/kavach-ai) • [Live Dashboard](https://kavach-ai.streamlit.app)*")
         return "\n".join(lines)
 
     lines.append("### 🚨 Detected Vulnerabilities & 1-Click Fixes")
@@ -150,7 +150,7 @@ def build_github_markdown_report(
         lines.append("")
 
     lines.append("---")
-    lines.append("*Protected by [Kavach AI (कवach)](https://github.com/rajrajak99/kavach-ai) — Zero-Noise AST Security & Self-Healing CI Gate*")
+    lines.append("*Protected by [Kavach AI](https://github.com/rajrajak99/kavach-ai) — Zero-Noise AST Security & Self-Healing CI Gate*")
     return "\n".join(lines)
 
 def post_github_comment(repo_full_name: str, pr_number: int, comment_body: str, token: str):
