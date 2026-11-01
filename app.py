@@ -322,18 +322,14 @@ with st.sidebar:
     if st.session_state.is_pro_user:
         safe_key = html.escape(st.session_state.license_key)
         tier_str = "Team Enterprise ($99/mo)" if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value else "Developer Pro ($1/mo)"
-        st.success(f"Verified: {tier_str}
-
-Key: `{safe_key}`")
+        st.success(f"Verified: {tier_str} | Key: `{safe_key}`")
         if st.button("Reset / Switch to Free Tier", use_container_width=True):
             st.session_state.is_pro_user = False
             st.session_state.license_tier = PlanTier.FREE.value
             st.session_state.license_key = ""
             st.rerun()
     else:
-        st.info("Current Plan: Community Free ($0)
-
-Unlimited scans on public repositories.")
+        st.info("Current Plan: Community Free ($0) — Unlimited scans on public repositories.")
 
     st.markdown("---")
     st.markdown("#### 🤖 AI Threat Reasoner")
@@ -441,8 +437,7 @@ def ping_host(host):
     # Run Analysis
     current_text = code_input.strip() if code_input else ""
     if current_text:
-        if "diff --git" in current_text or "
-@@ " in current_text or current_text.startswith("@@ "):
+        if "diff --git" in current_text or "\\n@@ " in current_text or current_text.startswith("@@ "):
             parsed_diffs = parser.parse_git_diff(current_text)
         else:
             if "#include" in current_text or "printf(" in current_text:
@@ -548,10 +543,8 @@ def ping_host(host):
                     )
                     st.markdown(f"**CVSS 3.1 Severity Score:** `{intel.cvss_score} / 10.0` ({intel.provider_used})")
                     st.markdown(f"**Attack Vector:** {intel.attack_vector}")
-                    st.markdown(f"**Exploit Scenario:**
-```text
-{intel.exploit_scenario}
-```")
+                    st.markdown("**Exploit Scenario:**")
+                    st.code(intel.exploit_scenario, language="text")
                     st.info(f"Verification: {intel.verification_step}")
 
 # ================= TAB 2: SELF-HEALING SIMULATION =================
@@ -804,5 +797,5 @@ jobs:
 ''', language="yaml")
 
     st.markdown("#### 📦 Terminal Quickstart")
-    st.code("pip install --upgrade kavach-ai
-kavach . --fail-on CRITICAL", language="bash")
+    st.code("""pip install --upgrade kavach-ai
+kavach . --fail-on CRITICAL""", language="bash")
