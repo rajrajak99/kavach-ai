@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import html
+import base64
 import os
 from pathlib import Path
 
@@ -17,6 +18,15 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# ----------------- LOGO LOADER -----------------
+@st.cache_data
+def get_logo_base64():
+    logo_path = Path("assets/logo.png")
+    if logo_path.exists():
+        with open(logo_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    return ""
 
 # ----------------- CACHED ENGINES & HELPERS -----------------
 @st.cache_resource
@@ -63,7 +73,7 @@ def select_plan(tier_val: str, key_val: str, is_pro_val: bool, plan_name: str):
     st.session_state.license_tier = tier_val
     st.session_state.license_key = key_val
     st.session_state.is_pro_user = is_pro_val
-    st.session_state.toast_msg = f"🎉 Plan Updated: {plan_name} Active!"
+    st.session_state.toast_msg = f"🎉 {plan_name} Active!"
 
 def activate_custom_key():
     key = st.session_state.get("custom_key_input", "").strip().upper()
@@ -91,174 +101,341 @@ if st.session_state.get("toast_msg"):
     st.toast(st.session_state.toast_msg)
     st.session_state.toast_msg = None
 
-# ----------------- CLEAN MINIMAL THEME (CSS) -----------------
+# ----------------- LUXURY MIDNIGHT CYBERSECURITY THEME (CSS) -----------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif !important;
-        color: #f4f4f5 !important;
-        background-color: #090a0f !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        color: #f0f6fc !important;
+        background-color: #07090e !important;
     }
 
     .stApp {
-        background-color: #090a0f !important;
+        background-color: #07090e !important;
     }
 
-    /* Clean Header */
+    /* Top Navbar */
+    .brand-group {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .brand-logo-img {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        object-fit: cover;
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+        border: 1px solid rgba(0, 229, 255, 0.45);
+    }
     .brand-title {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 800;
         color: #ffffff;
+        letter-spacing: -0.02em;
         display: flex;
         align-items: center;
         gap: 10px;
     }
-    .brand-sub {
-        font-size: 12.5px;
-        color: #8b949e;
-        margin-top: 2px;
-    }
-
-    /* Badges */
-    .plan-badge {
-        font-size: 12px;
+    .brand-badge {
+        font-size: 11px;
         font-weight: 700;
-        padding: 5px 14px;
+        color: #00e5ff;
+        background: rgba(0, 229, 255, 0.1);
+        border: 1px solid rgba(0, 229, 255, 0.28);
+        padding: 2px 8px;
         border-radius: 20px;
         font-family: 'JetBrains Mono', monospace;
     }
-    .badge-free {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34d399;
-        border: 1px solid rgba(16, 185, 129, 0.35);
-    }
-    .badge-pro {
-        background: rgba(56, 189, 248, 0.15);
-        color: #38bdf8;
-        border: 1px solid rgba(56, 189, 248, 0.35);
-    }
-    .badge-team {
-        background: rgba(245, 158, 11, 0.15);
-        color: #fbbf24;
-        border: 1px solid rgba(245, 158, 11, 0.35);
+    .brand-sub {
+        font-size: 12px;
+        color: #8b949e;
+        margin-top: 1px;
     }
 
-    /* Simple Clean Tabs */
+    /* Badges */
+    .plan-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .pill-free {
+        background: rgba(16, 185, 129, 0.12);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .pill-pro {
+        background: rgba(0, 229, 255, 0.12);
+        color: #00e5ff;
+        border: 1px solid rgba(0, 229, 255, 0.35);
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+    }
+    .pill-team {
+        background: rgba(245, 158, 11, 0.12);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* Hero Section */
+    .hero-box {
+        margin-bottom: 24px;
+    }
+    .hero-tag {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #00e5ff;
+        background: rgba(0, 229, 255, 0.08);
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        padding: 4px 10px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    .hero-title {
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: -0.03em;
+        line-height: 1.25;
+        margin-bottom: 6px;
+    }
+    .hero-desc {
+        font-size: 13.5px;
+        color: #8b949e;
+        line-height: 1.5;
+        max-width: 800px;
+    }
+    .privacy-tag {
+        font-size: 11.5px;
+        color: #34d399;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        padding: 4px 10px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Tabs Styling */
     .stTabs [data-baseweb="tab-list"] {
-        border-bottom: 1px solid #1f2430 !important;
-        gap: 20px !important;
+        border-bottom: 1px solid #161b26 !important;
+        gap: 16px !important;
         background: transparent !important;
+        margin-bottom: 20px !important;
     }
     .stTabs [data-baseweb="tab"] {
         color: #8b949e !important;
         font-weight: 600 !important;
-        font-size: 14.5px !important;
-        padding: 10px 18px !important;
+        font-size: 14px !important;
+        padding: 8px 16px !important;
         border: none !important;
+        background: transparent !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
     }
     .stTabs [aria-selected="true"] {
         color: #ffffff !important;
-        border-bottom: 2px solid #38bdf8 !important;
+        background: #111520 !important;
+        border-bottom: 2px solid #00e5ff !important;
     }
 
-    /* Clean Pricing Card */
-    .pricing-box {
-        background: #11131a;
-        border: 1px solid #1f2430;
+    /* Workspace Cards */
+    .card-head-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .card-head-sub {
+        font-size: 12px;
+        color: #8b949e;
+        margin-top: 2px;
+        margin-bottom: 14px;
+    }
+
+    /* Empty State in Right Card */
+    .empty-state-box {
+        background: #090c12;
+        border: 1px dashed #1c2638;
         border-radius: 12px;
-        padding: 24px;
+        padding: 32px 24px;
         text-align: center;
+        margin-top: 8px;
+    }
+    .empty-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 12px 0 6px 0;
+    }
+    .empty-desc {
+        font-size: 12.5px;
+        color: #8b949e;
+        line-height: 1.6;
+        max-width: 380px;
+        margin: 0 auto 20px auto;
+    }
+    .empty-features {
+        text-align: left;
+        display: inline-block;
+        font-size: 12.5px;
+        color: #c9d1d9;
+        line-height: 2;
+        margin-bottom: 20px;
+    }
+    .empty-tip {
+        background: rgba(0, 229, 255, 0.06);
+        border: 1px solid rgba(0, 229, 255, 0.18);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 12px;
+        color: #8b949e;
+        text-align: left;
+    }
+
+    /* Pricing Cards */
+    .pricing-card {
+        background: #0d1017;
+        border: 1px solid #182030;
+        border-radius: 14px;
+        padding: 26px 22px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 280px;
+        min-height: 340px;
+        position: relative;
+        transition: transform 0.15s ease, border-color 0.15s ease;
     }
-    .pricing-box-pro {
-        border: 2px solid #38bdf8;
-        background: #0f1622;
+    .pricing-card-popular {
+        border: 2px solid #00e5ff;
+        background: #09121f;
+        box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
     }
-    .pricing-box-team {
-        border: 2px solid #f59e0b;
-        background: #1b1610;
-    }
-    .price-title {
-        font-size: 14px;
+    .popular-pill {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #00e5ff;
+        color: #000000;
+        font-size: 10.5px;
         font-weight: 800;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 12px;
+        border-radius: 12px;
+        box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
+    }
+    .card-tier-title {
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
     }
-    .price-amt {
-        font-size: 2.2rem;
+    .card-tier-amt {
+        font-size: 2.3rem;
         font-weight: 900;
         color: #ffffff;
         font-family: 'JetBrains Mono', monospace;
-        margin: 10px 0;
+        margin: 8px 0 2px 0;
     }
-    .price-features {
+    .card-tier-sub {
+        font-size: 11.5px;
+        color: #8b949e;
+        margin-bottom: 16px;
+    }
+    .card-features-list {
         font-size: 12.5px;
         color: #c9d1d9;
-        line-height: 1.8;
+        line-height: 1.85;
         text-align: left;
-        margin: 16px 0;
+        margin-bottom: 20px;
     }
 
-    /* Inputs */
+    /* Buttons */
+    .stButton > button {
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        transition: all 0.15s ease !important;
+    }
+    .stButton > button[kind="primary"] {
+        background-color: #00e5ff !important;
+        color: #000000 !important;
+        border: none !important;
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.3) !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background-color: #33ebff !important;
+        box-shadow: 0 0 22px rgba(0, 229, 255, 0.5) !important;
+        transform: translateY(-1px) !important;
+    }
     .stTextArea textarea {
-        background: #0b0c10 !important;
-        border: 1px solid #1f2430 !important;
-        color: #ffffff !important;
+        background: #06080d !important;
+        border: 1px solid #182030 !important;
+        color: #f0f6fc !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 13px !important;
         border-radius: 8px !important;
     }
-    .stButton > button[kind="primary"] {
-        background-color: #38bdf8 !important;
-        color: #000000 !important;
-        font-weight: 700 !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 10px 20px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------- HEADER -----------------
-head_col1, head_col2 = st.columns([2, 1])
-with head_col1:
-    st.markdown("""
-    <div>
-        <div class="brand-title">🛡️ Kavach AI <span style="font-size:12px; font-weight:600; color:#38bdf8; background:#111c2a; padding:2px 8px; border-radius:12px; border:1px solid #1e3a5f;">v1.2.1 Secure</span></div>
-        <div class="brand-sub">Autonomous Zero-Noise Code Security Inspector & 1-Click Surgical Patcher</div>
+# ----------------- TOP NAVBAR -----------------
+logo_b64 = get_logo_base64()
+if logo_b64:
+    logo_tag = f'<img src="data:image/png;base64,{logo_b64}" class="brand-logo-img" alt="Kavach AI Logo" />'
+else:
+    logo_tag = '<span style="font-size:32px;">🛡️</span>'
+
+if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value:
+    badge_html = '<span class="plan-pill pill-team">● 👑 Team Active ($99/mo)</span>'
+elif st.session_state.is_pro_user:
+    badge_html = '<span class="plan-pill pill-pro">● ⚡ Developer Pro Active ($1/mo)</span>'
+else:
+    badge_html = '<span class="plan-pill pill-free">● 🆓 Community Free Active</span>'
+
+nav_col1, nav_col2 = st.columns([2.5, 1.5])
+with nav_col1:
+    st.markdown(f"""
+    <div class="brand-group">
+        {logo_tag}
+        <div>
+            <div class="brand-title">Kavach AI <span class="brand-badge">v1.2.1 Secure</span></div>
+            <div class="brand-sub">Autonomous Zero-Noise Code Security Inspector & 1-Click Surgical Patcher</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-with head_col2:
-    if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value:
-        badge_html = '<span class="plan-badge badge-team">👑 Team Plan ($99/mo) Active</span>'
-    elif st.session_state.is_pro_user:
-        badge_html = '<span class="plan-badge badge-pro">⚡ Developer Pro ($1/mo) Active</span>'
-    else:
-        badge_html = '<span class="plan-badge badge-free">🆓 Community Free Active</span>'
-
+with nav_col2:
     st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; padding-top:6px;">
-        <span style="font-size:12px; color:#8b949e;">Status:</span>
+    <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; height:100%;">
+        <span class="privacy-tag">🔒 Local Offline Engine</span>
         {badge_html}
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<div style='border-bottom: 1px solid #1f2430; margin: 8px 0 16px 0;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='border-bottom: 1px solid #161b26; margin: 12px 0 20px 0;'></div>", unsafe_allow_html=True)
 
-# ----------------- ONLY 3 CLEAN TABS -----------------
+# ----------------- CLEAN 3-TAB SUITE -----------------
 tab_scan, tab_pricing, tab_setup = st.tabs([
     "🔍 Scan Code (कोड स्कैन करें)",
-    "💎 Pricing Plans (सब्सक्रिप्शन प्लान्स - $0 / $1 / $99)",
+    "💎 Plans & Licensing (सब्सक्रिप्शन प्लान्स - $0 / $1 / $99)",
     "🔌 GitHub Setup (गिटहब इंटीग्रेशन)"
 ])
 
-# ================= TAB 1: CLEAN CODE SCANNER =================
+# ================= TAB 1: CODE INSPECTOR WORKSPACE =================
 SQL_SAMPLE = '''import sqlite3
 
 def find_user(username):
@@ -270,27 +447,50 @@ def find_user(username):
 '''
 
 with tab_scan:
-    # Quick Test Buttons
-    st.markdown("<div style='font-size:12px; font-weight:600; color:#8b949e; margin-bottom:6px;'>Quick Test Examples (Optional):</div>", unsafe_allow_html=True)
-    c_btn1, c_btn2, c_btn3, c_btn4 = st.columns([1.2, 1.2, 1, 3])
-    with c_btn1:
-        st.button("🔑 Load Secret Leak Sample", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), use_container_width=True)
-    with c_btn2:
-        st.button("💉 Load SQL Injection Sample", on_click=load_code_sample, args=(SQL_SAMPLE,), use_container_width=True)
-    with c_btn3:
-        st.button("🧹 Clear Box", on_click=clear_code_box, use_container_width=True)
+    # Hero Title Bar
+    st.markdown("""
+    <div class="hero-box">
+        <span class="hero-tag">🛡️ Security Workspace</span>
+        <div class="hero-title">Inspect code before it reaches production.</div>
+        <div class="hero-desc">Paste a snippet or run a committed scan. Search for pre-production patterns, secret leaks, and unsafe blocks with focused remediation.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    col_editor, col_result = st.columns([1.1, 1.2], gap="large")
+    col_editor, col_result = st.columns([1.15, 1.15], gap="large")
 
+    # LEFT PANEL: SOURCE TO INSPECT
     with col_editor:
-        code_input = st.text_area(
-            "Paste your Python, JavaScript, or C++ code here:",
-            key="user_code",
-            height=340,
-            placeholder="Code box is empty. Paste your code here to inspect for vulnerabilities (SQL injection, leaked keys, command injection...)"
-        )
-        inspect_btn = st.button("⚡ Inspect Code Now", type="primary", use_container_width=True)
+        st.markdown("""
+        <div class="card-head-title">
+            <span>Sources to inspect</span>
+            <span style="font-size:11px; color:#8b949e; font-family:'JetBrains Mono';">demo.py • UTF-8</span>
+        </div>
+        <div class="card-head-sub">Python, JavaScript, TypeScript, C++, or raw git diff format</div>
+        """, unsafe_allow_html=True)
 
+        # Quick Samples Bar
+        c1, c2, c3 = st.columns([1.3, 1.3, 0.9])
+        with c1:
+            st.button("🔑 Secret leak", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), use_container_width=True)
+        with c2:
+            st.button("💉 SQL injection", on_click=load_code_sample, args=(SQL_SAMPLE,), use_container_width=True)
+        with c3:
+            st.button("🧹 Clear", on_click=clear_code_box, use_container_width=True)
+
+        st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+
+        code_input = st.text_area(
+            "Code Input:",
+            key="user_code",
+            height=330,
+            label_visibility="collapsed",
+            placeholder="// Paste code here to inspect for SQL injection, leaked keys, command injection, and more..."
+        )
+
+        inspect_btn = st.button("⚡ Inspect Code Now", type="primary", use_container_width=True)
+        st.markdown("<div style='text-align:center; font-size:11.5px; color:#6e7681; margin-top:6px;'>🔒 No external servers contacted • Runs in local zero-trust sandbox</div>", unsafe_allow_html=True)
+
+    # RUN ANALYSIS (CACHED)
     code_to_check = code_input.strip() if code_input else ""
     if code_to_check:
         analysis = analyze_code_cached(code_to_check)
@@ -300,10 +500,33 @@ with tab_scan:
         findings = []
         metrics = {'critical': 0, 'security': 0, 'performance': 0}
 
+    # RIGHT PANEL: INSPECTION RESULT
     with col_result:
-        st.markdown("<div style='font-size:13px; font-weight:700; color:#ffffff; margin-bottom:6px;'>Inspection Result</div>", unsafe_allow_html=True)
+        status_label = "Awaiting scan" if not code_to_check else ("Clean" if not findings else f"{metrics['critical']} Critical / {metrics['security']} Security")
+        st.markdown(f"""
+        <div class="card-head-title">
+            <span>Inspection result</span>
+            <span style="font-size:11px; color:#00e5ff; background:rgba(0,229,255,0.1); padding:2px 8px; border-radius:12px; border:1px solid rgba(0,229,255,0.25); font-family:'JetBrains Mono';">{status_label}</span>
+        </div>
+        <div class="card-head-sub">Interactive findings & 1-click surgical remediation</div>
+        """, unsafe_allow_html=True)
+
         if not code_to_check:
-            st.info("👈 Code box is clean and empty. Paste any code on the left and click **Inspect Code Now**.")
+            st.markdown("""
+            <div class="empty-state-box">
+                <div style="font-size:36px;">🛡️</div>
+                <div class="empty-title">Ready when your code is.</div>
+                <div class="empty-desc">Paste a snippet on the left or choose a sample to see detected vulnerabilities, severity, and safe patches.</div>
+                <div class="empty-features">
+                    ✓ <b>Zero-noise signal filtering</b> (Ignores lockfiles & stylistic noise)<br>
+                    ✓ <b>Direct-in-patch suggestions</b> (1-click surgical remediation)<br>
+                    ✓ <b>Local data privacy</b> (Code never leaves your runner or browser)
+                </div>
+                <div class="empty-tip">
+                    💡 <b>Or start with a sample:</b> Click <code>Secret leak</code> or <code>SQL injection</code> on the left to test a pre-loaded exploit.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         elif not findings:
             st.success("🟢 **CLEAN - READY TO MERGE**\n\nZero security vulnerabilities or resource leaks detected in this code.")
         else:
@@ -317,20 +540,25 @@ with tab_scan:
                 exp_safe = html.escape(f.explanation)
                 cwe_safe = html.escape(f.cwe_id or "CWE-General")
                 
-                with st.expander(f"Issue #{i}: {cat_safe} ({f.severity})", expanded=True):
+                with st.expander(f"Issue #{i}: {cat_safe} ({f.severity}) • {cwe_safe}", expanded=True):
                     st.write(exp_safe)
-                    c1, c2 = st.columns(2)
-                    with c1:
+                    c_sub1, c_sub2 = st.columns(2)
+                    with c_sub1:
                         st.caption("❌ Vulnerable Code:")
                         st.code(f.problem_code, language=f.language)
-                    with c2:
+                    with c_sub2:
                         st.caption("✅ 1-Click Surgical Patch:")
                         st.code(f.fixed_code, language=f.language)
 
-# ================= TAB 2: PROMINENT SIMPLE PRICING =================
+# ================= TAB 2: PRICING & LICENSING =================
 with tab_pricing:
-    st.markdown("### 💎 Choose Your Kavach AI Plan")
-    st.caption("100% Zero-Loss Model. Runs locally on your machine — zero server bills.")
+    st.markdown("""
+    <div class="hero-box" style="text-align:center; max-width:750px; margin: 0 auto 32px auto;">
+        <span class="hero-tag">💎 Simple, Transparent Licensing</span>
+        <div class="hero-title">Secure every commit with Kavach AI.</div>
+        <div class="hero-desc">Start free for public repositories, then unlock private repo remediation and team-wide protection when you need it.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     is_free = (st.session_state.license_tier == PlanTier.FREE.value)
     is_pro = (st.session_state.license_tier == PlanTier.DEVELOPER_PRO.value)
@@ -338,26 +566,25 @@ with tab_pricing:
 
     p1, p2, p3 = st.columns(3)
 
-    # 1. Free Plan
+    # 1. COMMUNITY ($0)
     with p1:
-        free_box_class = "pricing-box pricing-box-active" if is_free else "pricing-box"
         st.markdown(f"""
-        <div class="{free_box_class}">
+        <div class="pricing-card">
             <div>
-                <div class="price-title" style="color:#34d399;">🆓 Community Plan</div>
-                <div class="price-amt">$0</div>
-                <div style="font-size:11px; color:#8b949e; margin-bottom:12px;">Forever Free</div>
-                <div class="price-features">
-                    ✓ <b>Unlimited Public Repositories</b><br>
-                    ✓ High-Speed Offline AST Scanner<br>
-                    ✓ Local CLI (`kavach .`)<br>
-                    ✓ Free for Students & Open Source<br>
-                    ✓ Zero Data Retention
+                <div class="card-tier-title" style="color:#34d399;">🆓 Community</div>
+                <div class="card-tier-amt">$0</div>
+                <div class="card-tier-sub">Forever free for public repositories</div>
+                <div class="card-features-list">
+                    ✓ <b>Unlimited public repositories</b><br>
+                    ✓ High-speed offline AST scanning<br>
+                    ✓ Local CLI execution (<code>kavach .</code>)<br>
+                    ✓ Free for students & open source<br>
+                    ✓ Zero data retention
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
             "✅ Active Plan" if is_free else "🆓 Use Free Plan ($0)",
             key="btn_activate_free",
@@ -367,26 +594,26 @@ with tab_pricing:
             use_container_width=True
         )
 
-    # 2. Developer Pro Plan
+    # 2. DEVELOPER PRO ($1) - MOST POPULAR
     with p2:
-        pro_box_class = "pricing-box pricing-box-pro pricing-box-active" if is_pro else "pricing-box pricing-box-pro"
         st.markdown(f"""
-        <div class="{pro_box_class}">
+        <div class="pricing-card pricing-card-popular">
+            <div class="popular-pill">🔥 Most Popular</div>
             <div>
-                <div class="price-title" style="color:#38bdf8;">⚡ Developer Pro</div>
-                <div class="price-amt">$1<span style="font-size:14px; color:#8b949e;">/mo</span></div>
-                <div style="font-size:11px; color:#38bdf8; font-weight:700; margin-bottom:12px;">$12 Billed Annually</div>
-                <div class="price-features">
-                    ✓ <b>Up to 5 Personal Private Repos</b><br>
-                    ✓ 1-Click Code Remediations<br>
-                    ✓ Local Git Pre-Commit Hooks<br>
-                    ✓ Personal GitHub Account Support<br>
-                    ✓ Priority Email Updates
+                <div class="card-tier-title" style="color:#00e5ff;">⚡ Developer Pro</div>
+                <div class="card-tier-amt">$1<span style="font-size:14px; color:#8b949e;">/mo</span></div>
+                <div class="card-tier-sub" style="color:#00e5ff; font-weight:700;">$12 Billed Annually • Independent devs</div>
+                <div class="card-features-list">
+                    ✓ <b>Up to 5 personal private repos</b><br>
+                    ✓ 1-click surgical auto-remediations<br>
+                    ✓ Local Git pre-commit hooks<br>
+                    ✓ Personal GitHub account support<br>
+                    ✓ Priority email updates
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
             "✅ Active Plan" if is_pro else "⚡ Select Developer Pro ($1)",
             key="btn_activate_pro",
@@ -397,26 +624,25 @@ with tab_pricing:
             use_container_width=True
         )
 
-    # 3. Team Enterprise Plan
+    # 3. TEAM ENTERPRISE ($99)
     with p3:
-        team_box_class = "pricing-box pricing-box-team pricing-box-active" if is_team else "pricing-box pricing-box-team"
         st.markdown(f"""
-        <div class="{team_box_class}">
+        <div class="pricing-card">
             <div>
-                <div class="price-title" style="color:#fbbf24;">🏢 Team Enterprise</div>
-                <div class="price-amt">$99<span style="font-size:14px; color:#8b949e;">/mo</span></div>
-                <div style="font-size:11px; color:#fbbf24; font-weight:700; margin-bottom:12px;">For Startups & Companies</div>
-                <div class="price-features">
-                    ✓ <b>GitHub Organizations</b><br>
-                    ✓ <b>Unlimited Team Repositories</b><br>
-                    ✓ Autonomous PR Review Bot & Blocker<br>
-                    ✓ Pytest Self-Healing Engine<br>
-                    ✓ SLA Support
+                <div class="card-tier-title" style="color:#fbbf24;">🏢 Team Enterprise</div>
+                <div class="card-tier-amt">$99<span style="font-size:14px; color:#8b949e;">/mo</span></div>
+                <div class="card-tier-sub">For startups & companies</div>
+                <div class="card-features-list">
+                    ✓ <b>GitHub Organizations support</b><br>
+                    ✓ <b>Unlimited team repositories</b><br>
+                    ✓ Autonomous PR review bot & blocker<br>
+                    ✓ Pytest self-healing engine<br>
+                    ✓ SLA support & custom rules
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
             "✅ Active Plan" if is_team else "🏢 Select Team Enterprise ($99)",
             key="btn_activate_team",
@@ -426,14 +652,20 @@ with tab_pricing:
             use_container_width=True
         )
 
-    st.markdown("---")
-    st.markdown("#### 🔑 Have a License Key?")
-    k_col1, k_col2 = st.columns([2, 1])
-    with k_col1:
-        st.text_input("Enter License Key:", key="custom_key_input", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99")
-    with k_col2:
-        st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-        st.button("⚡ Activate License Key", key="btn_activate_key", on_click=activate_custom_key, use_container_width=True)
+    # WIDE LICENSE ACTIVATION STRIP
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    lk_col1, lk_col2, lk_col3 = st.columns([2, 1.8, 1])
+    with lk_col1:
+        st.markdown("""
+        <div style="padding-top:6px;">
+            <div style="font-size:14px; font-weight:700; color:#ffffff;">🔑 Already have a license key?</div>
+            <div style="font-size:12px; color:#8b949e;">Enter your key to unlock developer or team features instantly.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with lk_col2:
+        st.text_input("License Key:", key="custom_key_input", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99", label_visibility="collapsed")
+    with lk_col3:
+        st.button("⚡ Activate License", key="btn_activate_key", on_click=activate_custom_key, use_container_width=True)
 
     if st.session_state.get("key_feedback"):
         status, msg = st.session_state.key_feedback
@@ -442,10 +674,21 @@ with tab_pricing:
         else:
             st.error(msg)
 
+    st.markdown("""
+    <div style="text-align:center; font-size:12px; color:#6e7681; margin-top:24px;">
+        Need help choosing? Kavach AI runs 100% locally with zero cloud compute cost for Raja Rajak.
+    </div>
+    """, unsafe_allow_html=True)
+
 # ================= TAB 3: GITHUB SETUP =================
 with tab_setup:
-    st.markdown("### 🔌 1-Minute GitHub Actions Setup")
-    st.caption("Protect your GitHub repository from bad code and vulnerabilities automatically.")
+    st.markdown("""
+    <div class="hero-box">
+        <span class="hero-tag">🔌 CI / CD Integration</span>
+        <div class="hero-title">1-Minute GitHub Actions Security Gate</div>
+        <div class="hero-desc">Protect your GitHub repository from bad code and vulnerabilities automatically before merges.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("Create file `.github/workflows/kavach.yml` in your repo:")
     st.code('''name: 🛡️ Kavach AI Security Gate
