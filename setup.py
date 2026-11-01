@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="kavach-ai",
-    version="1.2.0",
+    version="1.2.1",
     description="Autonomous Zero-Noise Code Security Inspector & 1-Click Surgical Patcher",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -33,7 +33,7 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
-        "License :: Free For Non-Commercial Use",
+        "License :: Other/Proprietary License",
         "Programming Language :: Python :: 3",
         "Topic :: Security",
         "Topic :: Software Development :: Quality Assurance",
