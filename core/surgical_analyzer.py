@@ -309,7 +309,13 @@ class SurgicalAnalyzer:
                     # 2. Py SQL Injection
                     for pat, label, cwe in self.PY_SQLI_PATTERNS:
                         if re.search(pat, line_str):
-                            fixed = f'{indent_str}# Use parameterized query to prevent SQL Injection\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = %s", (user_input,))'
+                            f_m = re.search(r'execute\s*\(\s*f["\'](.*?)\{([a-zA-Z0-9_]+)\}(.*?)["\']\s*\)', line_str)
+                            if f_m:
+                                q_pre = f_m.group(1).rstrip("'\" ").strip().rstrip("=").strip()
+                                var_n = f_m.group(2).strip()
+                                fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
+                            else:
+                                fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = ?", (user_input,))'
                             findings.append(PatchFinding(
                                 severity="SECURITY",
                                 category=label,

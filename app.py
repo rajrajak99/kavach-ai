@@ -96,6 +96,27 @@ def load_code_sample(code: str):
 def clear_code_box():
     st.session_state.user_code = ""
 
+def apply_patch_to_editor(problem_code: str, fixed_code: str):
+    current = st.session_state.get("user_code", "")
+    if problem_code in current:
+        st.session_state.user_code = current.replace(problem_code, fixed_code)
+        st.session_state.toast_msg = "🪄 1-Click Patch Applied! Code is now secure."
+    else:
+        lines = current.splitlines()
+        replaced = False
+        new_lines = []
+        for line in lines:
+            if not replaced and line.strip() == problem_code.strip():
+                indent = len(line) - len(line.lstrip())
+                indented_fixed = "\n".join([" " * indent + fl.lstrip() for fl in fixed_code.splitlines()])
+                new_lines.append(indented_fixed)
+                replaced = True
+            else:
+                new_lines.append(line)
+        if replaced:
+            st.session_state.user_code = "\n".join(new_lines)
+            st.session_state.toast_msg = "🪄 1-Click Patch Applied! Code is now secure."
+
 # Trigger toast notification if pending
 if st.session_state.get("toast_msg"):
     st.toast(st.session_state.toast_msg)
@@ -549,6 +570,16 @@ with tab_scan:
                     with c_sub2:
                         st.caption("✅ 1-Click Surgical Patch:")
                         st.code(f.fixed_code, language=f.language)
+
+                    st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+                    st.button(
+                        f"🪄 1-Click Apply Patch to Code Box (कोड ऑटोमैटिक ठीक करें)",
+                        key=f"btn_apply_fix_{i}",
+                        type="primary",
+                        on_click=apply_patch_to_editor,
+                        args=(f.problem_code, f.fixed_code),
+                        use_container_width=True
+                    )
 
 # ================= TAB 2: PRICING & LICENSING =================
 with tab_pricing:
