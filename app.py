@@ -517,7 +517,7 @@ with col_head_right:
             p_col1, p_col2 = st.columns(2)
             with p_col1:
                 st.markdown("""
-                <div style="background:#09090c; border:1px solid #27272a; border-radius:8px; padding:12px; margin-bottom:10px;">
+                <div style="background:#09090c; border:1px solid #38bdf8; border-radius:8px; padding:12px; margin-bottom:10px;">
                     <div style="font-size:12px; font-weight:800; color:#38bdf8;">⚡ DEVELOPER PRO</div>
                     <div style="font-size:1.4rem; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">$1<span style="font-size:11px; color:#71717a;">/mo</span></div>
                     <div style="font-size:10.5px; color:#a1a1aa; line-height:1.4; margin-top:4px;">
@@ -528,6 +528,13 @@ with col_head_right:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                if st.button("⚡ Select & Test Pro ($1)", key="btn_sel_pro_pop", use_container_width=True):
+                    st.session_state.is_pro_user = True
+                    st.session_state.license_tier = PlanTier.DEVELOPER_PRO.value
+                    st.session_state.license_key = "BUILDER-DEV-1"
+                    st.balloons()
+                    st.rerun()
+
             with p_col2:
                 st.markdown("""
                 <div style="background:#09090c; border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:10px;">
@@ -541,13 +548,21 @@ with col_head_right:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                if st.button("🏢 Select & Test Team ($99)", key="btn_sel_team_pop", use_container_width=True):
+                    st.session_state.is_pro_user = True
+                    st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value
+                    st.session_state.license_key = "KV-TEAM-ORG-99"
+                    st.balloons()
+                    st.rerun()
             
+            st.markdown("<div style='border-top:1px solid #18181b; margin:14px 0 10px 0;'></div>", unsafe_allow_html=True)
             st.caption("🆓 **Community Free Tier**: Unlimited scans on all public repositories forever ($0).")
             
-            lic_input = st.text_input("Enter License Key (Pro or Team):", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99", key="popover_lic")
+            st.markdown("<div style='font-size:12px; font-weight:700; color:#e4e4e7; margin-top:8px;'>Or Activate with Custom Key:</div>", unsafe_allow_html=True)
+            lic_input = st.text_input("License Key:", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99", key="popover_lic", label_visibility="collapsed")
             c_p1, c_p2 = st.columns(2)
             with c_p1:
-                if st.button("⚡ Activate License", key="popover_act_btn", use_container_width=True):
+                if st.button("🔑 Activate Key", key="popover_act_btn", use_container_width=True):
                     tier = verify_license_key(lic_input)
                     if tier:
                         st.session_state.is_pro_user = True
@@ -558,9 +573,7 @@ with col_head_right:
                     else:
                         st.error("Invalid Key! (Demo keys: BUILDER-DEV-1 or KV-TEAM-ORG-99)")
             with c_p2:
-                st.link_button("💳 Subscribe ($1 / $99)", "https://lemonsqueezy.com", use_container_width=True)
-            
-            st.caption("💡 *Demo test keys:* `BUILDER-DEV-1` (Pro) • `KV-TEAM-ORG-99` (Team)")
+                st.link_button("💳 Buy on LemonSqueezy", "https://lemonsqueezy.com", use_container_width=True)
 
 st.markdown("<div style='border-bottom: 1px solid #18181b; margin: 16px 0 24px 0;'></div>", unsafe_allow_html=True)
 
@@ -599,21 +612,33 @@ with st.sidebar:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        side_key = st.text_input("Activate License Key:", placeholder="BUILDER-DEV-1", key="sidebar_key_input")
-        c_s1, c_s2 = st.columns(2)
-        with c_s1:
-            if st.button("⚡ Activate", key="side_act_btn", use_container_width=True):
-                tier = verify_license_key(side_key)
-                if tier:
-                    st.session_state.is_pro_user = True
-                    st.session_state.license_tier = tier.value
-                    st.session_state.license_key = side_key.strip().upper()
-                    st.balloons()
-                    st.rerun()
-                else:
-                    st.error("Invalid Key! (Try: BUILDER-DEV-1 or KV-TEAM-ORG-99)")
-        with c_s2:
-            st.link_button("💳 Buy ($1 / $99)", "https://lemonsqueezy.com", use_container_width=True)
+        c_side_b1, c_side_b2 = st.columns(2)
+        with c_side_b1:
+            if st.button("⚡ Test Pro", key="btn_side_pro", use_container_width=True):
+                st.session_state.is_pro_user = True
+                st.session_state.license_tier = PlanTier.DEVELOPER_PRO.value
+                st.session_state.license_key = "BUILDER-DEV-1"
+                st.balloons()
+                st.rerun()
+        with c_side_b2:
+            if st.button("🏢 Test Team", key="btn_side_team", use_container_width=True):
+                st.session_state.is_pro_user = True
+                st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value
+                st.session_state.license_key = "KV-TEAM-ORG-99"
+                st.balloons()
+                st.rerun()
+
+        side_key = st.text_input("Or Enter License Key:", placeholder="BUILDER-DEV-1", key="sidebar_key_input")
+        if st.button("⚡ Activate Key", key="side_act_btn", use_container_width=True):
+            tier = verify_license_key(side_key)
+            if tier:
+                st.session_state.is_pro_user = True
+                st.session_state.license_tier = tier.value
+                st.session_state.license_key = side_key.strip().upper()
+                st.balloons()
+                st.rerun()
+            else:
+                st.error("Invalid Key! (Try: BUILDER-DEV-1 or KV-TEAM-ORG-99)")
 
     st.markdown("---")
     st.markdown("### AI Threat Intelligence Settings")
