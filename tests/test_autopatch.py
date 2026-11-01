@@ -99,3 +99,35 @@ def run_user(cmd):
     findings = analyzer.analyze_file_diff(diff)
     assert len(findings) >= 1
     assert any("shell=True" in f.category for f in findings)
+
+def test_license_manager_tiers():
+    from core.license_manager import LicenseManager, PlanTier
+    
+    assert LicenseManager.get_tier_for_key("BUILDER-DEV-1") == PlanTier.DEVELOPER_PRO
+    assert LicenseManager.get_tier_for_key("KV-TEAM-ORG-99") == PlanTier.TEAM_ENTERPRISE
+    assert LicenseManager.get_tier_for_key("INVALID-KEY-123") is None
+
+    # Public repo defaults to free
+    is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key=None)
+    assert is_auth is True
+    assert tier == PlanTier.FREE
+
+def test_license_manager_org_abuse_prevention(monkeypatch):
+    from core.license_manager import LicenseManager, PlanTier
+    
+    # Mock GitHub Organization context
+    monkeypatch.setattr(
+        LicenseManager,
+        "inspect_github_context",
+        lambda: {"is_ci": True, "repository": "bigcorp/api", "owner": "bigcorp", "visibility": "private", "owner_type": "Organization"}
+    )
+
+    # 1. Developer Pro ($1) key should be REJECTED for an Organization
+    is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key="BUILDER-DEV-1")
+    assert is_auth is False
+    assert "Organization detected" in msg
+
+    # 2. Team Enterprise ($99) key should be ACCEPTED for an Organization
+    is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key="KV-TEAM-ORG-99")
+    assert is_auth is True
+    assert tier == PlanTier.TEAM_ENTERPRISE

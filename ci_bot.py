@@ -14,6 +14,7 @@ except ImportError:
 from core.diff_parser import DiffParser, ParsedFileDiff
 from core.surgical_analyzer import SurgicalAnalyzer, PatchFinding
 from core.self_healing import SelfHealingTestRunner
+from core.license_manager import LicenseManager, PlanTier
 
 IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
@@ -217,12 +218,20 @@ def main():
     parser.add_argument("--fail-on", default="CRITICAL", choices=["CRITICAL", "HIGH", "ALL", "NONE"], help="Fail severity threshold")
     parser.add_argument("--heal", action="store_true", help="Run self-healing regression test verification on patches")
     parser.add_argument("--test-cmd", default="pytest", help="Test command for self-healing verification (default: pytest)")
+    parser.add_argument("--license-key", default=os.getenv("KAVACH_LICENSE_KEY"), help="Kavach AI License Key (Pro / Team)")
     parser.add_argument("--dry-run", action="store_true", help="Run without posting to GitHub API")
     args = parser.parse_args()
 
     print("=======================================================")
     print("  Kavach AI - Autonomous CI/CD PR Security Gate")
     print("=======================================================")
+
+    # Enforce Zero-Loss License Policy (Free for Public / Pro for Personal / Team for Orgs)
+    is_auth, active_tier, auth_msg = LicenseManager.validate_execution_policy(license_key=args.license_key)
+    print(f"[+] License Policy: {active_tier.value} — {auth_msg}")
+    if not is_auth:
+        print(f"\n[!] ACCESS BLOCKED: {auth_msg}\n")
+        sys.exit(1)
 
     analyzer = SurgicalAnalyzer()
     diff_parser = DiffParser()

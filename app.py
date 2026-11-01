@@ -20,24 +20,15 @@ st.set_page_config(
 )
 
 # Enterprise Subscription & Pro Licensing State
-def verify_license_key(key: str) -> bool:
-    clean = key.strip().upper()
-    if not clean:
-        return False
-    allowed_keys = {
-        "KV-PRO-2026-ALPHA",
-        "KAVACH-VIP-999",
-        "CHANDAN-FOUNDER",
-        "RAJA-FOUNDER-99",
-        "PRO-ACCESS-2026"
-    }
-    env_keys = os.getenv("KAVACH_VALID_KEYS", "")
-    if env_keys:
-        allowed_keys.update([k.strip().upper() for k in env_keys.split(",") if k.strip()])
-    return clean in allowed_keys
+from core.license_manager import LicenseManager, PlanTier
+
+def verify_license_key(key: str):
+    return LicenseManager.get_tier_for_key(key)
 
 if "is_pro_user" not in st.session_state:
     st.session_state.is_pro_user = False
+if "license_tier" not in st.session_state:
+    st.session_state.license_tier = PlanTier.FREE.value
 if "license_key" not in st.session_state:
     st.session_state.license_key = ""
 
@@ -519,36 +510,57 @@ with col_head_right:
         </div>
         """, unsafe_allow_html=True)
     else:
-        with st.popover("💎 Upgrade to Pro ($19/mo)", use_container_width=True):
-            st.markdown("### 👑 Kavach AI Pro Membership")
-            st.markdown("""
-            **Protect your production codebase with autonomous security:**
+        with st.popover("💎 Plans & Pricing ($1 / $99)", use_container_width=True):
+            st.markdown("### 🛡️ Kavach AI Transparent Pricing")
+            st.markdown("Zero hidden fees. Zero cloud lock-in. 100% private AST engine.")
             
-            * 🛡️ **Unlimited Scans & Pull Requests** (No daily limits)
-            * ⚡ **Autonomous Self-Healing Engine** (with Pytest Regression Rollback)
-            * 🤖 **Deep AI Threat Intelligence** (CVSS 3.1 & Exploit vector modeling)
-            * 🔌 **VS Code Extension & CI/CD GitHub Bot** Unlimited Access
-            * 🔒 **Zero Data Retention** (100% Private & Confidential)
+            p_col1, p_col2 = st.columns(2)
+            with p_col1:
+                st.markdown("""
+                <div style="background:#09090c; border:1px solid #27272a; border-radius:8px; padding:12px; margin-bottom:10px;">
+                    <div style="font-size:12px; font-weight:800; color:#38bdf8;">⚡ DEVELOPER PRO</div>
+                    <div style="font-size:1.4rem; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">$1<span style="font-size:11px; color:#71717a;">/mo</span></div>
+                    <div style="font-size:10.5px; color:#a1a1aa; line-height:1.4; margin-top:4px;">
+                        • $12 billed annually<br>
+                        • Up to 5 Personal Private Repos<br>
+                        • 1-Click Code Suggestions<br>
+                        • Local CLI & Git Hooks
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            with p_col2:
+                st.markdown("""
+                <div style="background:#09090c; border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:10px;">
+                    <div style="font-size:12px; font-weight:800; color:#fbbf24;">🏢 TEAM ENTERPRISE</div>
+                    <div style="font-size:1.4rem; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">$99<span style="font-size:11px; color:#71717a;">/mo</span></div>
+                    <div style="font-size:10.5px; color:#a1a1aa; line-height:1.4; margin-top:4px;">
+                        • GitHub Organizations<br>
+                        • Unlimited Team Repos<br>
+                        • Autonomous PR Bot & Blocker<br>
+                        • Pytest Self-Healing Engine
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             
-            ---
-            **Price:** **$19 / month** *(Billed monthly, cancel anytime)*
-            """)
+            st.caption("🆓 **Community Free Tier**: Unlimited scans on all public repositories forever ($0).")
             
-            lic_input = st.text_input("Enter License Key:", placeholder="e.g. KV-PRO-2026-ALPHA", key="popover_lic")
+            lic_input = st.text_input("Enter License Key (Pro or Team):", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99", key="popover_lic")
             c_p1, c_p2 = st.columns(2)
             with c_p1:
                 if st.button("⚡ Activate License", key="popover_act_btn", use_container_width=True):
-                    if verify_license_key(lic_input):
+                    tier = verify_license_key(lic_input)
+                    if tier:
                         st.session_state.is_pro_user = True
+                        st.session_state.license_tier = tier.value
                         st.session_state.license_key = lic_input.strip().upper()
                         st.balloons()
                         st.rerun()
                     else:
-                        st.error("Invalid Key! (Test demo: KV-PRO-2026-ALPHA)")
+                        st.error("Invalid Key! (Demo keys: BUILDER-DEV-1 or KV-TEAM-ORG-99)")
             with c_p2:
-                st.link_button("💳 Buy via Stripe ($19)", "https://lemonsqueezy.com", use_container_width=True)
+                st.link_button("💳 Subscribe ($1 / $99)", "https://lemonsqueezy.com", use_container_width=True)
             
-            st.caption("💡 *Demo test key:* `KV-PRO-2026-ALPHA`")
+            st.caption("💡 *Demo test keys:* `BUILDER-DEV-1` (Pro) • `KV-TEAM-ORG-99` (Team)")
 
 st.markdown("<div style='border-bottom: 1px solid #18181b; margin: 16px 0 24px 0;'></div>", unsafe_allow_html=True)
 
@@ -557,48 +569,51 @@ with st.sidebar:
     st.markdown("### 💎 Subscription & License")
     if st.session_state.is_pro_user:
         safe_key = html.escape(st.session_state.license_key)
+        tier_title = "👑 Team Enterprise Active ($99/mo)" if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value else "⚡ Developer Pro Active ($1/mo)"
         st.markdown(f"""
         <div class="pro-active-box">
-            <div style="font-weight:800; color:#fbbf24; font-size:13px;">👑 Kavach Pro Active</div>
+            <div style="font-weight:800; color:#fbbf24; font-size:13px;">{tier_title}</div>
             <div style="font-size:11px; color:#a1a1aa; font-family:'JetBrains Mono', monospace; margin-top:4px;">
                 Key: {safe_key}
             </div>
             <div style="font-size:11px; color:#34d399; margin-top:3px;">
-                ✓ Unlimited Scans & Self-Healing
+                ✓ Verified Active License
             </div>
         </div>
         """, unsafe_allow_html=True)
         if st.button("Reset / Log Out License", key="side_reset_lic", use_container_width=True):
             st.session_state.is_pro_user = False
+            st.session_state.license_tier = PlanTier.FREE.value
             st.session_state.license_key = ""
             st.rerun()
     else:
         st.markdown("""
         <div class="pro-promo-card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:800; font-size:13px; color:#ffffff;">Pro Plan</span>
-                <span class="pro-price-tag">$19<span style="font-size:11px; font-weight:500; color:#71717a;">/mo</span></span>
+                <span style="font-weight:800; font-size:13px; color:#38bdf8;">Dev Pro</span>
+                <span class="pro-price-tag">$1<span style="font-size:11px; font-weight:500; color:#71717a;">/mo</span></span>
             </div>
             <div style="font-size:11px; color:#a1a1aa; margin:6px 0 10px 0; line-height:1.5;">
-                ✓ Unlimited Code Audits<br>
-                ✓ Pytest Self-Healing<br>
-                ✓ CI/CD Unlimited Bot Runs
+                Personal private repos ($12/yr)<br>
+                <b>Team Tier:</b> $99/mo for GitHub Orgs
             </div>
         </div>
         """, unsafe_allow_html=True)
-        side_key = st.text_input("Activate License Key:", placeholder="KV-PRO-2026-ALPHA", key="sidebar_key_input")
+        side_key = st.text_input("Activate License Key:", placeholder="BUILDER-DEV-1", key="sidebar_key_input")
         c_s1, c_s2 = st.columns(2)
         with c_s1:
             if st.button("⚡ Activate", key="side_act_btn", use_container_width=True):
-                if verify_license_key(side_key):
+                tier = verify_license_key(side_key)
+                if tier:
                     st.session_state.is_pro_user = True
+                    st.session_state.license_tier = tier.value
                     st.session_state.license_key = side_key.strip().upper()
                     st.balloons()
                     st.rerun()
                 else:
-                    st.error("Invalid Key! (Try: KV-PRO-2026-ALPHA)")
+                    st.error("Invalid Key! (Try: BUILDER-DEV-1 or KV-TEAM-ORG-99)")
         with c_s2:
-            st.link_button("💳 Buy ($19)", "https://lemonsqueezy.com", use_container_width=True)
+            st.link_button("💳 Buy ($1 / $99)", "https://lemonsqueezy.com", use_container_width=True)
 
     st.markdown("---")
     st.markdown("### AI Threat Intelligence Settings")
