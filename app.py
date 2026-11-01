@@ -269,6 +269,12 @@ st.markdown("""
         color: #fbbf24;
         border: 1px solid rgba(245, 158, 11, 0.3);
     }
+    .mobile-only {
+        display: none !important;
+    }
+    .desktop-only {
+        display: inline !important;
+    }
 
     /* Hero Section */
     .hero-box {
@@ -476,6 +482,237 @@ st.markdown("""
         font-size: 13px !important;
         border-radius: 8px !important;
     }
+
+    /* ================= MOBILE RESPONSIVE SUITE (< 768px) ================= */
+    @media (max-width: 768px) {
+        /* 1. App container & horizontal scroll lock */
+        html, body, .stApp {
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+        }
+
+        /* 2. Remove desktop padding waste */
+        .block-container {
+            padding-top: 1rem !important;
+            padding-bottom: 2.5rem !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+            max-width: 100% !important;
+        }
+
+        /* 3. Header bar reduction */
+        header[data-testid="stHeader"] {
+            background: transparent !important;
+            height: 2.5rem !important;
+        }
+
+        /* 4. Top Navbar mobile stacking */
+        div[data-testid="stHorizontalBlock"]:has(.brand-group) {
+            flex-direction: column !important;
+            gap: 10px !important;
+            margin-bottom: 8px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.brand-group) > div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }
+        .brand-group {
+            gap: 10px !important;
+        }
+        .brand-logo-img {
+            width: 36px !important;
+            height: 36px !important;
+        }
+        .brand-title {
+            font-size: 1.15rem !important;
+            gap: 6px !important;
+        }
+        .brand-badge {
+            font-size: 10px !important;
+            padding: 1px 6px !important;
+        }
+        .brand-sub {
+            display: none !important; /* Hide long subtitle on mobile to preserve screen space */
+        }
+        .plan-pill {
+            font-size: 10.5px !important;
+            padding: 4px 10px !important;
+        }
+        .mobile-only {
+            display: inline !important;
+        }
+        .desktop-only {
+            display: none !important;
+        }
+
+        /* 5. Hero section scaling */
+        .hero-box {
+            margin-bottom: 14px !important;
+            text-align: left !important;
+        }
+        .hero-title {
+            font-size: 1.3rem !important;
+            line-height: 1.25 !important;
+            margin-bottom: 4px !important;
+        }
+        .hero-desc {
+            font-size: 12px !important;
+            line-height: 1.45 !important;
+        }
+        .hero-tag {
+            font-size: 10px !important;
+            padding: 2px 8px !important;
+            margin-bottom: 6px !important;
+        }
+
+        /* 6. Tabs styling - mobile swipeable pills */
+        .stTabs [data-baseweb="tab-list"] {
+            overflow-x: auto !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+            padding-bottom: 6px !important;
+            margin-bottom: 14px !important;
+            scrollbar-width: none !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
+            display: none !important;
+        }
+        .stTabs [data-baseweb="tab"] {
+            font-size: 12.5px !important;
+            padding: 6px 12px !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+        }
+
+        /* 7. Workspace Split-Pane: Stack Editor & Results vertically on phone */
+        div[data-testid="stHorizontalBlock"]:has(.split-pane-anchor) {
+            flex-direction: column !important;
+            gap: 20px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.split-pane-anchor) > div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }
+
+        /* Fallback for split pane columns */
+        div[data-testid="stHorizontalBlock"]:has(> div > div > .card-head-title) {
+            flex-direction: column !important;
+            gap: 20px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(> div > div > .card-head-title) > div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }
+
+        /* 8. Quick Sample Chips: Stay horizontal in one row on mobile */
+        div[data-testid="stHorizontalBlock"]:has(.quick-sample-anchor) {
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.quick-sample-anchor) > div[data-testid="column"] {
+            width: auto !important;
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+        }
+
+        /* 9. Code Input area on mobile */
+        .stTextArea textarea {
+            font-size: 12px !important;
+            height: 220px !important;
+            min-height: 200px !important;
+        }
+
+        /* 10. Finding Expanders & Full-Width Code Comparison */
+        div[data-testid="stExpander"] {
+            border: 1px solid #1c2638 !important;
+            border-radius: 10px !important;
+            background: #080b11 !important;
+            margin-bottom: 12px !important;
+        }
+        div[data-testid="stExpander"] summary {
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            padding: 8px 12px !important;
+        }
+        /* Make Vulnerable Code and 1-Click Patch stack 100% width on phone */
+        div[data-testid="stExpander"] div[data-testid="stHorizontalBlock"] {
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+        div[data-testid="stExpander"] div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+            margin-bottom: 6px !important;
+        }
+
+        /* 11. Empty State Card on mobile */
+        .empty-state-box {
+            padding: 20px 14px !important;
+        }
+        .empty-title {
+            font-size: 15px !important;
+        }
+        .empty-desc {
+            font-size: 12px !important;
+            margin-bottom: 14px !important;
+        }
+        .empty-features {
+            font-size: 11.5px !important;
+            line-height: 1.7 !important;
+            margin-bottom: 14px !important;
+        }
+        .empty-tip {
+            font-size: 11px !important;
+            padding: 8px 10px !important;
+        }
+
+        /* 12. Pricing Cards: Stack vertically on phone */
+        div[data-testid="stHorizontalBlock"]:has(.pricing-card) {
+            flex-direction: column !important;
+            gap: 18px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.pricing-card) > div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+            margin-bottom: 8px !important;
+        }
+        .pricing-card {
+            min-height: auto !important;
+            padding: 20px 18px !important;
+        }
+        .card-tier-amt {
+            font-size: 1.9rem !important;
+        }
+
+        /* 13. License Key Strip on mobile */
+        div[data-testid="stHorizontalBlock"]:has(.license-strip-anchor) {
+            flex-direction: column !important;
+            gap: 10px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(.license-strip-anchor) > div[data-testid="column"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }
+
+        /* 14. Mobile Touch Buttons */
+        .stButton > button {
+            min-height: 40px !important;
+            font-size: 13px !important;
+            padding: 8px 12px !important;
+        }
+        .stButton > button[kind="primary"] {
+            font-size: 14px !important;
+            letter-spacing: 0.02em !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -487,11 +724,11 @@ else:
     logo_tag = '<span style="font-size:32px;">🛡️</span>'
 
 if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value:
-    badge_html = '<span class="plan-pill pill-team">● 👑 Team Active ($99/mo)</span>'
+    badge_html = '<span class="plan-pill pill-team">● 👑 <span class="desktop-only">Team Active ($99/mo)</span><span class="mobile-only">Team</span></span>'
 elif st.session_state.is_pro_user:
-    badge_html = '<span class="plan-pill pill-pro">● ⚡ Developer Pro Active ($1/mo)</span>'
+    badge_html = '<span class="plan-pill pill-pro">● ⚡ <span class="desktop-only">Developer Pro Active ($1/mo)</span><span class="mobile-only">Pro</span></span>'
 else:
-    badge_html = '<span class="plan-pill pill-free">● 🆓 Community Free Active</span>'
+    badge_html = '<span class="plan-pill pill-free">● 🆓 <span class="desktop-only">Community Free Active</span><span class="mobile-only">Free</span></span>'
 
 nav_col1, nav_col2 = st.columns([2.0, 2.0])
 with nav_col1:
@@ -547,9 +784,9 @@ st.markdown("<div style='border-bottom: 1px solid #161b26; margin: 12px 0 20px 0
 
 # ----------------- CLEAN 3-TAB SUITE -----------------
 tab_scan, tab_pricing, tab_setup = st.tabs([
-    "🔍 Code Inspector",
-    "💎 Plans & Licensing ($0 / $1 / $99)",
-    "🔌 GitHub Integration"
+    "🔍 Inspector",
+    "💎 Pricing",
+    "🔌 GitHub"
 ])
 
 # ================= TAB 1: CODE INSPECTOR WORKSPACE =================
@@ -573,6 +810,7 @@ with tab_scan:
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown("<div class='split-pane-anchor'></div>", unsafe_allow_html=True)
     col_editor, col_result = st.columns([1.15, 1.15], gap="large")
 
     # LEFT PANEL: SOURCE TO INSPECT
@@ -586,11 +824,12 @@ with tab_scan:
         """, unsafe_allow_html=True)
 
         # Quick Samples Bar
-        c1, c2, c3 = st.columns([1.3, 1.3, 0.9])
+        st.markdown("<div class='quick-sample-anchor'></div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns([1.2, 1.4, 0.8])
         with c1:
-            st.button("🔑 Secret leak", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), use_container_width=True)
+            st.button("🔑 Secrets", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), use_container_width=True)
         with c2:
-            st.button("💉 SQL injection", on_click=load_code_sample, args=(SQL_SAMPLE,), use_container_width=True)
+            st.button("💉 SQL Injection", on_click=load_code_sample, args=(SQL_SAMPLE,), use_container_width=True)
         with c3:
             st.button("🧹 Clear", on_click=clear_code_box, use_container_width=True)
 
@@ -797,7 +1036,7 @@ with tab_pricing:
         )
 
     # WIDE LICENSE ACTIVATION STRIP
-    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='license-strip-anchor' style='margin-top:20px;'></div>", unsafe_allow_html=True)
     lk_col1, lk_col2, lk_col3 = st.columns([2, 1.8, 1])
     with lk_col1:
         st.markdown("""
