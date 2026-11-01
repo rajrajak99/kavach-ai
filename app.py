@@ -510,12 +510,32 @@ with col_head_right:
         </div>
         """, unsafe_allow_html=True)
     else:
-        with st.popover("💎 Plans & Pricing ($1 / $99)", use_container_width=True):
+        with st.popover("💎 Plans & Pricing (Free / $1 / $99)", use_container_width=True):
             st.markdown("### 🛡️ Kavach AI Transparent Pricing")
             st.markdown("Zero hidden fees. Zero cloud lock-in. 100% private AST engine.")
             
-            p_col1, p_col2 = st.columns(2)
+            p_col1, p_col2, p_col3 = st.columns(3)
             with p_col1:
+                st.markdown("""
+                <div style="background:#09090c; border:1px solid #10b981; border-radius:8px; padding:12px; margin-bottom:10px;">
+                    <div style="font-size:12px; font-weight:800; color:#34d399;">🆓 COMMUNITY</div>
+                    <div style="font-size:1.4rem; font-weight:900; color:#ffffff; font-family:'JetBrains Mono';">$0<span style="font-size:11px; color:#71717a;">/forever</span></div>
+                    <div style="font-size:10.5px; color:#a1a1aa; line-height:1.4; margin-top:4px;">
+                        • Unlimited Public Repos<br>
+                        • Zero-Noise Offline AST<br>
+                        • Local Terminal CLI (`kavach .`)<br>
+                        • 100% Free for Students & OSS
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("🆓 Select Free ($0)", key="btn_sel_free_pop", use_container_width=True):
+                    st.session_state.is_pro_user = False
+                    st.session_state.license_tier = PlanTier.FREE.value
+                    st.session_state.license_key = ""
+                    st.toast("Switched to Community Free Tier!")
+                    st.rerun()
+
+            with p_col2:
                 st.markdown("""
                 <div style="background:#09090c; border:1px solid #38bdf8; border-radius:8px; padding:12px; margin-bottom:10px;">
                     <div style="font-size:12px; font-weight:800; color:#38bdf8;">⚡ DEVELOPER PRO</div>
@@ -528,14 +548,14 @@ with col_head_right:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("⚡ Select & Test Pro ($1)", key="btn_sel_pro_pop", use_container_width=True):
+                if st.button("⚡ Select Pro ($1)", key="btn_sel_pro_pop", use_container_width=True):
                     st.session_state.is_pro_user = True
                     st.session_state.license_tier = PlanTier.DEVELOPER_PRO.value
                     st.session_state.license_key = "BUILDER-DEV-1"
                     st.balloons()
                     st.rerun()
 
-            with p_col2:
+            with p_col3:
                 st.markdown("""
                 <div style="background:#09090c; border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:10px;">
                     <div style="font-size:12px; font-weight:800; color:#fbbf24;">🏢 TEAM ENTERPRISE</div>
@@ -548,7 +568,7 @@ with col_head_right:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("🏢 Select & Test Team ($99)", key="btn_sel_team_pop", use_container_width=True):
+                if st.button("🏢 Select Team ($99)", key="btn_sel_team_pop", use_container_width=True):
                     st.session_state.is_pro_user = True
                     st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value
                     st.session_state.license_key = "KV-TEAM-ORG-99"
@@ -556,7 +576,6 @@ with col_head_right:
                     st.rerun()
             
             st.markdown("<div style='border-top:1px solid #18181b; margin:14px 0 10px 0;'></div>", unsafe_allow_html=True)
-            st.caption("🆓 **Community Free Tier**: Unlimited scans on all public repositories forever ($0).")
             
             st.markdown("<div style='font-size:12px; font-weight:700; color:#e4e4e7; margin-top:8px;'>Or Activate with Custom Key:</div>", unsafe_allow_html=True)
             lic_input = st.text_input("License Key:", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99", key="popover_lic", label_visibility="collapsed")
@@ -603,25 +622,33 @@ with st.sidebar:
         st.markdown("""
         <div class="pro-promo-card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:800; font-size:13px; color:#38bdf8;">Dev Pro</span>
-                <span class="pro-price-tag">$1<span style="font-size:11px; font-weight:500; color:#71717a;">/mo</span></span>
+                <span style="font-weight:800; font-size:13px; color:#ffffff;">Choose Tier</span>
+                <span class="pro-price-tag">$0 / $1 / $99</span>
             </div>
             <div style="font-size:11px; color:#a1a1aa; margin:6px 0 10px 0; line-height:1.5;">
-                Personal private repos ($12/yr)<br>
-                <b>Team Tier:</b> $99/mo for GitHub Orgs
+                • <b>Free:</b> Unlimited Public Repos ($0)<br>
+                • <b>Dev Pro:</b> Personal Private Repos ($1/mo)<br>
+                • <b>Team:</b> GitHub Organizations ($99/mo)
             </div>
         </div>
         """, unsafe_allow_html=True)
-        c_side_b1, c_side_b2 = st.columns(2)
+        c_side_b1, c_side_b2, c_side_b3 = st.columns(3)
         with c_side_b1:
-            if st.button("⚡ Test Pro", key="btn_side_pro", use_container_width=True):
+            if st.button("🆓 Free", key="btn_side_free", use_container_width=True):
+                st.session_state.is_pro_user = False
+                st.session_state.license_tier = PlanTier.FREE.value
+                st.session_state.license_key = ""
+                st.toast("Active: Community Free")
+                st.rerun()
+        with c_side_b2:
+            if st.button("⚡ $1 Pro", key="btn_side_pro", use_container_width=True):
                 st.session_state.is_pro_user = True
                 st.session_state.license_tier = PlanTier.DEVELOPER_PRO.value
                 st.session_state.license_key = "BUILDER-DEV-1"
                 st.balloons()
                 st.rerun()
-        with c_side_b2:
-            if st.button("🏢 Test Team", key="btn_side_team", use_container_width=True):
+        with c_side_b3:
+            if st.button("🏢 $99 Team", key="btn_side_team", use_container_width=True):
                 st.session_state.is_pro_user = True
                 st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value
                 st.session_state.license_key = "KV-TEAM-ORG-99"
