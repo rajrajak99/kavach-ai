@@ -168,7 +168,7 @@ autopatch-ai/
 ├── .streamlit/
 │   └── config.toml             # Raycast/Linear Obsidian theme configuration
 ├── requirements.txt            # Minimal production dependencies
-├── LICENSE                     # MIT License
+├── LICENSE                     # PolyForm Noncommercial 1.0.0
 └── README.md                   # Technical documentation
 ```
 
@@ -187,8 +187,12 @@ autopatch-ai/
 
 ---
 
-## 📄 License
+## 📄 License & Commercial Rights
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+Kavach AI is licensed under the **[PolyForm Noncommercial License 1.0.0](LICENSE)**.
 
-Developed by **[rajrajak99](https://github.com/rajrajak99)**.
+- **Free for Community**: Free forever for individuals, students, open-source projects, and noncommercial research.
+- **Commercial Restrictions**: Commercial deployment, SaaS hosting, or commercial redistribution is strictly prohibited without a commercial license.
+- **Enterprise & Commercial Licensing**: For commercial use or organization subscriptions, contact **Raja Rajak** (`rajabhaiyarajak2008@gmail.com`).
+
+Copyright (c) 2026 **[Raja Rajak (@rajrajak99)](https://github.com/rajrajak99)**. All rights reserved.

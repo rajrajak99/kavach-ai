@@ -11,7 +11,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Raja Rajak (@rajrajak99)",
     url="https://github.com/rajrajak99/kavach-ai",
-    license="MIT",
+    license="PolyForm-Noncommercial-1.0.0",
     packages=find_packages(include=["core*"]),
     py_modules=["cli", "ci_bot"],
     python_requires=">=3.9",
@@ -33,7 +33,7 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
+        "License :: Free For Non-Commercial Use",
         "Programming Language :: Python :: 3",
         "Topic :: Security",
         "Topic :: Software Development :: Quality Assurance",

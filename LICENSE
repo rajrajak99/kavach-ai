@@ -1,21 +1,36 @@
-MIT License
+# PolyForm Noncommercial License 1.0.0
 
-Copyright (c) 2026 Chandan (rajrajak99)
+https://polyformproject.org/licenses/noncommercial/1.0.0/
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Copyright (c) 2026 Raja Rajak (@rajrajak99) <rajabhaiyarajak2008@gmail.com>
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## Acceptance
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+In order to receive this license, you must agree to its rules. The rules of this license are both obligations under that agreement and conditions to your license. You must not do anything with this software that triggers a rule you cannot or will not follow.
+
+## Copyright License
+
+The licensor grants you a copyright license for the software on these conditions:
+
+1. **Noncommercial Purpose**: You may use the software only for noncommercial purposes (such as personal projects, educational learning, research, and non-commercial open-source contributions).
+2. **Distribution**: You may distribute copies of the software (in source or binary form) only for noncommercial purposes.
+3. **Notices**: You must ensure that any copy you distribute includes this license and the copyright notice above.
+
+## Commercial Restrictions & Dual Licensing
+
+**Any commercial use, integration into a commercial product or service, deployment as a commercial SaaS offering, or commercial redistribution is strictly prohibited without a separate commercial license from the author.**
+
+For commercial enterprise licensing, team subscriptions, or OEM partnerships, contact:
+**Raja Rajak** — `rajabhaiyarajak2008@gmail.com`
+
+## Patent License
+
+The licensor grants you a patent license for the software on the same conditions as the copyright license.
+
+## Fair Use and Other Rights
+
+This license does not limit your rights under fair use or other exceptions to copyright.
+
+## Disclaimer of Warranties
+
+As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of the use of the software.
