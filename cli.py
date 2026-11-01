@@ -5,6 +5,15 @@ import argparse
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from core.diff_parser import DiffParser
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.ai_reasoner import AIReasoner
