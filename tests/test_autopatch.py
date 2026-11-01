@@ -73,3 +73,29 @@ def test_cpp_security_detection():
     assert any("Buffer Overflow" in c for c in categories)
     assert any("Command Injection" in c for c in categories)
     assert any("Secret" in c for c in categories)
+
+def test_division_safety_and_no_crash():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    code = """
+def calc(a, b):
+    result = a / b
+    return result
+"""
+    diff = parser.parse_raw_snippet("calc.py", code)
+    findings = analyzer.analyze_file_diff(diff)
+    assert len(findings) >= 1
+    assert any("ZeroDivision" in f.category for f in findings)
+
+def test_shell_true_detection():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    code = """
+import subprocess
+def run_user(cmd):
+    subprocess.run(cmd, shell=True)
+"""
+    diff = parser.parse_raw_snippet("runner.py", code)
+    findings = analyzer.analyze_file_diff(diff)
+    assert len(findings) >= 1
+    assert any("shell=True" in f.category for f in findings)

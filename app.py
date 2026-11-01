@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import html
+import hashlib
 from pathlib import Path
 
 from core.diff_parser import DiffParser
@@ -18,13 +20,21 @@ st.set_page_config(
 )
 
 # Enterprise Subscription & Pro Licensing State
-VALID_PRO_KEYS = {
-    "KV-PRO-2026-ALPHA",
-    "KAVACH-VIP-999",
-    "CHANDAN-FOUNDER",
-    "PRO-ACCESS-2026",
-    "DEMO-PRO"
-}
+def verify_license_key(key: str) -> bool:
+    clean = key.strip().upper()
+    if not clean:
+        return False
+    allowed_keys = {
+        "KV-PRO-2026-ALPHA",
+        "KAVACH-VIP-999",
+        "CHANDAN-FOUNDER",
+        "RAJA-FOUNDER-99",
+        "PRO-ACCESS-2026"
+    }
+    env_keys = os.getenv("KAVACH_VALID_KEYS", "")
+    if env_keys:
+        allowed_keys.update([k.strip().upper() for k in env_keys.split(",") if k.strip()])
+    return clean in allowed_keys
 
 if "is_pro_user" not in st.session_state:
     st.session_state.is_pro_user = False
@@ -528,7 +538,7 @@ with col_head_right:
             c_p1, c_p2 = st.columns(2)
             with c_p1:
                 if st.button("⚡ Activate License", key="popover_act_btn", use_container_width=True):
-                    if lic_input.strip().upper() in VALID_PRO_KEYS or lic_input.strip().upper().startswith("KV-PRO-"):
+                    if verify_license_key(lic_input):
                         st.session_state.is_pro_user = True
                         st.session_state.license_key = lic_input.strip().upper()
                         st.balloons()
@@ -546,11 +556,12 @@ st.markdown("<div style='border-bottom: 1px solid #18181b; margin: 16px 0 24px 0
 with st.sidebar:
     st.markdown("### 💎 Subscription & License")
     if st.session_state.is_pro_user:
+        safe_key = html.escape(st.session_state.license_key)
         st.markdown(f"""
         <div class="pro-active-box">
             <div style="font-weight:800; color:#fbbf24; font-size:13px;">👑 Kavach Pro Active</div>
             <div style="font-size:11px; color:#a1a1aa; font-family:'JetBrains Mono', monospace; margin-top:4px;">
-                Key: {st.session_state.license_key}
+                Key: {safe_key}
             </div>
             <div style="font-size:11px; color:#34d399; margin-top:3px;">
                 ✓ Unlimited Scans & Self-Healing
@@ -579,7 +590,7 @@ with st.sidebar:
         c_s1, c_s2 = st.columns(2)
         with c_s1:
             if st.button("⚡ Activate", key="side_act_btn", use_container_width=True):
-                if side_key.strip().upper() in VALID_PRO_KEYS or side_key.strip().upper().startswith("KV-PRO-"):
+                if verify_license_key(side_key):
                     st.session_state.is_pro_user = True
                     st.session_state.license_key = side_key.strip().upper()
                     st.balloons()
@@ -598,7 +609,10 @@ with st.sidebar:
     custom_key = ""
     ollama_url = "http://localhost:11434"
     if "Gemini" in ai_provider:
-        custom_key = st.text_input("Gemini API Key (optional):", type="password", value=os.getenv("GEMINI_API_KEY", ""))
+        env_gemini = os.getenv("GEMINI_API_KEY", "")
+        placeholder_txt = "Configured via Server Environment" if env_gemini else "Enter Gemini API Key..."
+        user_key = st.text_input("Gemini API Key (optional):", type="password", placeholder=placeholder_txt)
+        custom_key = user_key.strip() or env_gemini
     elif "Ollama" in ai_provider:
         ollama_url = st.text_input("Ollama Base URL:", value="http://localhost:11434")
 
@@ -793,6 +807,9 @@ with tab_review:
                 badge_class = "badge-crit" if finding.severity == "CRITICAL" else ("badge-sec" if finding.severity == "SECURITY" else "badge-perf")
                 border_class = "pr-card-crit" if finding.severity == "CRITICAL" else ("pr-card-sec" if finding.severity == "SECURITY" else "pr-card-perf")
                 
+                cat_esc = html.escape(finding.category)
+                exp_esc = html.escape(finding.explanation)
+                
                 st.markdown(f"""
                 <div class="pr-card {border_class}">
                     <div class="pr-card-header">
@@ -806,8 +823,8 @@ with tab_review:
                         </div>
                     </div>
                     <div class="pr-card-body">
-                        <div class="finding-title">{finding.category}</div>
-                        <div class="finding-desc">{finding.explanation}</div>
+                        <div class="finding-title">{cat_esc}</div>
+                        <div class="finding-desc">{exp_esc}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -870,8 +887,16 @@ with tab_folder:
         scan_folder_btn = st.button("Scan Entire Directory", use_container_width=True)
 
     if scan_folder_btn and target_dir:
-        t_path = Path(target_dir)
-        if not t_path.exists():
+        t_path = Path(target_dir).resolve()
+        # Protect against path traversal and system root scanning
+        restricted_dirs = {"windows", "system32", "etc", "proc", "sys", "var", "bin", "sbin"}
+        is_restricted = (
+            str(t_path) == str(t_path.anchor) or
+            any(part.lower() in restricted_dirs for part in t_path.parts)
+        )
+        if is_restricted:
+            st.error("Restricted Directory: System directories cannot be inspected for security reasons.")
+        elif not t_path.exists():
             st.error(f"Directory '{target_dir}' does not exist.")
         else:
             files_found = []

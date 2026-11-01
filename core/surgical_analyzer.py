@@ -37,13 +37,15 @@ class SurgicalAnalyzer:
     PY_SQLI_PATTERNS = [
         (r'(?i)(?:execute\s*\(\s*)?f[\"\'].*?(?:SELECT|INSERT|UPDATE|DELETE).*?\{.*?\}', "Raw SQL Injection via f-string formatting", "CWE-89"),
         (r'(?i)execute\s*\(\s*[\"\'].*?(?:SELECT|INSERT|UPDATE|DELETE).*?\s*%\s*\(.*?\)', "SQL Injection via string modulo interpolation", "CWE-89"),
-        (r'(?i)execute\s*\(\s*[\"\'].*?(?:SELECT|INSERT|UPDATE|DELETE).*?[\"\']\s*\+\s*[a-zA-Z_]', "SQL Injection via string concatenation", "CWE-89")
+        (r'(?i)execute\s*\(\s*[\"\'].*?(?:SELECT|INSERT|UPDATE|DELETE).*?[\"\']\s*\+\s*[a-zA-Z_]', "SQL Injection via string concatenation", "CWE-89"),
+        (r'(?i)execute\s*\(\s*[\"\'].*?(?:SELECT|INSERT|UPDATE|DELETE).*?\.format\s*\(', "SQL Injection via string format() interpolation", "CWE-89")
     ]
 
     PY_COMMAND_INJECTION_PATTERNS = [
-        (r'(?i)os\.system\s*\(\s*f[\"\'].*?\{.*?\}', "Command Injection via os.system(f-string)", "CWE-78"),
-        (r'(?i)subprocess\.call\s*\(\s*f[\"\'].*?\{.*?\}', "Command Injection via subprocess shell", "CWE-78"),
-        (r'(?i)subprocess\.Popen\s*\(\s*f[\"\'].*?\{.*?\}', "Command Injection via subprocess shell", "CWE-78")
+        (r'(?i)os\.system\s*\(\s*f?[\"\'].*?\{.*?\}', "Command Injection via os.system", "CWE-78"),
+        (r'(?i)os\.popen\s*\(\s*f?[\"\'].*?\{.*?\}', "Command Injection via os.popen", "CWE-78"),
+        (r'(?i)subprocess\.(?:call|Popen|run|check_output)\s*\(\s*f[\"\'].*?\{.*?\}', "Command Injection via subprocess shell", "CWE-78"),
+        (r'(?i)subprocess\.(?:call|Popen|run|check_output)\s*\(.*?\bshell\s*=\s*True', "Remote Command Injection via shell=True execution", "CWE-78")
     ]
 
     PY_RESOURCE_LEAK_PATTERNS = [
@@ -362,11 +364,12 @@ class SurgicalAnalyzer:
                             break
 
                     # 5. Py Unchecked Zero Division
-                    if re.search(r'[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)', line_str) and not re.search(r'if\s+.*?!=\s*0', line_str):
+                    stripped = line_str.strip()
+                    denom_match = None
+                    if re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str) and not re.search(r'if\s+.*?!=\s*0', line_str):
                         # Ensure not inside a string literal
                         if not (stripped.startswith(('"', "'", 'r"', "r'", 'f"', "f'")) or stripped.endswith(('",', "',", '")'))):
-                            denom_match = re.search(r'[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)', line_str)
-                        if denom_match:
+                            denom_match = re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str)
                             denom = denom_match.group(1)
                             if denom not in ['2', '10', '100', '1000', 'len', 'total_count']:
                                 fixed = f"{indent_str}safe_{denom} = {denom} if {denom} != 0 else 1e-7\n{indent_str}{line_str.strip().replace(f'/{denom}', f'/safe_{denom}')}"

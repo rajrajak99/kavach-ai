@@ -33,7 +33,7 @@ def get_git_diff() -> Optional[str]:
         # Check if in GitHub Action pull request context
         base_ref = os.getenv("GITHUB_BASE_REF")
         if base_ref:
-            cmd = ["git", "diff", f"origin/{base_ref}...HEAD"]
+            cmd = ["git", "diff", f"origin/{base_ref}...HEAD", "--"]
             p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             if p.returncode == 0 and p.stdout.strip():
                 return p.stdout
@@ -170,7 +170,7 @@ def post_github_comment(repo_full_name: str, pr_number: int, comment_body: str, 
 
     try:
         req = urllib.request.Request(list_url, headers=headers)
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=15) as resp:
             comments = json.loads(resp.read().decode('utf-8'))
             for c in comments:
                 b = c.get('body', '')
@@ -186,7 +186,7 @@ def post_github_comment(repo_full_name: str, pr_number: int, comment_body: str, 
         payload = json.dumps({"body": comment_body}).encode('utf-8')
         try:
             req = urllib.request.Request(update_url, data=payload, headers=headers, method="PATCH")
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:
                 print(f"[+] Updated existing AutoPatch review comment (ID: {existing_comment_id})")
                 return
         except Exception as e:
@@ -197,7 +197,7 @@ def post_github_comment(repo_full_name: str, pr_number: int, comment_body: str, 
     payload = json.dumps({"body": comment_body}).encode('utf-8')
     try:
         req = urllib.request.Request(create_url, data=payload, headers=headers, method="POST")
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=15) as resp:
             print(f"[+] Posted fresh AutoPatch review comment on PR #{pr_number}")
     except Exception as e:
         print(f"[!] Error posting PR comment: {e}")

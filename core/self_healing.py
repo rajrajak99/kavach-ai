@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import shlex
 import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -135,11 +136,21 @@ class SelfHealingTestRunner:
             with open(p, "w", encoding="utf-8") as f:
                 f.write(new_content)
 
-            # 3. Run Test Command
+            # 3. Run Test Command safely without shell=True
             try:
+                if isinstance(cmd, str):
+                    cmd_tokens = shlex.split(cmd)
+                else:
+                    cmd_tokens = list(cmd)
+
+                if cmd_tokens and not Path(cmd_tokens[0]).is_file():
+                    resolved_bin = shutil.which(cmd_tokens[0])
+                    if resolved_bin:
+                        cmd_tokens[0] = resolved_bin
+
                 test_proc = subprocess.run(
-                    cmd,
-                    shell=True,
+                    cmd_tokens,
+                    shell=False,
                     cwd=cwd,
                     capture_output=True,
                     text=True,

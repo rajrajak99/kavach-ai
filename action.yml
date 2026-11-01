@@ -33,12 +33,16 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_SCAN_PATH: ${{ inputs.scan-path }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_HEAL: ${{ inputs.heal }}
+        INPUT_TEST_CMD: ${{ inputs.test-cmd }}
       run: |
-        HEAL_FLAG=""
-        if [ "${{ inputs.heal }}" = "true" ]; then
-          HEAL_FLAG="--heal --test-cmd '${{ inputs.test-cmd }}'"
+        HEAL_ARGS=()
+        if [ "$INPUT_HEAL" = "true" ]; then
+          HEAL_ARGS=(--heal --test-cmd "$INPUT_TEST_CMD")
         fi
-        python ci_bot.py --path "${{ inputs.scan-path }}" --fail-on "${{ inputs.fail-on }}" $HEAL_FLAG
+        python "${{ github.action_path }}/ci_bot.py" --path "$INPUT_SCAN_PATH" --fail-on "$INPUT_FAIL_ON" "${HEAL_ARGS[@]}"
 branding:
   icon: 'shield'
   color: 'blue'

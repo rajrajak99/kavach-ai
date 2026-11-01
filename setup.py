@@ -1,15 +1,18 @@
 from setuptools import setup, find_packages
 
+with open("README.md", "r", encoding="utf-8") as f:
+    long_description = f.read()
+
 setup(
     name="kavach-ai",
     version="1.2.0",
     description="Autonomous Zero-Noise Code Security Inspector & 1-Click Surgical Patcher",
-    long_description=open("README.md", encoding="utf-8").read(),
+    long_description=long_description,
     long_description_content_type="text/markdown",
     author="Raja Rajak (@rajrajak99)",
     url="https://github.com/rajrajak99/kavach-ai",
     license="MIT",
-    packages=find_packages(include=["core*", "samples*"]),
+    packages=find_packages(include=["core*"]),
     py_modules=["cli", "ci_bot"],
     python_requires=">=3.9",
     install_requires=[
