@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import requests
 import html
 import base64
 import os
@@ -67,6 +68,64 @@ if "toast_msg" not in st.session_state:
     st.session_state.toast_msg = None
 if "key_feedback" not in st.session_state:
     st.session_state.key_feedback = None
+if "github_user" not in st.session_state:
+    st.session_state.github_user = None
+if "auth_error" not in st.session_state:
+    st.session_state.auth_error = None
+
+# ----------------- GITHUB AUTH HELPER -----------------
+@st.cache_data(ttl=3600)
+def fetch_github_profile(username: str, token: str = ""):
+    if not username:
+        return {"success": False, "error": "Username cannot be empty."}
+    headers = {"User-Agent": "Kavach-AI-Scanner"}
+    if token:
+        headers["Authorization"] = f"token {token}"
+    try:
+        res = requests.get(f"https://api.github.com/users/{username.strip()}", headers=headers, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            return {
+                "success": True,
+                "login": data.get("login"),
+                "name": data.get("name") or data.get("login"),
+                "avatar_url": data.get("avatar_url"),
+                "public_repos": data.get("public_repos", 0),
+                "html_url": data.get("html_url"),
+                "bio": data.get("bio", ""),
+            }
+        elif res.status_code == 404:
+            return {"success": False, "error": f"GitHub user '@{username}' not found."}
+        else:
+            return {"success": False, "error": f"GitHub API error (status {res.status_code})"}
+    except Exception as e:
+        return {"success": False, "error": f"Network error: {str(e)}"}
+
+def login_github():
+    username = st.session_state.get("input_gh_user", "").strip()
+    token = st.session_state.get("input_gh_pat", "").strip()
+    if not username:
+        st.session_state.auth_error = "Please enter your GitHub username."
+        return
+    profile = fetch_github_profile(username, token)
+    if profile.get("success"):
+        st.session_state.github_user = profile
+        st.session_state.auth_error = None
+        st.session_state.toast_msg = f"👋 Connected as @{profile['login']}!"
+    else:
+        st.session_state.auth_error = profile.get("error", "GitHub user not found.")
+
+def demo_login_github():
+    profile = fetch_github_profile("rajrajak99")
+    if profile.get("success"):
+        st.session_state.github_user = profile
+        st.session_state.auth_error = None
+        st.session_state.toast_msg = "👋 Signed in as Founder @rajrajak99!"
+
+def logout_github():
+    st.session_state.github_user = None
+    st.session_state.auth_error = None
+    st.session_state.toast_msg = "Logged out of GitHub."
 
 # ----------------- INSTANT CALLBACKS (0ms LATENCY) -----------------
 def select_plan(tier_val: str, key_val: str, is_pro_val: bool, plan_name: str):
@@ -427,7 +486,7 @@ elif st.session_state.is_pro_user:
 else:
     badge_html = '<span class="plan-pill pill-free">● 🆓 Community Free Active</span>'
 
-nav_col1, nav_col2 = st.columns([2.5, 1.5])
+nav_col1, nav_col2 = st.columns([2.0, 2.0])
 with nav_col1:
     st.markdown(f"""
     <div class="brand-group">
@@ -440,12 +499,42 @@ with nav_col1:
     """, unsafe_allow_html=True)
 
 with nav_col2:
-    st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; height:100%;">
-        <span class="privacy-tag">🔒 Local Offline Engine</span>
-        {badge_html}
-    </div>
-    """, unsafe_allow_html=True)
+    nav_auth_col, nav_badge_col = st.columns([1.15, 0.85])
+    with nav_auth_col:
+        if st.session_state.github_user:
+            u = st.session_state.github_user
+            with st.popover(f"👤 @{u['login']}", use_container_width=True):
+                st.markdown(f"""
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                    <img src="{u['avatar_url']}" style="width:44px; height:44px; border-radius:50%; border:2px solid #00e5ff;" />
+                    <div>
+                        <div style="font-weight:700; color:#fff; font-size:14.5px;">{html.escape(u['name'])}</div>
+                        <div style="font-size:12px; color:#8b949e;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown(badge_html, unsafe_allow_html=True)
+                st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+                st.button("🚪 Sign Out", key="btn_signout", on_click=logout_github, use_container_width=True)
+        else:
+            with st.popover("🐙 Sign in with GitHub", use_container_width=True):
+                st.markdown("<div style='font-weight:700; font-size:14px; margin-bottom:4px;'>🐙 Connect GitHub Account</div>", unsafe_allow_html=True)
+                st.caption("Link your GitHub handle to bind licenses and scan private repos.")
+                st.text_input("GitHub Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
+                st.text_input("Personal Access Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
+                c_in1, c_in2 = st.columns(2)
+                with c_in1:
+                    st.button("⚡ Connect", key="btn_do_login", on_click=login_github, use_container_width=True)
+                with c_in2:
+                    st.button("👤 Demo Login", key="btn_demo_login", on_click=demo_login_github, use_container_width=True)
+                if st.session_state.get("auth_error"):
+                    st.error(st.session_state.auth_error)
+    with nav_badge_col:
+        st.markdown(f"""
+        <div style="display:flex; justify-content:flex-end; align-items:center; height:100%; padding-top:4px;">
+            {badge_html}
+        </div>
+        """, unsafe_allow_html=True)
 
 st.markdown("<div style='border-bottom: 1px solid #161b26; margin: 12px 0 20px 0;'></div>", unsafe_allow_html=True)
 
@@ -584,12 +673,29 @@ with tab_scan:
 # ================= TAB 2: PRICING & LICENSING =================
 with tab_pricing:
     st.markdown("""
-    <div class="hero-box" style="text-align:center; max-width:750px; margin: 0 auto 32px auto;">
+    <div class="hero-box" style="text-align:center; max-width:750px; margin: 0 auto 20px auto;">
         <span class="hero-tag">💎 Simple, Transparent Licensing</span>
         <div class="hero-title">Secure every commit with Kavach AI.</div>
         <div class="hero-desc">Start free for public repositories, then unlock private repo remediation and team-wide protection when you need it.</div>
     </div>
     """, unsafe_allow_html=True)
+
+    if st.session_state.github_user:
+        u = st.session_state.github_user
+        st.markdown(f"""
+        <div style="background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 10px 16px; margin: 0 auto 20px auto; max-width: 750px; display:flex; align-items:center; gap:12px;">
+            <img src="{u['avatar_url']}" style="width:34px; height:34px; border-radius:50%; border:1px solid #00e5ff;" />
+            <div style="font-size:12.5px; color:#f0f6fc;">
+                Subscribing as <b>{html.escape(u['name'])}</b> (<code>@{html.escape(u['login'])}</code>). All purchased licenses attach to this GitHub profile.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="text-align:center; font-size:12px; color:#8b949e; margin: 0 auto 18px auto; max-width: 600px;">
+            💡 <i>Tip: Click <b>🐙 Sign in with GitHub</b> in the top right to link your Developer Pro license to your account.</i>
+        </div>
+        """, unsafe_allow_html=True)
 
     is_free = (st.session_state.license_tier == PlanTier.FREE.value)
     is_pro = (st.session_state.license_tier == PlanTier.DEVELOPER_PRO.value)
