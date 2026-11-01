@@ -18,7 +18,33 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ----------------- STATE -----------------
+# ----------------- CACHED ENGINES & HELPERS -----------------
+@st.cache_resource
+def get_parser():
+    return DiffParser()
+
+@st.cache_resource
+def get_analyzer():
+    return SurgicalAnalyzer()
+
+@st.cache_data(show_spinner=False)
+def analyze_code_cached(code_str: str):
+    if not code_str:
+        return {'findings': [], 'metrics': {'critical': 0, 'security': 0, 'performance': 0}}
+    parser = get_parser()
+    analyzer = get_analyzer()
+    if "diff --git" in code_str or "\n@@ " in code_str or code_str.startswith("@@ "):
+        diffs = parser.parse_git_diff(code_str)
+    else:
+        sn_name = "snippet.py"
+        if "const " in code_str or "function" in code_str:
+            sn_name = "snippet.js"
+        elif "#include" in code_str:
+            sn_name = "snippet.cpp"
+        diffs = [parser.parse_raw_snippet(sn_name, code_str)]
+    return analyzer.generate_pull_request_review(diffs)
+
+# ----------------- STATE INITIALIZATION -----------------
 if "is_pro_user" not in st.session_state:
     st.session_state.is_pro_user = False
 if "license_tier" not in st.session_state:
@@ -27,9 +53,43 @@ if "license_key" not in st.session_state:
     st.session_state.license_key = ""
 if "user_code" not in st.session_state:
     st.session_state.user_code = ""
+if "toast_msg" not in st.session_state:
+    st.session_state.toast_msg = None
+if "key_feedback" not in st.session_state:
+    st.session_state.key_feedback = None
 
-def verify_license_key(key: str):
-    return LicenseManager.get_tier_for_key(key)
+# ----------------- INSTANT CALLBACKS (0ms LATENCY) -----------------
+def select_plan(tier_val: str, key_val: str, is_pro_val: bool, plan_name: str):
+    st.session_state.license_tier = tier_val
+    st.session_state.license_key = key_val
+    st.session_state.is_pro_user = is_pro_val
+    st.session_state.toast_msg = f"🎉 Plan Updated: {plan_name} Active!"
+
+def activate_custom_key():
+    key = st.session_state.get("custom_key_input", "").strip().upper()
+    if not key:
+        st.session_state.key_feedback = ("error", "Please enter a license key.")
+        return
+    tier = LicenseManager.get_tier_for_key(key)
+    if tier:
+        st.session_state.license_tier = tier.value
+        st.session_state.license_key = key
+        st.session_state.is_pro_user = (tier != PlanTier.FREE)
+        st.session_state.key_feedback = ("success", f"✅ Key Verified: {tier.value} Activated!")
+        st.session_state.toast_msg = f"✅ Activated: {tier.value}"
+    else:
+        st.session_state.key_feedback = ("error", "❌ Invalid Key! Demo keys: BUILDER-DEV-1 (Pro) or KV-TEAM-ORG-99 (Team)")
+
+def load_code_sample(code: str):
+    st.session_state.user_code = code
+
+def clear_code_box():
+    st.session_state.user_code = ""
+
+# Trigger toast notification if pending
+if st.session_state.get("toast_msg"):
+    st.toast(st.session_state.toast_msg)
+    st.session_state.toast_msg = None
 
 # ----------------- CLEAN MINIMAL THEME (CSS) -----------------
 st.markdown("""
@@ -199,17 +259,7 @@ tab_scan, tab_pricing, tab_setup = st.tabs([
 ])
 
 # ================= TAB 1: CLEAN CODE SCANNER =================
-with tab_scan:
-    # Quick Test Buttons
-    st.markdown("<div style='font-size:12px; font-weight:600; color:#8b949e; margin-bottom:6px;'>Quick Test Examples (Optional):</div>", unsafe_allow_html=True)
-    c_btn1, c_btn2, c_btn3, c_btn4 = st.columns([1.2, 1.2, 1, 3])
-    with c_btn1:
-        if st.button("🔑 Load Secret Leak Sample", use_container_width=True):
-            st.session_state.user_code = SAMPLE_PYTHON_MULTI
-            st.rerun()
-    with c_btn2:
-        if st.button("💉 Load SQL Injection Sample", use_container_width=True):
-            st.session_state.user_code = '''import sqlite3
+SQL_SAMPLE = '''import sqlite3
 
 def find_user(username):
     conn = sqlite3.connect("database.db")
@@ -218,39 +268,32 @@ def find_user(username):
     cursor.execute(f"SELECT * FROM users WHERE name = '{username}'")
     return cursor.fetchall()
 '''
-            st.rerun()
+
+with tab_scan:
+    # Quick Test Buttons
+    st.markdown("<div style='font-size:12px; font-weight:600; color:#8b949e; margin-bottom:6px;'>Quick Test Examples (Optional):</div>", unsafe_allow_html=True)
+    c_btn1, c_btn2, c_btn3, c_btn4 = st.columns([1.2, 1.2, 1, 3])
+    with c_btn1:
+        st.button("🔑 Load Secret Leak Sample", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), use_container_width=True)
+    with c_btn2:
+        st.button("💉 Load SQL Injection Sample", on_click=load_code_sample, args=(SQL_SAMPLE,), use_container_width=True)
     with c_btn3:
-        if st.button("🧹 Clear Box", use_container_width=True):
-            st.session_state.user_code = ""
-            st.rerun()
+        st.button("🧹 Clear Box", on_click=clear_code_box, use_container_width=True)
 
     col_editor, col_result = st.columns([1.1, 1.2], gap="large")
 
     with col_editor:
         code_input = st.text_area(
             "Paste your Python, JavaScript, or C++ code here:",
-            value=st.session_state.user_code,
+            key="user_code",
             height=340,
             placeholder="Code box is empty. Paste your code here to inspect for vulnerabilities (SQL injection, leaked keys, command injection...)"
         )
         inspect_btn = st.button("⚡ Inspect Code Now", type="primary", use_container_width=True)
 
-    # Run Analysis
-    parser = DiffParser()
-    analyzer = SurgicalAnalyzer()
-
     code_to_check = code_input.strip() if code_input else ""
     if code_to_check:
-        if "diff --git" in code_to_check or "\n@@ " in code_to_check or code_to_check.startswith("@@ "):
-            diffs = parser.parse_git_diff(code_to_check)
-        else:
-            sn_name = "snippet.py"
-            if "const " in code_to_check or "function" in code_to_check:
-                sn_name = "snippet.js"
-            elif "#include" in code_to_check:
-                sn_name = "snippet.cpp"
-            diffs = [parser.parse_raw_snippet(sn_name, code_to_check)]
-        analysis = analyzer.generate_pull_request_review(diffs)
+        analysis = analyze_code_cached(code_to_check)
         findings = analysis['findings']
         metrics = analysis['metrics']
     else:
@@ -289,12 +332,17 @@ with tab_pricing:
     st.markdown("### 💎 Choose Your Kavach AI Plan")
     st.caption("100% Zero-Loss Model. Runs locally on your machine — zero server bills.")
 
+    is_free = (st.session_state.license_tier == PlanTier.FREE.value)
+    is_pro = (st.session_state.license_tier == PlanTier.DEVELOPER_PRO.value)
+    is_team = (st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value)
+
     p1, p2, p3 = st.columns(3)
 
     # 1. Free Plan
     with p1:
-        st.markdown("""
-        <div class="pricing-box">
+        free_box_class = "pricing-box pricing-box-active" if is_free else "pricing-box"
+        st.markdown(f"""
+        <div class="{free_box_class}">
             <div>
                 <div class="price-title" style="color:#34d399;">🆓 Community Plan</div>
                 <div class="price-amt">$0</div>
@@ -310,17 +358,20 @@ with tab_pricing:
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-        if st.button("🆓 Use Free Plan ($0)", key="btn_activate_free", use_container_width=True):
-            st.session_state.is_pro_user = False
-            st.session_state.license_tier = PlanTier.FREE.value
-            st.session_state.license_key = ""
-            st.success("Active Plan: Community Free ($0)")
-            st.rerun()
+        st.button(
+            "✅ Active Plan" if is_free else "🆓 Use Free Plan ($0)",
+            key="btn_activate_free",
+            disabled=is_free,
+            on_click=select_plan,
+            args=(PlanTier.FREE.value, "", False, "Community Free ($0)"),
+            use_container_width=True
+        )
 
     # 2. Developer Pro Plan
     with p2:
-        st.markdown("""
-        <div class="pricing-box pricing-box-pro">
+        pro_box_class = "pricing-box pricing-box-pro pricing-box-active" if is_pro else "pricing-box pricing-box-pro"
+        st.markdown(f"""
+        <div class="{pro_box_class}">
             <div>
                 <div class="price-title" style="color:#38bdf8;">⚡ Developer Pro</div>
                 <div class="price-amt">$1<span style="font-size:14px; color:#8b949e;">/mo</span></div>
@@ -336,18 +387,21 @@ with tab_pricing:
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-        if st.button("⚡ Select Developer Pro ($1)", key="btn_activate_pro", use_container_width=True):
-            st.session_state.is_pro_user = True
-            st.session_state.license_tier = PlanTier.DEVELOPER_PRO.value
-            st.session_state.license_key = "BUILDER-DEV-1"
-            st.balloons()
-            st.success("Active Plan: Developer Pro ($1/mo)")
-            st.rerun()
+        st.button(
+            "✅ Active Plan" if is_pro else "⚡ Select Developer Pro ($1)",
+            key="btn_activate_pro",
+            disabled=is_pro,
+            type="primary" if not is_pro else "secondary",
+            on_click=select_plan,
+            args=(PlanTier.DEVELOPER_PRO.value, "BUILDER-DEV-1", True, "Developer Pro ($1/mo)"),
+            use_container_width=True
+        )
 
     # 3. Team Enterprise Plan
     with p3:
-        st.markdown("""
-        <div class="pricing-box pricing-box-team">
+        team_box_class = "pricing-box pricing-box-team pricing-box-active" if is_team else "pricing-box pricing-box-team"
+        st.markdown(f"""
+        <div class="{team_box_class}">
             <div>
                 <div class="price-title" style="color:#fbbf24;">🏢 Team Enterprise</div>
                 <div class="price-amt">$99<span style="font-size:14px; color:#8b949e;">/mo</span></div>
@@ -363,31 +417,30 @@ with tab_pricing:
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-        if st.button("🏢 Select Team Enterprise ($99)", key="btn_activate_team", use_container_width=True):
-            st.session_state.is_pro_user = True
-            st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value
-            st.session_state.license_key = "KV-TEAM-ORG-99"
-            st.balloons()
-            st.success("Active Plan: Team Enterprise ($99/mo)")
-            st.rerun()
+        st.button(
+            "✅ Active Plan" if is_team else "🏢 Select Team Enterprise ($99)",
+            key="btn_activate_team",
+            disabled=is_team,
+            on_click=select_plan,
+            args=(PlanTier.TEAM_ENTERPRISE.value, "KV-TEAM-ORG-99", True, "Team Enterprise ($99/mo)"),
+            use_container_width=True
+        )
 
     st.markdown("---")
     st.markdown("#### 🔑 Have a License Key?")
     k_col1, k_col2 = st.columns([2, 1])
     with k_col1:
-        custom_key_input = st.text_input("Enter License Key:", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99")
+        st.text_input("Enter License Key:", key="custom_key_input", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99")
     with k_col2:
         st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-        if st.button("⚡ Activate License Key", use_container_width=True):
-            tier = verify_license_key(custom_key_input)
-            if tier:
-                st.session_state.is_pro_user = True
-                st.session_state.license_tier = tier.value
-                st.session_state.license_key = custom_key_input.strip().upper()
-                st.balloons()
-                st.rerun()
-            else:
-                st.error("Invalid Key! Demo keys: BUILDER-DEV-1 (Pro) or KV-TEAM-ORG-99 (Team)")
+        st.button("⚡ Activate License Key", key="btn_activate_key", on_click=activate_custom_key, use_container_width=True)
+
+    if st.session_state.get("key_feedback"):
+        status, msg = st.session_state.key_feedback
+        if status == "success":
+            st.success(msg)
+        else:
+            st.error(msg)
 
 # ================= TAB 3: GITHUB SETUP =================
 with tab_setup:
