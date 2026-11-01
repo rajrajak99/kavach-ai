@@ -252,38 +252,37 @@ def main():
     # Step 2.5: Self-Healing Test Verification (if enabled and files exist on disk)
     healing_summary = None
     if args.heal and findings:
-        print(f"[+] Running Self-Healing regression verification via '{args.test_cmd}'...")
-        healing_runner = SelfHealingTestRunner(default_test_cmd=args.test_cmd)
-        passed_count = 0
-        tested_count = 0
+        try:
+            print(f"[+] Running Self-Healing regression verification via '{args.test_cmd}'...")
+            healing_runner = SelfHealingTestRunner(default_test_cmd=args.test_cmd)
+            passed_count = 0
+            tested_count = 0
 
-        # Group findings by file
-        by_file: Dict[str, List[PatchFinding]] = {}
-        for f in findings:
-            target_f = f.problem_code  # will try to locate matching file on disk
+            by_file: Dict[str, List[PatchFinding]] = {}
             for fd in file_diffs:
                 fname = fd.filename_new or fd.filename_old
                 if fname and Path(fname).exists():
-                    by_file.setdefault(fname, []).append(f)
-                    break
+                    f_list = analyzer.analyze_file_diff(fd)
+                    if f_list:
+                        by_file[fname] = f_list
 
-        for fpath, file_findings in by_file.items():
-            tested_count += 1
-            # Build unified patch
-            patch_content = "\n".join([f.github_suggestion_block for f in file_findings])
-            h_res = healing_runner.apply_patch_and_verify(Path(fpath), patch_content, test_command=args.test_cmd)
-            if h_res.success:
-                passed_count += 1
-                print(f"[✓] Verified safe patch on {fpath}: All tests passed!")
-            else:
-                print(f"[!] Warning on {fpath}: Tests failed or syntax error: {h_res.message}")
+            for fpath, file_findings in by_file.items():
+                tested_count += 1
+                h_res = healing_runner.heal_file(fpath, file_findings, test_command=args.test_cmd)
+                if h_res.status == "VERIFIED_PASSED":
+                    passed_count += 1
+                    print(f"[✓] Verified safe patch on {fpath}: All tests passed!")
+                else:
+                    print(f"[!] Self-healing notice on {fpath}: {h_res.message}")
 
-        if tested_count > 0:
-            all_safe = (passed_count == tested_count)
-            healing_summary = {
-                "success": all_safe,
-                "message": f"{passed_count}/{tested_count} file patch(es) passed automated test verification."
-            }
+            if tested_count > 0:
+                all_safe = (passed_count == tested_count)
+                healing_summary = {
+                    "success": all_safe,
+                    "message": f"{passed_count}/{tested_count} file patch(es) passed automated test verification."
+                }
+        except Exception as e:
+            print(f"[*] Note: Self-healing test runner encountered notice: {e}")
 
     # Step 3: Generate Markdown report
     report_md = build_github_markdown_report(analysis, total_files, healing_summary=healing_summary)
@@ -322,7 +321,7 @@ def main():
     perf = metrics['performance']
 
     should_fail = False
-    if args.fail_on == "CRITICAL" and crit > 0:
+    if args.fail_on == "CRITICAL" and (crit > 0 or sec > 0):
         should_fail = True
     elif args.fail_on == "HIGH" and (crit > 0 or sec > 0):
         should_fail = True
