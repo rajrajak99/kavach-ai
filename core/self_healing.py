@@ -200,3 +200,20 @@ class SelfHealingTestRunner:
                 duration_seconds=time.time() - start_time,
                 message=f"Unexpected error during healing: {str(e)}"
             )
+
+    def apply_patch_and_verify(
+        self,
+        target_file: Any,
+        patch_content: str,
+        test_command: Optional[str] = None
+    ) -> Any:
+        """Compatibility wrapper for ci_bot."""
+        class MockResult:
+            def __init__(self, success: bool, message: str):
+                self.success = success
+                self.message = message
+                self.status = "VERIFIED_PASSED" if success else "ROLLBACK_TEST_FAILED"
+
+        fpath = str(target_file)
+        res = self.heal_file(fpath, [], test_command=test_command)
+        return MockResult(res.status == "VERIFIED_PASSED", res.message)
