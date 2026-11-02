@@ -1,60 +1,53 @@
-import sys
-import os
-from pathlib import Path
-
-# Explicitly ensure repository root is at index 0 of sys.path
-ROOT_DIR = Path(__file__).resolve().parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+"""
+Kavach AI - Autonomous AST Code Security Inspector & 1-Click Surgical Patcher
+Billion-Dollar SaaS Design: Electric Violet (#7C6CFF) + Matte Near-Black (#07070A)
+"""
 
 import streamlit as st
-import requests
 import html
 import base64
-
-from core.diff_parser import DiffParser
+import os
+import requests
+from kavach_license import PlanTier, LicenseManager
 from core.surgical_analyzer import SurgicalAnalyzer
-from core.ai_reasoner import AIReasoner
-from kavach_license import LicenseManager, PlanTier
+from core.diff_parser import DiffParser
 from samples.vulnerable_samples import SAMPLE_PYTHON_MULTI
 
-# ----------------- PAGE CONFIG -----------------
+# ----------------- STREAMLIT PAGE CONFIG -----------------
 st.set_page_config(
-    page_title="Kavach AI | Code Security Inspector",
+    page_title="Kavach AI — Autonomous Code Security",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# ----------------- LOGO LOADER -----------------
+# ----------------- CACHED STATIC ASSETS & ENGINES -----------------
 @st.cache_data
 def get_logo_base64():
-    logo_path = Path("assets/logo.png")
-    if logo_path.exists():
-        with open(logo_path, "rb") as f:
+    p = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
+    if os.path.exists(p):
+        with open(p, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
     return ""
-
-# ----------------- CACHED ENGINES & HELPERS -----------------
-@st.cache_resource
-def get_parser():
-    return DiffParser()
 
 @st.cache_resource
 def get_analyzer():
     return SurgicalAnalyzer()
 
-@st.cache_data(show_spinner=False)
+@st.cache_resource
+def get_parser():
+    return DiffParser()
+
+@st.cache_data(ttl=3600)
 def analyze_code_cached(code_str: str):
-    if not code_str:
-        return {'findings': [], 'metrics': {'critical': 0, 'security': 0, 'performance': 0}}
-    parser = get_parser()
     analyzer = get_analyzer()
-    if "diff --git" in code_str or "\n@@ " in code_str or code_str.startswith("@@ "):
+    parser = get_parser()
+    diffs = []
+    if "diff --git" in code_str or "@@" in code_str:
         diffs = parser.parse_git_diff(code_str)
-    else:
+    if not diffs:
         sn_name = "snippet.py"
-        if "const " in code_str or "function" in code_str:
+        if "function " in code_str or "const " in code_str or "var " in code_str:
             sn_name = "snippet.js"
         elif "#include" in code_str:
             sn_name = "snippet.cpp"
@@ -69,7 +62,8 @@ if "license_tier" not in st.session_state:
 if "license_key" not in st.session_state:
     st.session_state.license_key = ""
 if "user_code" not in st.session_state:
-    st.session_state.user_code = ""
+    # Pre-populate demo code so first-time visitors immediately see the engine in action
+    st.session_state.user_code = SAMPLE_PYTHON_MULTI
 if "toast_msg" not in st.session_state:
     st.session_state.toast_msg = None
 if "key_feedback" not in st.session_state:
@@ -205,229 +199,328 @@ if st.session_state.get("toast_msg"):
     st.toast(st.session_state.toast_msg)
     st.session_state.toast_msg = None
 
-# ----------------- MONOCHROME ZINC SYSTEM & LINEAR/VERCEL CSS -----------------
+# ----------------- BILLION-DOLLAR SAAS CSS (ELECTRIC VIOLET) -----------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    /* 1. Global Reset & Typography */
+    /* 1. Global Reset & Theme Variables */
+    :root {
+        --bg-main: #07070A;
+        --bg-surface: #0F0F14;
+        --border-subtle: #1E1E28;
+        --border-hover: rgba(124, 108, 255, 0.4);
+        --accent: #7C6CFF;
+        --accent-hover: #6A59F0;
+        --accent-glow: rgba(124, 108, 255, 0.16);
+        --text-primary: #EDEDF2;
+        --text-muted: #8A8A99;
+        --pass: #3DDC97;
+        --vuln: #FF5C6C;
+        --warn: #FFB454;
+    }
+
     html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        color: #EDEDED !important;
-        background-color: #09090B !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        color: #EDEDF2 !important;
+        background-color: #07070A !important;
     }
     .stApp {
-        background-color: #09090B !important;
+        background-color: #07070A !important;
     }
 
-    /* 2. Hide Streamlit Boilerplate Chrome & Restrict to 100vh */
-    #MainMenu { visibility: hidden !important; display: none !important; }
-    header[data-testid="stHeader"] { display: none !important; }
-    footer { visibility: hidden !important; display: none !important; }
+    /* 2. Absolute Removal of Streamlit Boilerplate & Glitch Lines */
+    [data-testid="stDecoration"],
+    [data-testid="stHeader"],
+    header[data-testid="stHeader"],
+    header,
+    div[data-testid="stToolbar"] {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+    }
+    #MainMenu, footer {
+        display: none !important;
+        visibility: hidden !important;
+    }
 
     .block-container {
-        padding-top: 1.1rem !important;
-        padding-bottom: 0.8rem !important;
-        padding-left: 1.25rem !important;
-        padding-right: 1.25rem !important;
-        max-width: 1380px !important;
+        padding-top: 1.25rem !important;
+        padding-bottom: 2rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+        max-width: 1260px !important;
+        margin: 0 auto !important;
     }
 
-    /* 3. Top Navbar (Compact Single-Row Container) */
+    /* 3. Single-Row Navbar Container */
     .brand-wrap {
         display: flex;
         align-items: center;
-        gap: 9px;
+        gap: 10px;
     }
     .brand-logo-img {
-        width: 24px;
-        height: 24px;
-        border-radius: 6px;
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
         object-fit: cover;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .brand-title {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 600;
-        color: #FAFAFA;
-        letter-spacing: -0.01em;
+        color: #EDEDF2;
+        letter-spacing: -0.02em;
         display: flex;
         align-items: center;
-        gap: 7px;
+        gap: 8px;
     }
     .brand-pill {
         font-size: 10.5px;
         font-weight: 500;
-        color: #A1A1AA;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 1px 6px;
-        border-radius: 10px;
+        color: #7C6CFF;
+        background: rgba(124, 108, 255, 0.12);
+        border: 1px solid rgba(124, 108, 255, 0.25);
+        padding: 1px 7px;
+        border-radius: 99px;
         font-family: 'JetBrains Mono', monospace;
     }
     .plan-pill {
         font-size: 11px;
         font-weight: 500;
-        padding: 3px 9px;
-        border-radius: 12px;
+        padding: 4px 10px;
+        border-radius: 99px;
         font-family: 'JetBrains Mono', monospace;
         letter-spacing: 0.02em;
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
+        white-space: nowrap;
     }
     .pill-free {
-        color: #A1A1AA;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #8A8A99;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid #1E1E28;
     }
     .pill-pro {
-        color: #FAFAFA;
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.22);
+        color: #7C6CFF;
+        background: rgba(124, 108, 255, 0.12);
+        border: 1px solid rgba(124, 108, 255, 0.3);
     }
     .pill-team {
-        color: #FBBF24;
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.22);
+        color: #7C6CFF;
+        background: rgba(124, 108, 255, 0.18);
+        border: 1px solid #7C6CFF;
+        box-shadow: 0 0 15px rgba(124, 108, 255, 0.2);
     }
 
-    /* 4. Linear Segmented Control Tabs */
+    /* 4. Segmented Control Navbar */
     div[data-testid="stSegmentedControl"] {
-        background: #121214 !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 8px !important;
-        padding: 2px !important;
+        background: #0F0F14 !important;
+        border: 1px solid #1E1E28 !important;
+        border-radius: 10px !important;
+        padding: 3px !important;
     }
     div[data-testid="stSegmentedControl"] button {
         background: transparent !important;
-        color: #A1A1AA !important;
-        font-size: 12.5px !important;
+        color: #8A8A99 !important;
+        font-size: 13px !important;
         font-weight: 500 !important;
-        border-radius: 6px !important;
+        border-radius: 7px !important;
         border: none !important;
-        padding: 3px 14px !important;
-        height: 28px !important;
-        min-height: 28px !important;
-        transition: all 0.15s ease !important;
+        padding: 4px 16px !important;
+        height: 30px !important;
+        min-height: 30px !important;
+        transition: all 0.18s ease !important;
     }
     div[data-testid="stSegmentedControl"] button:hover {
-        color: #EDEDED !important;
+        color: #EDEDF2 !important;
     }
     div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
-        background: #27272A !important;
+        background: #1E1E28 !important;
         color: #FFFFFF !important;
         font-weight: 600 !important;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
     }
 
-    /* 5. Linear Crisp High-Contrast White Primary & Secondary Buttons */
+    /* 5. Buttons & Inputs */
+    div[data-testid="stButton"] button {
+        white-space: nowrap !important;
+        text-overflow: clip !important;
+        overflow: visible !important;
+    }
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: #FAFAFA !important;
-        color: #09090B !important;
+        background: #7C6CFF !important;
+        color: #FFFFFF !important;
         font-weight: 600 !important;
-        font-size: 12.5px !important;
+        font-size: 13px !important;
         height: 36px !important;
         min-height: 36px !important;
-        padding: 0 14px !important;
-        border-radius: 6px !important;
+        padding: 0 16px !important;
+        border-radius: 8px !important;
         border: none !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
-        transition: all 0.15s ease !important;
+        box-shadow: 0 0 20px rgba(124, 108, 255, 0.25) !important;
+        transition: all 0.18s ease !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
-        background: #E4E4E7 !important;
-        color: #09090B !important;
+        background: #6A59F0 !important;
+        box-shadow: 0 0 28px rgba(124, 108, 255, 0.4) !important;
+        transform: translateY(-1px);
     }
     div[data-testid="stButton"] > button[kind="secondary"] {
-        background: #18181B !important;
-        color: #D4D4D8 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: #0F0F14 !important;
+        color: #EDEDF2 !important;
+        border: 1px solid #1E1E28 !important;
         font-size: 12px !important;
+        font-weight: 500 !important;
         height: 36px !important;
         min-height: 36px !important;
-        border-radius: 6px !important;
-        transition: all 0.15s ease !important;
+        border-radius: 8px !important;
+        padding: 0 12px !important;
+        transition: all 0.18s ease !important;
     }
     div[data-testid="stButton"] > button[kind="secondary"]:hover {
-        background: #27272A !important;
+        background: #161620 !important;
+        border-color: rgba(124, 108, 255, 0.4) !important;
         color: #FFFFFF !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
     }
 
     /* GitHub Popover Button */
     div[data-testid="stPopover"] > button {
-        background: #18181B !important;
-        color: #D4D4D8 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        font-size: 11.5px !important;
-        height: 30px !important;
-        min-height: 30px !important;
-        border-radius: 6px !important;
-        padding: 0 10px !important;
+        background: #0F0F14 !important;
+        color: #EDEDF2 !important;
+        border: 1px solid #1E1E28 !important;
+        font-size: 12px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        border-radius: 8px !important;
+        padding: 0 12px !important;
+        transition: all 0.18s ease !important;
     }
     div[data-testid="stPopover"] > button:hover {
-        background: #27272A !important;
+        background: #161620 !important;
+        border-color: rgba(124, 108, 255, 0.4) !important;
         color: #FFFFFF !important;
     }
 
-    /* 6. IDE Code Editor Card */
-    .ide-tab-label {
+    /* 6. Hero & Positioning Banner */
+    .hero-container {
+        text-align: center;
+        padding: 20px 0 18px 0;
+        margin-bottom: 12px;
+    }
+    .hero-heading {
+        font-size: 25px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: #EDEDF2;
+        margin-bottom: 6px;
+    }
+    .hero-lead {
+        font-size: 13.5px;
+        color: #8A8A99;
+        max-width: 620px;
+        margin: 0 auto 12px auto;
+        line-height: 1.5;
+    }
+    .trust-strip {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        font-family: 'JetBrains Mono', monospace;
-        color: #D4D4D8;
-        background: #121214;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 4px 10px;
-        border-radius: 6px;
-        height: 36px;
-        box-sizing: border-box;
+        gap: 12px;
+        font-size: 11.5px;
+        color: #8A8A99;
+        background: #0F0F14;
+        border: 1px solid #1E1E28;
+        padding: 5px 16px;
+        border-radius: 99px;
     }
-    .ide-dot {
+    .trust-dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #10B981;
+        background: #3DDC97;
+        box-shadow: 0 0 6px rgba(61, 220, 151, 0.6);
+        display: inline-block;
+    }
+    .trust-sep {
+        color: #272732;
+    }
+    .trust-link {
+        color: #7C6CFF;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.15s;
+    }
+    .trust-link:hover {
+        color: #9D91FF;
+        text-decoration: underline;
+    }
+
+    /* 7. Code Editor & Diagnostics Toolbars */
+    .ide-tab-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        color: #EDEDF2;
+        background: #0F0F14;
+        border: 1px solid #1E1E28;
+        padding: 4px 12px;
+        border-radius: 8px;
+        height: 36px;
+        box-sizing: border-box;
+        white-space: nowrap !important;
+    }
+    .ide-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #3DDC97;
+        box-shadow: 0 0 6px rgba(61, 220, 151, 0.6);
     }
     .ide-meta {
-        color: #71717A;
-        font-size: 11px;
+        color: #8A8A99;
+        font-size: 11.5px;
     }
 
     div[data-testid="stTextArea"] textarea {
-        background: #0C0D0F !important;
-        color: #E4E4E7 !important;
+        background: #0A0A0F !important;
+        color: #EDEDF2 !important;
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 12px !important;
-        line-height: 1.55 !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 8px !important;
-        padding: 10px 12px !important;
+        font-size: 12.5px !important;
+        line-height: 1.6 !important;
+        border: 1px solid #1E1E28 !important;
+        border-radius: 10px !important;
+        padding: 12px 14px !important;
     }
     div[data-testid="stTextArea"] textarea:focus {
-        border-color: rgba(255, 255, 255, 0.22) !important;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+        border-color: #7C6CFF !important;
+        box-shadow: 0 0 0 1px rgba(124, 108, 255, 0.3) !important;
     }
 
-    /* 7. Diagnostic Container (440px Match) */
+    /* 8. Diagnostic Container (440px Match) */
     div[data-testid="stVerticalBlock"]:has(> div[data-testid="stContainer"]) {
         gap: 0 !important;
     }
     div[data-testid="stContainer"] {
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 8px !important;
-        background: #0C0D0F !important;
+        border: 1px solid #1E1E28 !important;
+        border-radius: 10px !important;
+        background: #0A0A0F !important;
     }
 
     /* Minimal Terminal Empty State */
     .terminal-empty-box {
-        background: #121214;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 14px 16px;
+        background: #0F0F14;
+        border: 1px solid #1E1E28;
+        border-radius: 10px;
+        padding: 16px 18px;
         font-family: 'JetBrains Mono', monospace;
     }
     .terminal-bar {
@@ -435,7 +528,7 @@ st.markdown("""
         align-items: center;
         gap: 6px;
         padding-bottom: 10px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid #1E1E28;
         margin-bottom: 10px;
     }
     .term-dot {
@@ -443,123 +536,202 @@ st.markdown("""
         height: 9px;
         border-radius: 50%;
     }
-    .term-dot.red { background: #EF4444; opacity: 0.8; }
-    .term-dot.yellow { background: #F59E0B; opacity: 0.8; }
-    .term-dot.green { background: #10B981; opacity: 0.8; }
+    .term-dot.red { background: #FF5C6C; opacity: 0.8; }
+    .term-dot.yellow { background: #FFB454; opacity: 0.8; }
+    .term-dot.green { background: #3DDC97; opacity: 0.8; }
     .term-title {
-        color: #71717A;
+        color: #8A8A99;
         font-size: 11px;
         margin-left: 6px;
     }
     .term-body {
         font-size: 11.5px;
-        line-height: 1.65;
+        line-height: 1.7;
     }
     .term-line {
-        color: #D4D4D8;
+        color: #EDEDF2;
     }
     .term-prompt {
-        color: #10B981;
+        color: #7C6CFF;
         font-weight: 600;
         margin-right: 6px;
     }
     .term-line.muted {
-        color: #71717A;
+        color: #8A8A99;
         font-size: 11px;
     }
     .term-line.success {
-        color: #34D399;
+        color: #3DDC97;
         margin-top: 6px;
     }
     .term-line.info {
-        color: #60A5FA;
+        color: #7C6CFF;
         font-size: 11px;
         margin-top: 4px;
     }
 
-    /* Diagnostics Banners & Expander Cards */
+    /* Diagnostics Banners */
     .diag-banner {
-        border-radius: 6px;
-        padding: 7px 11px;
+        border-radius: 8px;
+        padding: 9px 13px;
         font-size: 12px;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
     .diag-blocked {
-        background: rgba(239, 68, 68, 0.12);
-        border: 1px solid rgba(239, 68, 68, 0.28);
-        color: #F87171;
+        background: rgba(255, 92, 108, 0.1);
+        border: 1px solid rgba(255, 92, 108, 0.25);
+        color: #FF5C6C;
     }
     .diag-warning {
-        background: rgba(245, 158, 11, 0.12);
-        border: 1px solid rgba(245, 158, 11, 0.28);
-        color: #FBBF24;
+        background: rgba(255, 180, 84, 0.1);
+        border: 1px solid rgba(255, 180, 84, 0.25);
+        color: #FFB454;
     }
     .diag-clean {
-        background: rgba(16, 185, 129, 0.12);
-        border: 1px solid rgba(16, 185, 129, 0.28);
-        color: #34D399;
+        background: rgba(61, 220, 151, 0.1);
+        border: 1px solid rgba(61, 220, 151, 0.25);
+        color: #3DDC97;
     }
 
     div[data-testid="stExpander"] {
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 6px !important;
-        background: #121214 !important;
-        margin-bottom: 7px !important;
+        border: 1px solid #1E1E28 !important;
+        border-radius: 8px !important;
+        background: #0F0F14 !important;
+        margin-bottom: 8px !important;
+        transition: border-color 0.18s ease !important;
+    }
+    div[data-testid="stExpander"]:hover {
+        border-color: rgba(124, 108, 255, 0.35) !important;
     }
     div[data-testid="stExpander"] summary {
-        font-size: 12px !important;
+        font-size: 12.5px !important;
         font-weight: 600 !important;
-        padding: 5px 8px !important;
+        padding: 6px 10px !important;
+        color: #EDEDF2 !important;
     }
 
-    /* 8. Pricing Cards */
-    .pricing-card {
-        background: #121214;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 20px 18px;
-        position: relative;
+    /* Diff View Styling */
+    .diff-box-vuln {
+        background: rgba(255, 92, 108, 0.06);
+        border: 1px solid rgba(255, 92, 108, 0.2);
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
     }
-    .pricing-card-popular {
-        border-color: rgba(255, 255, 255, 0.22);
-        background: #16161A;
+    .diff-box-patch {
+        background: rgba(61, 220, 151, 0.06);
+        border: 1px solid rgba(61, 220, 151, 0.2);
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-bottom: 6px;
     }
-    .popular-pill {
-        position: absolute;
-        top: 12px;
-        right: 14px;
-        font-size: 10px;
-        font-weight: 600;
-        background: #FAFAFA;
-        color: #09090B;
-        padding: 2px 7px;
-        border-radius: 10px;
+
+    /* 9. Billion-Dollar SaaS Pricing Cards */
+    .pricing-header-wrap {
+        text-align: center;
+        padding: 14px 0 18px 0;
     }
-    .card-tier-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #FAFAFA;
+    .pricing-headline {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        color: #EDEDF2;
         margin-bottom: 4px;
     }
-    .card-tier-amt {
-        font-size: 1.9rem;
-        font-weight: 700;
+    .pricing-subhead {
+        font-size: 13.5px;
+        color: #8A8A99;
+        margin-bottom: 14px;
+    }
+
+    .pricing-card {
+        background: #0F0F14;
+        border: 1px solid #1E1E28;
+        border-radius: 14px;
+        padding: 24px 22px;
+        position: relative;
+        transition: all 0.2s ease;
+        height: 100%;
+        box-sizing: border-box;
+    }
+    .pricing-card:hover {
+        border-color: rgba(124, 108, 255, 0.3);
+    }
+    .pricing-card-featured {
+        background: radial-gradient(ellipse at top, rgba(124, 108, 255, 0.1) 0%, #0F0F14 70%);
+        border: 1px solid #7C6CFF;
+        box-shadow: 0 0 50px rgba(124, 108, 255, 0.16);
+    }
+    .popular-badge {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        font-size: 10.5px;
+        font-weight: 600;
+        background: #7C6CFF;
         color: #FFFFFF;
-        letter-spacing: -0.02em;
+        padding: 2px 9px;
+        border-radius: 99px;
+        box-shadow: 0 0 12px rgba(124, 108, 255, 0.4);
+    }
+    .card-tier-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #EDEDF2;
+        margin-bottom: 4px;
+        letter-spacing: -0.01em;
+    }
+    .card-tier-amt {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #EDEDF2;
+        letter-spacing: -0.03em;
         margin-bottom: 2px;
     }
     .card-tier-sub {
-        font-size: 11.5px;
-        color: #71717A;
-        margin-bottom: 12px;
+        font-size: 12px;
+        color: #8A8A99;
+        margin-bottom: 16px;
+        min-height: 32px;
     }
     .card-features-list {
-        font-size: 12px;
-        line-height: 1.75;
-        color: #D4D4D8;
+        font-size: 12.5px;
+        line-height: 1.8;
+        color: #C7C7D1;
+        border-top: 1px solid #1E1E28;
+        padding-top: 14px;
+    }
+
+    /* Activation Strip & Feedback */
+    .activation-card {
+        background: #0F0F14;
+        border: 1px solid #1E1E28;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-top: 18px;
+    }
+    .alert-success {
+        background: rgba(61, 220, 151, 0.1);
+        border: 1px solid rgba(61, 220, 151, 0.25);
+        color: #3DDC97;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        margin-top: 10px;
+        font-weight: 500;
+    }
+    .alert-error {
+        background: rgba(255, 92, 108, 0.1);
+        border: 1px solid rgba(255, 92, 108, 0.25);
+        color: #FF5C6C;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        margin-top: 10px;
+        font-weight: 500;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -576,9 +748,9 @@ if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value:
 elif st.session_state.is_pro_user:
     badge_html = '<span class="plan-pill pill-pro">● ⚡ Pro ($1/mo)</span>'
 else:
-    badge_html = '<span class="plan-pill pill-free">● 🆓 Free</span>'
+    badge_html = '<span class="plan-pill pill-free">● Free Community</span>'
 
-nav_col1, nav_col2, nav_col3 = st.columns([1.1, 1.25, 1.35], gap="small", vertical_alignment="center")
+nav_col1, nav_col2, nav_col3 = st.columns([1.15, 1.25, 1.3], gap="small", vertical_alignment="center")
 
 with nav_col1:
     st.markdown(f"""
@@ -597,6 +769,10 @@ with nav_col2:
         key="main_nav_tab"
     ) or "Inspector"
 
+# Clear temporary license error feedback when user navigates away from Pricing
+if active_tab != "Pricing" and st.session_state.get("key_feedback"):
+    st.session_state.key_feedback = None
+
 with nav_col3:
     auth_subcol1, auth_subcol2 = st.columns([1.1, 1.0], gap="small", vertical_alignment="center")
     with auth_subcol1:
@@ -605,10 +781,10 @@ with nav_col3:
             with st.popover(f"👤 @{u['login']}", use_container_width=True):
                 st.markdown(f"""
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                    <img src="{u['avatar_url']}" style="width:36px; height:36px; border-radius:50%; border:1px solid #FAFAFA;" />
+                    <img src="{u['avatar_url']}" style="width:36px; height:36px; border-radius:50%; border:1px solid #7C6CFF;" />
                     <div>
-                        <div style="font-weight:600; color:#fff; font-size:13px;">{html.escape(u['name'])}</div>
-                        <div style="font-size:11px; color:#A1A1AA;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
+                        <div style="font-weight:600; color:#EDEDF2; font-size:13px;">{html.escape(u['name'])}</div>
+                        <div style="font-size:11px; color:#8A8A99;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -616,9 +792,9 @@ with nav_col3:
                 st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
                 st.button("🚪 Sign Out", key="btn_signout", on_click=logout_github, use_container_width=True)
         else:
-            with st.popover("🐙 Sign in", use_container_width=True):
-                st.markdown("<div style='font-weight:600; font-size:12.5px; margin-bottom:3px;'>GitHub Identity</div>", unsafe_allow_html=True)
-                st.caption("Link username to bind licenses.")
+            with st.popover("🐙 GitHub Sign In", use_container_width=True):
+                st.markdown("<div style='font-weight:600; font-size:12.5px; margin-bottom:3px; color:#EDEDF2;'>GitHub Identity</div>", unsafe_allow_html=True)
+                st.caption("Link username to bind offline cryptographic licenses.")
                 st.text_input("Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
                 st.text_input("Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
                 c_in1, c_in2 = st.columns(2)
@@ -635,20 +811,36 @@ with nav_col3:
         </div>
         """, unsafe_allow_html=True)
 
-st.markdown("<div style='border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin: 6px 0 12px 0;'></div>", unsafe_allow_html=True)
-
 SQL_SAMPLE = '''import sqlite3
 
 def find_user(username):
     conn = sqlite3.connect("database.db")
     cursor = conn.cursor()
-    # Vulnerable SQL Injection
-    cursor.execute(f"SELECT * FROM users WHERE name = '{username}'")
+    # Vulnerable SQL Injection (CWE-89)
+    query = f"SELECT * FROM users WHERE name = '{username}'"
+    cursor.execute(query)
     return cursor.fetchall()
 '''
 
 # ================= TAB 1: GOLDEN RATIO CODE INSPECTOR =================
 if active_tab == "Inspector":
+    # Hero Positioning & Trust Bar
+    st.markdown("""
+    <div class="hero-container">
+        <div class="hero-heading">Catch secrets & SQL injection before they ship.</div>
+        <div class="hero-lead">Deterministic intra-procedural AST taint analyzer with 1-click surgical auto-patching. Zero false positives.</div>
+        <div class="trust-strip">
+            <span><span class="trust-dot"></span> Zero Data Retention</span>
+            <span class="trust-sep">·</span>
+            <span>⚡ 100% Offline AST Engine</span>
+            <span class="trust-sep">·</span>
+            <span>🛡️ 1-Click Surgical Remediations</span>
+            <span class="trust-sep">·</span>
+            <a href="https://github.com/rajrajak99/kavach-ai" target="_blank" class="trust-link">★ Star on GitHub</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     col_editor, col_result = st.columns([1.45, 1.0], gap="medium")
 
     # RUN ANALYSIS (CACHED)
@@ -664,17 +856,17 @@ if active_tab == "Inspector":
     # LEFT COLUMN: 60% CODE EDITOR
     with col_editor:
         # IDE Header Bar
-        tb_col1, tb_col2, tb_col3 = st.columns([1.0, 1.7, 1.3], gap="small", vertical_alignment="center")
+        tb_col1, tb_col2, tb_col3 = st.columns([1.1, 2.0, 1.2], gap="small", vertical_alignment="center")
         with tb_col1:
             st.markdown("""
             <div class="ide-tab-label">
                 <span class="ide-dot"></span>
-                <span>demo.py</span>
+                <span style="font-weight:600; color:#EDEDF2;">demo.py</span>
                 <span class="ide-meta">UTF-8</span>
             </div>
             """, unsafe_allow_html=True)
         with tb_col2:
-            q1, q2, q3 = st.columns([1.0, 1.2, 0.8], gap="small")
+            q1, q2, q3 = st.columns([1.1, 1.0, 0.9], gap="small")
             with q1:
                 st.button("🔑 Secrets", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), key="btn_sec", use_container_width=True)
             with q2:
@@ -689,29 +881,35 @@ if active_tab == "Inspector":
             key="user_code",
             height=440,
             label_visibility="collapsed",
-            placeholder="// Paste code here or click Secrets / SQLi above to inspect..."
+            placeholder="// Paste code here or select Secrets / SQLi above to inspect..."
         )
 
     # RIGHT COLUMN: 40% DIAGNOSTIC INSPECTOR
     with col_result:
-        # Diagnostic Header Bar
-        r_head1, r_head2 = st.columns([1.2, 1.8], gap="small", vertical_alignment="center")
+        # Diagnostic Header Bar with generous width to prevent text wrapping
+        r_head1, r_head2 = st.columns([2.0, 1.0], gap="small", vertical_alignment="center")
         with r_head1:
-            status_text = "Awaiting Scan" if not current_code else ("Clean" if not findings else f"{len(findings)} Issue(s)")
+            if not current_code:
+                status_text = "Awaiting Scan"
+            elif not findings:
+                status_text = "Clean (0 Issues)"
+            else:
+                status_text = f"{len(findings)} Issue(s) Detected"
+
             st.markdown(f"""
             <div class="ide-tab-label">
-                <span>Diagnostics</span>
+                <span style="font-weight:600; color:#EDEDF2;">Diagnostics</span>
                 <span class="ide-meta">• {status_text}</span>
             </div>
             """, unsafe_allow_html=True)
         with r_head2:
             if findings:
-                crit_badge = f'<span style="color:#F87171; font-weight:600;">{metrics["critical"]} Crit</span>'
-                sec_badge = f'<span style="color:#FBBF24; font-weight:600;">{metrics["security"]} Sec</span>'
-                perf_badge = f'<span style="color:#60A5FA; font-weight:600;">{metrics["performance"]} Perf</span>'
-                st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:6px;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
+                crit_badge = f'<span style="color:#FF5C6C; font-weight:600;">{metrics["critical"]} Crit</span>'
+                sec_badge = f'<span style="color:#FFB454; font-weight:600;">{metrics["security"]} Sec</span>'
+                perf_badge = f'<span style="color:#7C6CFF; font-weight:600;">{metrics["performance"]} Perf</span>'
+                st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='text-align:right; font-size:11.5px; color:#71717A; font-family:\"JetBrains Mono\"; padding-top:6px;'>Zero Noise</div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:right; font-size:11.5px; color:#8A8A99; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Zero Noise</div>", unsafe_allow_html=True)
 
         # 440px Matched Height Container
         with st.container(height=440):
@@ -730,30 +928,39 @@ if active_tab == "Inspector":
                         <div class="term-line muted">Taint Flow: active (Intra-procedural tracking)</div>
                         <div class="term-line muted">Constant Folding: active (CWE-798 resolver)</div>
                         <div class="term-line success">✓ Engine idle. Ready when your code is.</div>
-                        <div class="term-line info">ℹ Select 'Secrets' or 'SQLi' above to test.</div>
+                        <div class="term-line info">ℹ Select 'Secrets' or 'SQLi' above to run live AST analysis.</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             elif not findings:
                 st.markdown("""
                 <div class="diag-banner diag-clean">
-                    <span>🟢</span>
-                    <div><b>CLEAN - READY TO MERGE</b><br><span style="font-size:11.5px;">Zero security vulnerabilities or resource leaks detected in this code.</span></div>
+                    <span style="font-size:16px;">✓</span>
+                    <div>
+                        <div style="font-weight:600; font-size:12.5px;">ALL CHECKS PASSED — READY TO MERGE</div>
+                        <div style="font-size:11.5px; opacity:0.85;">Zero security vulnerabilities or resource leaks detected in this code.</div>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 if metrics['critical'] > 0:
                     st.markdown(f"""
                     <div class="diag-banner diag-blocked">
-                        <span>🔴</span>
-                        <div><b>MERGE BLOCKED</b> • {metrics['critical']} Critical Exploit(s) Detected</div>
+                        <span style="font-size:16px;">✕</span>
+                        <div>
+                            <div style="font-weight:600; font-size:12.5px;">MERGE BLOCKED • {metrics['critical']} Critical Exploit(s)</div>
+                            <div style="font-size:11.5px; opacity:0.85;">High-risk attack vectors identified. Apply surgical patches below.</div>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown(f"""
                     <div class="diag-banner diag-warning">
-                        <span>🟠</span>
-                        <div><b>SECURITY WARNING</b> • {metrics['security']} Vulnerability/Leak(s) Detected</div>
+                        <span style="font-size:16px;">⚠</span>
+                        <div>
+                            <div style="font-weight:600; font-size:12.5px;">SECURITY AUDIT • {metrics['security']} Warning(s)</div>
+                            <div style="font-size:11.5px; opacity:0.85;">Vulnerabilities or resource leaks flagged for review.</div>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -761,15 +968,17 @@ if active_tab == "Inspector":
                     cat_safe = html.escape(f.category)
                     exp_safe = html.escape(f.explanation)
                     cwe_safe = html.escape(f.cwe_id or "CWE-General")
+                    is_crit = (f.severity.upper() == "CRITICAL")
+                    sev_color = "#FF5C6C" if is_crit else ("#FFB454" if f.severity.upper() == "WARNING" else "#7C6CFF")
 
                     with st.expander(f"L{f.line_number} [{f.severity}] {cat_safe} • {cwe_safe}", expanded=(i <= 2)):
-                        st.markdown(f"<div style='font-size:12px; color:#A1A1AA; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='font-size:12px; color:#C7C7D1; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
                         c_sub1, c_sub2 = st.columns(2)
                         with c_sub1:
-                            st.caption("❌ Current:")
+                            st.caption("❌ Current Problem Code:")
                             st.code(f.problem_code, language=f.language)
                         with c_sub2:
-                            st.caption("✅ Patch:")
+                            st.caption("✅ Surgical 1-Click Patch:")
                             st.code(f.fixed_code, language=f.language)
 
                         st.button(
@@ -787,27 +996,47 @@ elif active_tab == "Pricing":
     is_pro = (st.session_state.license_tier == PlanTier.DEVELOPER_PRO.value)
     is_team = (st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value)
 
-    p1, p2, p3 = st.columns(3)
+    # Header & Billing Toggle
+    st.markdown("""
+    <div class="pricing-header-wrap">
+        <div class="pricing-headline">Predictable pricing for developers and teams.</div>
+        <div class="pricing-subhead">Start free for open source. Upgrade when you need private repo coverage and CI gates.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    b_col1, b_col2, b_col3 = st.columns([1.5, 1.2, 1.5], gap="small", vertical_alignment="center")
+    with b_col2:
+        billing_cycle = st.segmented_control(
+            "Billing Cycle",
+            ["Annual (Save 50%)", "Monthly"],
+            default="Annual (Save 50%)",
+            label_visibility="collapsed",
+            key="pricing_billing_toggle"
+        ) or "Annual (Save 50%)"
+
+    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
+
+    p1, p2, p3 = st.columns(3, gap="medium")
 
     # 1. COMMUNITY ($0)
     with p1:
         st.markdown("""
         <div class="pricing-card">
-            <div class="card-tier-title" style="color:#34D399;">Community</div>
+            <div class="card-tier-title">Community</div>
             <div class="card-tier-amt">$0</div>
-            <div class="card-tier-sub">Forever free for public repositories</div>
+            <div class="card-tier-sub">Forever free for public open-source repos</div>
             <div class="card-features-list">
                 ✓ <b>Unlimited public repositories</b><br>
                 ✓ High-speed offline AST scanning<br>
                 ✓ Local CLI execution (<code>kavach .</code>)<br>
                 ✓ Free for students & open source<br>
-                ✓ Zero data retention
+                ✓ Zero code telemetry or data retention
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "Active Plan" if is_free else "Use Free Plan ($0)",
+            "Active Plan" if is_free else "Use Free Community",
             key="btn_activate_free",
             disabled=is_free,
             on_click=select_plan,
@@ -815,88 +1044,115 @@ elif active_tab == "Pricing":
             use_container_width=True
         )
 
-    # 2. DEVELOPER PRO ($1)
+    # 2. DEVELOPER PRO ($1/mo or $2/mo)
     with p2:
-        st.markdown("""
-        <div class="pricing-card pricing-card-popular">
-            <div class="popular-pill">Most Popular</div>
-            <div class="card-tier-title" style="color:#FAFAFA;">Developer Pro</div>
-            <div class="card-tier-amt">$1<span style="font-size:14px; color:#71717A;">/mo</span></div>
-            <div class="card-tier-sub">$12 billed annually • Independent devs</div>
+        if billing_cycle == "Monthly":
+            pro_price = "$2"
+            pro_sub = "$2 billed monthly • Independent devs"
+        else:
+            pro_price = "$1"
+            pro_sub = "$12 billed annually (Save 50%) • Independent devs"
+
+        st.markdown(f"""
+        <div class="pricing-card pricing-card-featured">
+            <div class="popular-badge">Most Popular</div>
+            <div class="card-tier-title">Developer Pro</div>
+            <div class="card-tier-amt">{pro_price}<span style="font-size:15px; color:#8A8A99; font-weight:500;">/mo</span></div>
+            <div class="card-tier-sub">{pro_sub}</div>
             <div class="card-features-list">
                 ✓ <b>Up to 5 personal private repos</b><br>
-                ✓ Cryptographic signed token verification<br>
+                ✓ Cryptographic Ed25519 token verification<br>
                 ✓ 1-click surgical auto-remediations<br>
                 ✓ Local Git pre-commit hooks<br>
-                ✓ Priority email updates
+                ✓ Priority email updates & patches
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "Active Plan" if is_pro else "Select Developer Pro ($1)",
+            "Active Plan" if is_pro else f"Select Developer Pro ({pro_price}/mo)",
             key="btn_activate_pro",
             disabled=is_pro,
             type="primary" if not is_pro else "secondary",
             on_click=select_plan,
-            args=(PlanTier.DEVELOPER_PRO.value, "Developer Pro ($1/mo)"),
+            args=(PlanTier.DEVELOPER_PRO.value, f"Developer Pro ({pro_price}/mo)"),
             use_container_width=True
         )
 
-    # 3. TEAM ENTERPRISE ($99)
+    # 3. TEAM ENTERPRISE ($99/mo or $119/mo)
     with p3:
-        st.markdown("""
+        if billing_cycle == "Monthly":
+            team_price = "$119"
+            team_sub = "$119 billed monthly • Startups & Orgs"
+        else:
+            team_price = "$99"
+            team_sub = "$1,188 billed annually (Save 17%) • Startups & Orgs"
+
+        st.markdown(f"""
         <div class="pricing-card">
-            <div class="card-tier-title" style="color:#FBBF24;">Team Enterprise</div>
-            <div class="card-tier-amt">$99<span style="font-size:14px; color:#71717A;">/mo</span></div>
-            <div class="card-tier-sub">For startups & GitHub Organizations</div>
+            <div class="card-tier-title">Team Enterprise</div>
+            <div class="card-tier-amt">{team_price}<span style="font-size:15px; color:#8A8A99; font-weight:500;">/mo</span></div>
+            <div class="card-tier-sub">{team_sub}</div>
             <div class="card-features-list">
                 ✓ <b>GitHub Organizations support</b><br>
                 ✓ <b>Unlimited team repositories</b><br>
-                ✓ Autonomous PR review bot & blocker<br>
-                ✓ Pytest self-healing engine<br>
-                ✓ SLA support & custom rules
+                ✓ Autonomous PR review bot & merge blocker<br>
+                ✓ Pytest self-healing engine integration<br>
+                ✓ SLA support & custom AST rule sets
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "Active Plan" if is_team else "Select Team Enterprise ($99)",
+            "Active Plan" if is_team else f"Select Team Enterprise ({team_price}/mo)",
             key="btn_activate_team",
             disabled=is_team,
             on_click=select_plan,
-            args=(PlanTier.TEAM_ENTERPRISE.value, "Team Enterprise ($99/mo)"),
+            args=(PlanTier.TEAM_ENTERPRISE.value, f"Team Enterprise ({team_price}/mo)"),
             use_container_width=True
         )
 
     # LICENSE ACTIVATION STRIP
-    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-    lk_col1, lk_col2, lk_col3 = st.columns([2, 1.8, 1])
-    with lk_col1:
-        st.markdown("""
-        <div style="padding-top:4px;">
-            <div style="font-size:13.5px; font-weight:600; color:#FAFAFA;">🔑 Activate Customer License Key</div>
-            <div style="font-size:11.5px; color:#71717A;">Supports LemonSqueezy license keys or offline signed Ed25519 tokens.</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with lk_col2:
-        st.text_input("License Key:", key="custom_key_input", placeholder="LemonSqueezy UUID or KAVACH-PRO-... token", label_visibility="collapsed")
-    with lk_col3:
-        st.button("Activate Key", key="btn_activate_key", type="primary", on_click=activate_custom_key, use_container_width=True)
+    st.markdown("<div style='margin-top:22px;'></div>", unsafe_allow_html=True)
+    with st.container():
+        lk_col1, lk_col2, lk_col3 = st.columns([2.1, 1.8, 1.0], gap="medium", vertical_alignment="center")
+        with lk_col1:
+            st.markdown("""
+            <div>
+                <div style="font-size:14px; font-weight:600; color:#EDEDF2;">🔑 Activate Customer License Key</div>
+                <div style="font-size:12px; color:#8A8A99;">Supports LemonSqueezy license UUIDs or offline signed Ed25519 tokens.</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with lk_col2:
+            st.text_input(
+                "License Key:",
+                key="custom_key_input",
+                placeholder="LemonSqueezy UUID or KAVACH-PRO-... token",
+                label_visibility="collapsed"
+            )
+        with lk_col3:
+            st.button(
+                "Activate Key",
+                key="btn_activate_key",
+                type="primary",
+                on_click=activate_custom_key,
+                use_container_width=True
+            )
 
-    if st.session_state.get("key_feedback"):
-        status, msg = st.session_state.key_feedback
-        if status == "success":
-            st.success(msg)
-        else:
-            st.error(msg)
+        # Only display error/success banner if the user explicitly performed an activation action
+        if st.session_state.get("key_feedback"):
+            status, msg = st.session_state.key_feedback
+            if status == "success":
+                st.markdown(f'<div class="alert-success">✓ {html.escape(msg)}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="alert-error">✕ {html.escape(msg)}</div>', unsafe_allow_html=True)
 
 # ================= TAB 3: GITHUB SETUP =================
 elif active_tab == "GitHub":
     st.markdown("""
-    <div style="margin-bottom:12px;">
-        <div style="font-size:14px; font-weight:600; color:#FAFAFA;">1-Minute GitHub Actions Security Gate</div>
-        <div style="font-size:12px; color:#71717A;">Block vulnerable pull requests before they reach your production branch.</div>
+    <div style="margin-bottom:14px;">
+        <div style="font-size:18px; font-weight:700; color:#EDEDF2; letter-spacing:-0.02em;">1-Minute GitHub Actions Security Gate</div>
+        <div style="font-size:13px; color:#8A8A99;">Block vulnerable pull requests before they reach your production branch.</div>
     </div>
     """, unsafe_allow_html=True)
 
