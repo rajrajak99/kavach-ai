@@ -3,7 +3,7 @@ import os
 import ast
 import json
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Tuple, Set
 
 from .diff_parser import ParsedFileDiff, DiffHunk
 from .patch_validator import PatchValidator
@@ -111,6 +111,200 @@ class SurgicalAnalyzer:
             return "javascript"
         return "python"
 
+    def _resolve_string(self, node: ast.AST, symbol_table: Dict[str, str], depth: int = 0) -> Optional[str]:
+        if depth > 10:
+            return None
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.Name):
+            return symbol_table.get(node.id)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            left = self._resolve_string(node.left, symbol_table, depth + 1)
+            right = self._resolve_string(node.right, symbol_table, depth + 1)
+            if left is not None and right is not None:
+                return left + right
+        return None
+
+    def _prescan_finally_closes(self, tree: ast.AST) -> Set[str]:
+        safely_closed: Set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Try):
+                for stmt in node.finalbody:
+                    for subnode in ast.walk(stmt):
+                        if isinstance(subnode, ast.Call) and isinstance(subnode.func, ast.Attribute):
+                            if subnode.func.attr == "close" and isinstance(subnode.func.value, ast.Name):
+                                safely_closed.add(subnode.func.value.id)
+        return safely_closed
+
+    def _analyze_python_ast(
+        self,
+        full_code: str,
+        lines_by_num: Dict[int, str],
+        changed_line_nums: Set[int]
+    ) -> Tuple[List[PatchFinding], Set[str]]:
+        ast_findings: List[PatchFinding] = []
+        safely_closed_handles: Set[str] = set()
+
+        try:
+            tree = ast.parse(full_code)
+        except Exception:
+            return ast_findings, safely_closed_handles
+
+        safely_closed_handles = self._prescan_finally_closes(tree)
+        symbol_table: Dict[str, str] = {}
+        tainted_sql_vars: Dict[str, Tuple[int, Any, str]] = {}
+
+        for node in ast.walk(tree):
+            # 1. Track String Constants & Obfuscated Secrets
+            if isinstance(node, ast.Assign):
+                target_name = None
+                for t in node.targets:
+                    if isinstance(t, ast.Name):
+                        target_name = t.id
+                        break
+
+                if target_name:
+                    resolved = self._resolve_string(node.value, symbol_table)
+                    if resolved is not None:
+                        symbol_table[target_name] = resolved
+
+                        # Feature 2: Obfuscated / Split Secret Detection (CWE-798)
+                        if isinstance(node.value, (ast.BinOp, ast.Name)) and node.lineno in changed_line_nums:
+                            is_secret = False
+                            sec_label = ""
+                            if re.search(r'ghp_[a-zA-Z0-9]{30,45}', resolved):
+                                is_secret = True
+                                sec_label = "Obfuscated GitHub Token via String Concatenation"
+                            elif re.search(r'sk-[a-zA-Z0-9]{32,48}', resolved) and not resolved.startswith("sk-0000"):
+                                is_secret = True
+                                sec_label = "Obfuscated API Secret Key via String Concatenation"
+                            elif re.search(r'AKIA[0-9A-Z]{16}', resolved):
+                                is_secret = True
+                                sec_label = "Obfuscated AWS Access Key via String Concatenation"
+
+                            if is_secret:
+                                line_str = lines_by_num.get(node.lineno, f"{target_name} = ...")
+                                indent = len(line_str) - len(line_str.lstrip())
+                                indent_str = " " * indent
+                                fixed = f'{indent_str}{target_name} = os.environ.get("{target_name.upper()}", "")'
+                                ast_findings.append(PatchFinding(
+                                    severity="CRITICAL",
+                                    category=sec_label,
+                                    line_number=node.lineno,
+                                    problem_code=line_str.strip(),
+                                    fixed_code=fixed.strip(),
+                                    explanation=f"Secret token dynamically assembled via string concatenation in variable '{target_name}'. Exposes credentials in memory.",
+                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                    cwe_id="CWE-798",
+                                    language="python"
+                                ))
+
+                    # Feature 1: Mark Tainted SQL Query Variables
+                    is_tainted_sql = False
+                    if isinstance(node.value, ast.JoinedStr):
+                        raw_text = "".join([c.value for c in node.value.values if isinstance(c, ast.Constant)])
+                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', raw_text):
+                            if any(isinstance(v, ast.FormattedValue) for v in node.value.values):
+                                is_tainted_sql = True
+                    elif isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Add):
+                        concat_str = self._resolve_string(node.value.left, symbol_table) or ""
+                        if not concat_str and isinstance(node.value.left, ast.Constant):
+                            concat_str = str(node.value.left.value)
+                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', concat_str):
+                            is_tainted_sql = True
+                    elif isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mod):
+                        mod_str = self._resolve_string(node.value.left, symbol_table) or ""
+                        if not mod_str and isinstance(node.value.left, ast.Constant):
+                            mod_str = str(node.value.left.value)
+                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', mod_str):
+                            is_tainted_sql = True
+                    elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "format":
+                        fmt_str = self._resolve_string(node.value.func.value, symbol_table) or ""
+                        if not fmt_str and isinstance(node.value.func.value, ast.Constant):
+                            fmt_str = str(node.value.func.value.value)
+                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', fmt_str):
+                            is_tainted_sql = True
+
+                    if is_tainted_sql:
+                        tainted_sql_vars[target_name] = (node.lineno, node.value, target_name)
+
+            # 2. Function Calls: Env Fallbacks & Tainted SQL Sinks
+            elif isinstance(node, ast.Call):
+                # Feature 3: Environment Variable Fallback Secret Inspection
+                is_env_get = False
+                if isinstance(node.func, ast.Attribute) and node.func.attr == "get":
+                    if isinstance(node.func.value, ast.Attribute) and node.func.value.attr == "environ":
+                        is_env_get = True
+                    elif isinstance(node.func.value, ast.Name) and node.func.value.id in ("environ", "os"):
+                        is_env_get = True
+                elif isinstance(node.func, ast.Attribute) and node.func.attr == "getenv":
+                    is_env_get = True
+
+                if is_env_get and node.lineno in changed_line_nums:
+                    default_node = None
+                    if len(node.args) >= 2:
+                        default_node = node.args[1]
+                    else:
+                        for kw in node.keywords:
+                            if kw.arg == "default":
+                                default_node = kw.value
+                                break
+
+                    if default_node:
+                        fallback_val = self._resolve_string(default_node, symbol_table)
+                        if fallback_val:
+                            is_secret_fallback = False
+                            if re.search(r'sk-[a-zA-Z0-9]{32,48}', fallback_val) and not fallback_val.startswith("sk-0000"):
+                                is_secret_fallback = True
+                            elif re.search(r'ghp_[a-zA-Z0-9]{30,45}', fallback_val):
+                                is_secret_fallback = True
+                            elif re.search(r'AKIA[0-9A-Z]{16}', fallback_val):
+                                is_secret_fallback = True
+
+                            if is_secret_fallback:
+                                line_str = lines_by_num.get(node.lineno, "os.environ.get(...)")
+                                indent = len(line_str) - len(line_str.lstrip())
+                                indent_str = " " * indent
+                                key_name = "TOKEN"
+                                if node.args and isinstance(node.args[0], ast.Constant):
+                                    key_name = str(node.args[0].value)
+                                fixed = f'{indent_str}os.environ.get("{key_name}")  # Removed hardcoded secret fallback'
+                                ast_findings.append(PatchFinding(
+                                    severity="CRITICAL",
+                                    category="Hardcoded Secret in Environment Variable Fallback",
+                                    line_number=node.lineno,
+                                    problem_code=line_str.strip(),
+                                    fixed_code=fixed.strip(),
+                                    explanation="Hardcoded secret provided as fallback in os.environ.get(). If the environment variable is unset, the app silently uses the exposed credential.",
+                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                    cwe_id="CWE-798",
+                                    language="python"
+                                ))
+
+                # Feature 1: Indirect / Variable-Aliased SQL Injection Sink
+                if isinstance(node.func, ast.Attribute) and node.func.attr in ("execute", "executemany"):
+                    if node.args and node.lineno in changed_line_nums:
+                        arg0 = node.args[0]
+                        if isinstance(arg0, ast.Name) and arg0.id in tainted_sql_vars:
+                            orig_line, _, var_name = tainted_sql_vars[arg0.id]
+                            line_str = lines_by_num.get(node.lineno, f"cursor.execute({var_name})")
+                            indent = len(line_str) - len(line_str.lstrip())
+                            indent_str = " " * indent
+                            fixed = f'{indent_str}# Safe Parameterized Query (Prevents Indirect SQL Injection)\n{indent_str}cursor.execute("SELECT ... WHERE param = ?", (param_value,))'
+                            ast_findings.append(PatchFinding(
+                                severity="CRITICAL",
+                                category="Variable-Aliased Indirect SQL Injection (Taint Flow)",
+                                line_number=node.lineno,
+                                problem_code=line_str.strip(),
+                                fixed_code=fixed.strip(),
+                                explanation=f"Tainted SQL query constructed dynamically in '{var_name}' at line {orig_line} is passed into execute() without parameterization.",
+                                github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                cwe_id="CWE-89",
+                                language="python"
+                            ))
+
+        return ast_findings, safely_closed_handles
+
     def analyze_file_diff(self, file_diff: ParsedFileDiff) -> List[PatchFinding]:
         findings: List[PatchFinding] = []
         if file_diff.is_noise:
@@ -119,6 +313,26 @@ class SurgicalAnalyzer:
         # Detect language
         sample_snippet = " ".join([cl.content for h in file_diff.hunks for cl in h.lines[:20]])
         lang = self.detect_language(file_diff.filename_new or file_diff.filename_old, sample_snippet)
+
+        lines_by_num: Dict[int, str] = {}
+        changed_line_nums: Set[int] = set()
+        for hunk in file_diff.hunks:
+            for cl in hunk.lines:
+                if cl.line_number_new:
+                    lines_by_num[cl.line_number_new] = cl.content
+                    if cl.line_type == '+':
+                        changed_line_nums.add(cl.line_number_new)
+
+        safely_closed_handles: Set[str] = set()
+        ast_flagged_lines: Set[int] = set()
+
+        if lang == "python":
+            max_ln = max(lines_by_num.keys()) if lines_by_num else 0
+            full_code = "\n".join([lines_by_num.get(i, "") for i in range(1, max_ln + 1)])
+            ast_findings, safely_closed_handles = self._analyze_python_ast(full_code, lines_by_num, changed_line_nums)
+            findings.extend(ast_findings)
+            for af in ast_findings:
+                ast_flagged_lines.add(af.line_number)
 
         for hunk in file_diff.hunks:
             for changed_line in hunk.lines:
@@ -286,48 +500,50 @@ class SurgicalAnalyzer:
                 # ==================== PYTHON RULES ====================
                 else:
                     # 1. Py Secrets
-                    for pat, label, cwe in self.PY_SECRET_PATTERNS:
-                        if re.search(pat, line_str):
-                            fixed = re.sub(
-                                r'\s*=\s*[\"\'][^\"\'\s]+[\"\']',
-                                ' = os.environ.get("SECRET_KEY", "")',
-                                line_str
-                            )
-                            findings.append(PatchFinding(
-                                severity="SECURITY",
-                                category=label,
-                                line_number=line_num,
-                                problem_code=line_str.strip(),
-                                fixed_code=fixed.strip(),
-                                explanation="Hardcoded credential detected. Exposing secrets in source control risks unauthorized access. Retrieve securely from environment variables.",
-                                github_suggestion_block=f"```suggestion\n{fixed}\n```",
-                                cwe_id=cwe,
-                                language="python"
-                            ))
-                            break
+                    if not ("sk-00000000" in line_str or "00000000000000000000" in line_str or line_num in ast_flagged_lines):
+                        for pat, label, cwe in self.PY_SECRET_PATTERNS:
+                            if re.search(pat, line_str):
+                                fixed = re.sub(
+                                    r'\s*=\s*[\"\'][^\"\'\s]+[\"\']',
+                                    ' = os.environ.get("SECRET_KEY", "")',
+                                    line_str
+                                )
+                                findings.append(PatchFinding(
+                                    severity="SECURITY",
+                                    category=label,
+                                    line_number=line_num,
+                                    problem_code=line_str.strip(),
+                                    fixed_code=fixed.strip(),
+                                    explanation="Hardcoded credential detected. Exposing secrets in source control risks unauthorized access. Retrieve securely from environment variables.",
+                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                    cwe_id=cwe,
+                                    language="python"
+                                ))
+                                break
 
                     # 2. Py SQL Injection
-                    for pat, label, cwe in self.PY_SQLI_PATTERNS:
-                        if re.search(pat, line_str):
-                            f_m = re.search(r'execute\s*\(\s*f["\'](.*?)\{([a-zA-Z0-9_]+)\}(.*?)["\']\s*\)', line_str)
-                            if f_m:
-                                q_pre = f_m.group(1).rstrip("'\" ").strip().rstrip("=").strip()
-                                var_n = f_m.group(2).strip()
-                                fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
-                            else:
-                                fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = ?", (user_input,))'
-                            findings.append(PatchFinding(
-                                severity="SECURITY",
-                                category=label,
-                                line_number=line_num,
-                                problem_code=line_str.strip(),
-                                fixed_code=fixed.strip(),
-                                explanation="Raw string interpolation in SQL query permits malicious input execution. Use parameterized queries with tuples instead.",
-                                github_suggestion_block=f"```suggestion\n{fixed}\n```",
-                                cwe_id=cwe,
-                                language="python"
-                            ))
-                            break
+                    if line_num not in ast_flagged_lines:
+                        for pat, label, cwe in self.PY_SQLI_PATTERNS:
+                            if re.search(pat, line_str):
+                                f_m = re.search(r'execute\s*\(\s*f["\'](.*?)\{([a-zA-Z0-9_]+)\}(.*?)["\']\s*\)', line_str)
+                                if f_m:
+                                    q_pre = f_m.group(1).rstrip("'\" ").strip().rstrip("=").strip()
+                                    var_n = f_m.group(2).strip()
+                                    fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
+                                else:
+                                    fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = ?", (user_input,))'
+                                findings.append(PatchFinding(
+                                    severity="SECURITY",
+                                    category=label,
+                                    line_number=line_num,
+                                    problem_code=line_str.strip(),
+                                    fixed_code=fixed.strip(),
+                                    explanation="Raw string interpolation in SQL query permits malicious input execution. Use parameterized queries with tuples instead.",
+                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                    cwe_id=cwe,
+                                    language="python"
+                                ))
+                                break
 
                     # 3. Py Command Injection
                     for pat, label, cwe in self.PY_COMMAND_INJECTION_PATTERNS:
@@ -352,6 +568,9 @@ class SurgicalAnalyzer:
                             file_match = re.search(r'([a-zA-Z_]\w*)\s*=\s*open\s*\((.*?)\)', line_str)
                             if file_match:
                                 var_name = file_match.group(1)
+                                # Feature 4: Suppress false positive if closed in finally
+                                if var_name in safely_closed_handles:
+                                    continue
                                 args = file_match.group(2)
                                 fixed = f"{indent_str}with open({args}) as {var_name}:"
                             else:
@@ -371,13 +590,28 @@ class SurgicalAnalyzer:
 
                     # 5. Py Unchecked Zero Division
                     stripped = line_str.strip()
+                    if stripped.startswith('#') or stripped.startswith('//'):
+                        continue
+                    # Skip if / is inside a quoted string literal (e.g. key = "abc/def/ghi")
+                    if re.search(r'["\'][^"\']*/[^"\']*["\']', line_str):
+                        continue
                     denom_match = None
                     if re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str) and not re.search(r'if\s+.*?!=\s*0', line_str):
                         # Ensure not inside a string literal
-                        if not (stripped.startswith(('"', "'", 'r"', "r'", 'f"', "f'")) or stripped.endswith(('",', "',", '")'))):
+                        if not (stripped.startswith(('"', "'", 'r"', "r'", 'f"', "f'")) or stripped.endswith(('",', "',", '")', '"', "'"))):
                             denom_match = re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str)
                             denom = denom_match.group(1)
                             if denom not in ['2', '10', '100', '1000', 'len', 'total_count']:
+                                # Check preceding 3 lines for guard on denom
+                                is_guarded = False
+                                for back_idx in range(max(1, line_num - 3), line_num):
+                                    prev_line = lines_by_num.get(back_idx, "")
+                                    if re.search(rf'\b{denom}\s*(?:<=|<|==|!=)\s*0\b', prev_line) or re.search(rf'\bif\s+(?:not\s+{denom}|{denom}\s*>\s*0)\b', prev_line):
+                                        is_guarded = True
+                                        break
+                                if is_guarded:
+                                    continue
+
                                 fixed = f"{indent_str}safe_{denom} = {denom} if {denom} != 0 else 1e-7\n{indent_str}{line_str.strip().replace(f'/{denom}', f'/safe_{denom}')}"
                                 findings.append(PatchFinding(
                                     severity="CRITICAL",

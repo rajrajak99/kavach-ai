@@ -131,3 +131,80 @@ def test_license_manager_org_abuse_prevention(monkeypatch):
     is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key="KV-TEAM-ORG-99")
     assert is_auth is True
     assert tier == PlanTier.TEAM_ENTERPRISE
+
+def test_variable_aliased_sql_injection():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    code = """
+def search_users(role):
+    query_stmt = f"SELECT id, username FROM users WHERE role = '{role}'"
+    # Some intermediate logic
+    cursor.execute(query_stmt)
+"""
+    diff = parser.parse_raw_snippet("test_taint.py", code)
+    findings = analyzer.analyze_file_diff(diff)
+    categories = [f.category for f in findings]
+    assert any("Variable-Aliased Indirect SQL Injection" in c for c in categories)
+    taint_finding = next(f for f in findings if "Variable-Aliased" in f.category)
+    assert taint_finding.cwe_id == "CWE-89"
+    assert taint_finding.severity == "CRITICAL"
+    assert "query_stmt" in taint_finding.explanation
+
+def test_obfuscated_secret_constant_folding():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    code = """
+_part_a = "ghp_"
+_part_b = "1234567890abcdef1234567890abcdef"
+github_backup_pat = _part_a + _part_b
+"""
+    diff = parser.parse_raw_snippet("test_secrets.py", code)
+    findings = analyzer.analyze_file_diff(diff)
+    categories = [f.category for f in findings]
+    assert any("Obfuscated GitHub Token via String Concatenation" in c for c in categories)
+    secret_finding = next(f for f in findings if "Obfuscated" in f.category)
+    assert secret_finding.cwe_id == "CWE-798"
+    assert secret_finding.severity == "CRITICAL"
+
+def test_env_fallback_secret_inspection():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    code = """
+import os
+auth_token = os.environ.get("MASTER_TOKEN", "sk-99887766554433221100112233445566")
+"""
+    diff = parser.parse_raw_snippet("test_env.py", code)
+    findings = analyzer.analyze_file_diff(diff)
+    categories = [f.category for f in findings]
+    assert any("Hardcoded Secret in Environment Variable Fallback" in c for c in categories)
+    fallback_finding = next(f for f in findings if "Fallback" in f.category)
+    assert fallback_finding.cwe_id == "CWE-798"
+    assert fallback_finding.severity == "CRITICAL"
+
+def test_try_finally_file_close_no_false_positive():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    code = """
+def read_config(path):
+    f = open(path, "r")
+    try:
+        return f.read()
+    finally:
+        f.close()
+"""
+    diff = parser.parse_raw_snippet("test_leak.py", code)
+    findings = analyzer.analyze_file_diff(diff)
+    assert not any("Resource Leak" in f.category for f in findings)
+
+def test_unmanaged_file_leak_still_detected():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    code = """
+def dump_data(filename, payload):
+    fd = open(filename, "w")
+    fd.write(payload)
+"""
+    diff = parser.parse_raw_snippet("test_leak_real.py", code)
+    findings = analyzer.analyze_file_diff(diff)
+    assert any("Resource Leak" in f.category for f in findings)
+
