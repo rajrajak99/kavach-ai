@@ -45,8 +45,7 @@ def mint_license(tier: str, subject: str, days: int = 365) -> str:
     load_env_file()
     priv_hex = os.getenv("KAVACH_MASTER_SIGNING_KEY", "")
     if not priv_hex:
-        print("Error: KAVACH_MASTER_SIGNING_KEY not found in environment or .env")
-        sys.exit(1)
+        raise RuntimeError("KAVACH_MASTER_SIGNING_KEY not found in environment or .env")
 
     tier_clean = tier.strip().upper()
     if tier_clean in ["PRO", "DEVELOPER_PRO"]:

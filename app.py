@@ -132,18 +132,10 @@ def select_plan(tier_val: str, plan_name: str):
     user_handle = st.session_state.github_user['login'] if st.session_state.github_user else "local-builder"
     key_val = ""
     if tier_val == PlanTier.DEVELOPER_PRO.value:
-        try:
-            from scripts.mint_license import mint_license
-            key_val = mint_license(tier="pro", subject=user_handle, days=365)
-        except Exception:
-            key_val = "KV-PRO-INDIE"
+        key_val = f"KV-PRO-{user_handle.upper()}"
         st.session_state.is_pro_user = True
     elif tier_val == PlanTier.TEAM_ENTERPRISE.value:
-        try:
-            from scripts.mint_license import mint_license
-            key_val = mint_license(tier="team", subject=user_handle, days=365)
-        except Exception:
-            key_val = "KV-TEAM-ORG"
+        key_val = f"KV-TEAM-{user_handle.upper()}"
         st.session_state.is_pro_user = True
     else:
         key_val = ""
@@ -389,6 +381,28 @@ st.markdown("""
         background: #161620 !important;
         border-color: rgba(124, 108, 255, 0.4) !important;
         color: #FFFFFF !important;
+    }
+
+    /* Anti-Dimming: Prevent Streamlit from fading/dimming the app during interactions */
+    [data-stale="true"],
+    .stApp [data-stale="true"],
+    div[data-testid="stAppViewBlockContainer"] [data-stale="true"],
+    div[data-testid="stVerticalBlock"] [data-stale="true"],
+    div[data-testid="stAppViewContainer"] [data-stale="true"] {
+        opacity: 1 !important;
+        filter: none !important;
+        transition: none !important;
+    }
+
+    /* Active / Disabled Plan Button Styling (100% full opacity, crisp green checkmark) */
+    div[data-testid="stButton"] > button:disabled {
+        background: rgba(61, 220, 151, 0.08) !important;
+        color: #3DDC97 !important;
+        border: 1px solid rgba(61, 220, 151, 0.35) !important;
+        opacity: 1 !important;
+        font-weight: 600 !important;
+        cursor: default !important;
+        box-shadow: none !important;
     }
 
     /* GitHub Popover Button */
@@ -664,6 +678,10 @@ st.markdown("""
         background: radial-gradient(ellipse at top, rgba(124, 108, 255, 0.1) 0%, #0F0F14 70%);
         border: 1px solid #7C6CFF;
         box-shadow: 0 0 50px rgba(124, 108, 255, 0.16);
+    }
+    .pricing-card-active {
+        border-color: #3DDC97 !important;
+        box-shadow: 0 0 35px rgba(61, 220, 151, 0.15) !important;
     }
     .popular-badge {
         position: absolute;
@@ -1020,8 +1038,9 @@ elif active_tab == "Pricing":
 
     # 1. COMMUNITY ($0)
     with p1:
-        st.markdown("""
-        <div class="pricing-card">
+        free_active = "pricing-card-active" if is_free else ""
+        st.markdown(f"""
+        <div class="pricing-card {free_active}">
             <div class="card-tier-title">Community</div>
             <div class="card-tier-amt">$0</div>
             <div class="card-tier-sub">Forever free for public open-source repos</div>
@@ -1036,7 +1055,7 @@ elif active_tab == "Pricing":
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "Active Plan" if is_free else "Use Free Community",
+            "✓ Active Plan" if is_free else "Use Free Community",
             key="btn_activate_free",
             disabled=is_free,
             on_click=select_plan,
@@ -1053,8 +1072,9 @@ elif active_tab == "Pricing":
             pro_price = "$1"
             pro_sub = "$12 billed annually (Save 50%) • Independent devs"
 
+        pro_active = "pricing-card-active" if is_pro else ""
         st.markdown(f"""
-        <div class="pricing-card pricing-card-featured">
+        <div class="pricing-card pricing-card-featured {pro_active}">
             <div class="popular-badge">Most Popular</div>
             <div class="card-tier-title">Developer Pro</div>
             <div class="card-tier-amt">{pro_price}<span style="font-size:15px; color:#8A8A99; font-weight:500;">/mo</span></div>
@@ -1070,7 +1090,7 @@ elif active_tab == "Pricing":
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "Active Plan" if is_pro else f"Select Developer Pro ({pro_price}/mo)",
+            "✓ Active Plan" if is_pro else f"Select Developer Pro ({pro_price}/mo)",
             key="btn_activate_pro",
             disabled=is_pro,
             type="primary" if not is_pro else "secondary",
@@ -1088,8 +1108,9 @@ elif active_tab == "Pricing":
             team_price = "$99"
             team_sub = "$1,188 billed annually (Save 17%) • Startups & Orgs"
 
+        team_active = "pricing-card-active" if is_team else ""
         st.markdown(f"""
-        <div class="pricing-card">
+        <div class="pricing-card {team_active}">
             <div class="card-tier-title">Team Enterprise</div>
             <div class="card-tier-amt">{team_price}<span style="font-size:15px; color:#8A8A99; font-weight:500;">/mo</span></div>
             <div class="card-tier-sub">{team_sub}</div>
@@ -1104,7 +1125,7 @@ elif active_tab == "Pricing":
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "Active Plan" if is_team else f"Select Team Enterprise ({team_price}/mo)",
+            "✓ Active Plan" if is_team else f"Select Team Enterprise ({team_price}/mo)",
             key="btn_activate_team",
             disabled=is_team,
             on_click=select_plan,
