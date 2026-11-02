@@ -102,18 +102,61 @@ def run_user(cmd):
 
 def test_license_manager_tiers():
     from core.license_manager import LicenseManager, PlanTier
+    from scripts.mint_license import mint_license
     
-    assert LicenseManager.get_tier_for_key("BUILDER-DEV-1") == PlanTier.DEVELOPER_PRO
-    assert LicenseManager.get_tier_for_key("KV-TEAM-ORG-99") == PlanTier.TEAM_ENTERPRISE
+    # 1. Plaintext strings and forged tokens are strictly rejected
+    assert LicenseManager.get_tier_for_key("BUILDER-DEV-1") is None
+    assert LicenseManager.get_tier_for_key("KV-TEAM-ORG-99") is None
     assert LicenseManager.get_tier_for_key("INVALID-KEY-123") is None
+    assert LicenseManager.get_tier_for_key("KAVACH-PRO-forged.signature") is None
 
-    # Public repo defaults to free
+    # 2. Cryptographically signed authentic tokens are verified
+    pro_token = mint_license(tier="pro", subject="alice", days=30)
+    assert LicenseManager.get_tier_for_key(pro_token) == PlanTier.DEVELOPER_PRO
+
+    team_token = mint_license(tier="team", subject="acme_corp", days=30)
+    assert LicenseManager.get_tier_for_key(team_token) == PlanTier.TEAM_ENTERPRISE
+
+    # 3. Tampered payload or signature is strictly rejected
+    tampered = pro_token[:-5] + "AAAAA"
+    assert LicenseManager.get_tier_for_key(tampered) is None
+
+    # 4. Expired token is rejected
+    expired_token = mint_license(tier="pro", subject="alice", days=-10)
+    assert LicenseManager.get_tier_for_key(expired_token) is None
+
+    # 5. Public repo defaults to free
     is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key=None)
     assert is_auth is True
     assert tier == PlanTier.FREE
 
+def test_license_manager_lemonsqueezy_validation(monkeypatch):
+    from core.license_manager import LicenseManager, PlanTier
+    import requests
+
+    class MockResponse:
+        def __init__(self, status_code, data):
+            self.status_code = status_code
+            self._data = data
+        def json(self):
+            return self._data
+
+    # Mock LemonSqueezy API response
+    def mock_post(url, *args, **kwargs):
+        if "lemonsqueezy" in url:
+            return MockResponse(200, {
+                "valid": True,
+                "meta": {"variant_name": "Developer Pro ($12/yr)"}
+            })
+        return MockResponse(404, {})
+
+    monkeypatch.setattr(requests, "post", mock_post)
+    tier = LicenseManager.verify_lemonsqueezy_key("45f91753-4632-4fb3-a9d2-3112a6470377")
+    assert tier == PlanTier.DEVELOPER_PRO
+
 def test_license_manager_org_abuse_prevention(monkeypatch):
     from core.license_manager import LicenseManager, PlanTier
+    from scripts.mint_license import mint_license
     
     # Mock GitHub Organization context
     monkeypatch.setattr(
@@ -122,13 +165,16 @@ def test_license_manager_org_abuse_prevention(monkeypatch):
         lambda: {"is_ci": True, "repository": "bigcorp/api", "owner": "bigcorp", "visibility": "private", "owner_type": "Organization"}
     )
 
-    # 1. Developer Pro ($1) key should be REJECTED for an Organization
-    is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key="BUILDER-DEV-1")
+    pro_token = mint_license(tier="pro", subject="developer", days=30)
+    team_token = mint_license(tier="team", subject="bigcorp", days=30)
+
+    # 1. Developer Pro token should be REJECTED for an Organization
+    is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key=pro_token)
     assert is_auth is False
     assert "Organization detected" in msg
 
-    # 2. Team Enterprise ($99) key should be ACCEPTED for an Organization
-    is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key="KV-TEAM-ORG-99")
+    # 2. Team Enterprise token should be ACCEPTED for an Organization
+    is_auth, tier, msg = LicenseManager.validate_execution_policy(license_key=team_token)
     assert is_auth is True
     assert tier == PlanTier.TEAM_ENTERPRISE
 
@@ -219,6 +265,10 @@ def test_cli_license_gating(monkeypatch, tmp_path):
         lambda: {"is_ci": True, "repository": "mega-corp/core", "owner": "mega-corp", "visibility": "private", "owner_type": "Organization"}
     )
 
+    from scripts.mint_license import mint_license
+    pro_token = mint_license(tier="pro", subject="developer", days=30)
+    team_token = mint_license(tier="team", subject="mega-corp", days=30)
+
     test_file = tmp_path / "test.py"
     test_file.write_text("x = 1\n", encoding="utf-8")
 
@@ -227,10 +277,14 @@ def test_cli_license_gating(monkeypatch, tmp_path):
     assert code == 1
 
     # 2. Blocked with Developer Pro key in Org context
-    code = scan_path(str(test_file), as_json=True, license_key="BUILDER-DEV-1")
+    code = scan_path(str(test_file), as_json=True, license_key=pro_token)
     assert code == 1
 
-    # 3. Authorized with Team Enterprise key in Org context
+    # 3. Blocked with unverified/spoofed key
     code = scan_path(str(test_file), as_json=True, license_key="KV-TEAM-ORG-99")
+    assert code == 1
+
+    # 4. Authorized with Team Enterprise cryptographic key in Org context
+    code = scan_path(str(test_file), as_json=True, license_key=team_token)
     assert code == 0
 

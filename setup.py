@@ -13,10 +13,11 @@ setup(
     url="https://github.com/rajrajak99/kavach-ai",
     license="PolyForm-Noncommercial-1.0.0",
     packages=find_packages(include=["core*"]),
-    py_modules=["cli", "ci_bot"],
+    py_modules=["cli", "ci_bot", "kavach_license"],
     python_requires=">=3.9",
     install_requires=[
         "requests>=2.28.0",
+        "cryptography>=41.0.0",
     ],
     extras_require={
         "ui": ["streamlit>=1.35.0", "pandas>=2.0.0"],

@@ -2,7 +2,7 @@ import sys
 import os
 from pathlib import Path
 
-# Explicitly ensure repository root is at index 0 of sys.path (critical for Linux / Streamlit Cloud)
+# Explicitly ensure repository root is at index 0 of sys.path
 ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -16,7 +16,8 @@ import base64
 from core.diff_parser import DiffParser
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.ai_reasoner import AIReasoner
-from core.license_manager import LicenseManager, PlanTier
+from kavach_license import LicenseManager, PlanTier
+from scripts.mint_license import mint_license
 from samples.vulnerable_samples import SAMPLE_PYTHON_MULTI
 
 # ----------------- PAGE CONFIG -----------------
@@ -134,15 +135,25 @@ def logout_github():
     st.session_state.auth_error = None
     st.session_state.toast_msg = "Logged out of GitHub."
 
-# ----------------- INSTANT CALLBACKS (0ms LATENCY) -----------------
-def select_plan(tier_val: str, key_val: str, is_pro_val: bool, plan_name: str):
+# ----------------- CALLBACKS -----------------
+def select_plan(tier_val: str, plan_name: str):
+    user_handle = st.session_state.github_user['login'] if st.session_state.github_user else "local-builder"
+    if tier_val == PlanTier.DEVELOPER_PRO.value:
+        key_val = mint_license(tier="pro", subject=user_handle, days=365)
+        st.session_state.is_pro_user = True
+    elif tier_val == PlanTier.TEAM_ENTERPRISE.value:
+        key_val = mint_license(tier="team", subject=user_handle, days=365)
+        st.session_state.is_pro_user = True
+    else:
+        key_val = ""
+        st.session_state.is_pro_user = False
+
     st.session_state.license_tier = tier_val
     st.session_state.license_key = key_val
-    st.session_state.is_pro_user = is_pro_val
     st.session_state.toast_msg = f"🎉 {plan_name} Active!"
 
 def activate_custom_key():
-    key = st.session_state.get("custom_key_input", "").strip().upper()
+    key = st.session_state.get("custom_key_input", "").strip()
     if not key:
         st.session_state.key_feedback = ("error", "Please enter a license key.")
         return
@@ -152,9 +163,9 @@ def activate_custom_key():
         st.session_state.license_key = key
         st.session_state.is_pro_user = (tier != PlanTier.FREE)
         st.session_state.key_feedback = ("success", f"✅ Key Verified: {tier.value} Activated!")
-        st.session_state.toast_msg = f"✅ Activated: {tier.value}"
+        st.session_state.toast_msg = f"✅ Verified: {tier.value}"
     else:
-        st.session_state.key_feedback = ("error", "❌ Invalid Key! Demo keys: BUILDER-DEV-1 (Pro) or KV-TEAM-ORG-99 (Team)")
+        st.session_state.key_feedback = ("error", "❌ Invalid or expired key! Must be a signed Ed25519 token or LemonSqueezy license key.")
 
 def load_code_sample(code: str):
     st.session_state.user_code = code
@@ -183,613 +194,448 @@ def apply_patch_to_editor(problem_code: str, fixed_code: str):
             st.session_state.user_code = "\n".join(new_lines)
             st.session_state.toast_msg = "🪄 1-Click Patch Applied! Code is now secure."
 
-# Trigger toast notification if pending
 if st.session_state.get("toast_msg"):
     st.toast(st.session_state.toast_msg)
     st.session_state.toast_msg = None
 
-# ----------------- LUXURY MIDNIGHT CYBERSECURITY THEME (CSS) -----------------
+# ----------------- MONOCHROME ZINC SYSTEM & VERCEL/LINEAR CSS -----------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+    /* 1. Global Reset & Typography */
     html, body, [class*="css"] {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        color: #f0f6fc !important;
-        background-color: #07090e !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        color: #EDEDED !important;
+        background-color: #09090B !important;
     }
-
     .stApp {
-        background-color: #07090e !important;
+        background-color: #09090B !important;
     }
 
-    /* Top Navbar */
+    /* 2. Hide Streamlit Boilerplate Padding & Chrome */
+    #MainMenu { visibility: hidden !important; display: none !important; }
+    header[data-testid="stHeader"] { display: none !important; }
+    footer { visibility: hidden !important; display: none !important; }
+
+    .block-container {
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+        max-width: 1440px !important;
+    }
+
+    /* 3. Top Navbar (Single-Row Slim Container) */
     .brand-group {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-    }
-    .brand-logo-img {
-        width: 44px;
-        height: 44px;
-        border-radius: 10px;
-        object-fit: cover;
-        box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-        border: 1px solid rgba(0, 229, 255, 0.45);
-    }
-    .brand-title {
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: #ffffff;
-        letter-spacing: -0.02em;
         display: flex;
         align-items: center;
         gap: 10px;
     }
-    .brand-badge {
+    .brand-logo-img {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .brand-title {
+        font-size: 14.5px;
+        font-weight: 600;
+        color: #FAFAFA;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .brand-pill {
         font-size: 11px;
-        font-weight: 700;
-        color: #00e5ff;
-        background: rgba(0, 229, 255, 0.1);
-        border: 1px solid rgba(0, 229, 255, 0.28);
-        padding: 2px 8px;
-        border-radius: 20px;
+        font-weight: 500;
+        color: #A1A1AA;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1px 7px;
+        border-radius: 12px;
         font-family: 'JetBrains Mono', monospace;
     }
-    .brand-sub {
-        font-size: 12px;
-        color: #8b949e;
-        margin-top: 1px;
-    }
-
-    /* Badges */
     .plan-pill {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        letter-spacing: 0.02em;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-family: 'JetBrains Mono', monospace;
+        gap: 5px;
     }
     .pill-free {
-        background: rgba(16, 185, 129, 0.12);
-        color: #34d399;
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #A1A1AA;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .pill-pro {
-        background: rgba(0, 229, 255, 0.12);
-        color: #00e5ff;
-        border: 1px solid rgba(0, 229, 255, 0.35);
-        box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+        color: #FAFAFA;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.25);
     }
     .pill-team {
-        background: rgba(245, 158, 11, 0.12);
-        color: #fbbf24;
-        border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-    .mobile-only {
-        display: none !important;
-    }
-    .desktop-only {
-        display: inline !important;
+        color: #FBBF24;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.25);
     }
 
-    /* Hero Section */
-    .hero-box {
-        margin-bottom: 24px;
+    /* 4. Vercel / Linear Segmented Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        background: #121214 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 8px !important;
+        padding: 3px !important;
+        gap: 4px !important;
+        margin-bottom: 12px !important;
     }
-    .hero-tag {
-        display: inline-block;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #00e5ff;
-        background: rgba(0, 229, 255, 0.08);
-        border: 1px solid rgba(0, 229, 255, 0.2);
-        padding: 4px 10px;
-        border-radius: 6px;
-        margin-bottom: 8px;
+    .stTabs [data-baseweb="tab"] {
+        color: #A1A1AA !important;
+        border-radius: 6px !important;
+        padding: 5px 14px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        border: none !important;
+        background: transparent !important;
+        transition: all 0.15s ease !important;
     }
-    .hero-title {
-        font-size: 1.85rem;
-        font-weight: 800;
-        color: #ffffff;
-        letter-spacing: -0.03em;
-        line-height: 1.25;
-        margin-bottom: 6px;
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #EDEDED !important;
     }
-    .hero-desc {
-        font-size: 13.5px;
-        color: #8b949e;
-        line-height: 1.5;
-        max-width: 800px;
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: #27272A !important;
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
     }
-    .privacy-tag {
-        font-size: 11.5px;
-        color: #34d399;
-        background: rgba(16, 185, 129, 0.08);
-        border: 1px solid rgba(16, 185, 129, 0.2);
-        padding: 4px 10px;
-        border-radius: 6px;
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    .stTabs [data-baseweb="tab-border"] {
+        display: none !important;
+    }
+
+    /* 5. Linear Crisp High-Contrast Primary & Secondary Buttons */
+    div[data-testid="stButton"] > button[kind="primary"] {
+        background: #FAFAFA !important;
+        color: #09090B !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        height: 34px !important;
+        min-height: 34px !important;
+        padding: 0 14px !important;
+        border-radius: 6px !important;
+        border: none !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stButton"] > button[kind="primary"]:hover {
+        background: #E4E4E7 !important;
+        color: #09090B !important;
+    }
+    div[data-testid="stButton"] > button[kind="secondary"] {
+        background: #18181B !important;
+        color: #D4D4D8 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        font-size: 12px !important;
+        height: 34px !important;
+        min-height: 34px !important;
+        border-radius: 6px !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stButton"] > button[kind="secondary"]:hover {
+        background: #27272A !important;
+        color: #FFFFFF !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    /* Popover button */
+    div[data-testid="stPopover"] > button {
+        background: #18181B !important;
+        color: #D4D4D8 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        font-size: 12px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        border-radius: 6px !important;
+    }
+    div[data-testid="stPopover"] > button:hover {
+        background: #27272A !important;
+        color: #FFFFFF !important;
+    }
+
+    /* 6. IDE Code Editor Styling */
+    .ide-file-pill {
         display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        color: #D4D4D8;
+        background: #121214;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 5px 10px;
+        border-radius: 6px;
+    }
+    .ide-file-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #10B981;
+    }
+    .ide-file-meta {
+        color: #71717A;
+        font-size: 11px;
+    }
+
+    div[data-testid="stTextArea"] textarea {
+        background: #0C0D0F !important;
+        color: #E4E4E7 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 12.5px !important;
+        line-height: 1.55 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 8px !important;
+        padding: 12px 14px !important;
+    }
+    div[data-testid="stTextArea"] textarea:focus {
+        border-color: rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .ide-footer-note {
+        font-size: 11.5px;
+        color: #71717A;
+        margin-top: 6px;
+        display: flex;
         align-items: center;
         gap: 6px;
     }
 
-    /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] {
-        border-bottom: 1px solid #161b26 !important;
-        gap: 16px !important;
-        background: transparent !important;
-        margin-bottom: 20px !important;
+    /* 7. Diagnostic Container & Terminal Empty State */
+    div[data-testid="stVerticalBlock"]:has(> div[data-testid="stContainer"]) {
+        gap: 0 !important;
     }
-    .stTabs [data-baseweb="tab"] {
-        color: #8b949e !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
-        padding: 8px 16px !important;
-        border: none !important;
-        background: transparent !important;
+    div[data-testid="stContainer"] {
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 8px !important;
-        transition: all 0.2s ease !important;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #ffffff !important;
-        background: #111520 !important;
-        border-bottom: 2px solid #00e5ff !important;
+        background: #0C0D0F !important;
     }
 
-    /* Workspace Cards */
-    .card-head-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: #ffffff;
+    .terminal-empty-box {
+        background: #121214;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 16px;
+        font-family: 'JetBrains Mono', monospace;
+        margin-top: 4px;
+    }
+    .terminal-bar {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 6px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        margin-bottom: 12px;
     }
-    .card-head-sub {
+    .term-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .term-dot.red { background: #EF4444; opacity: 0.8; }
+    .term-dot.yellow { background: #F59E0B; opacity: 0.8; }
+    .term-dot.green { background: #10B981; opacity: 0.8; }
+    .term-title {
+        color: #71717A;
+        font-size: 11.5px;
+        margin-left: 6px;
+    }
+    .term-body {
         font-size: 12px;
-        color: #8b949e;
-        margin-top: 2px;
-        margin-bottom: 14px;
+        line-height: 1.65;
+    }
+    .term-line {
+        color: #D4D4D8;
+    }
+    .term-prompt {
+        color: #10B981;
+        font-weight: 600;
+        margin-right: 6px;
+    }
+    .term-line.muted {
+        color: #71717A;
+        font-size: 11.5px;
+    }
+    .term-line.success {
+        color: #34D399;
+        margin-top: 6px;
+    }
+    .term-line.info {
+        color: #60A5FA;
+        font-size: 11px;
+        margin-top: 4px;
     }
 
-    /* Empty State in Right Card */
-    .empty-state-box {
-        background: #090c12;
-        border: 1px dashed #1c2638;
-        border-radius: 12px;
-        padding: 32px 24px;
-        text-align: center;
-        margin-top: 8px;
-    }
-    .empty-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: #ffffff;
-        margin: 12px 0 6px 0;
-    }
-    .empty-desc {
+    /* Diagnostic Banners & Cards */
+    .diag-banner {
+        border-radius: 6px;
+        padding: 8px 12px;
         font-size: 12.5px;
-        color: #8b949e;
-        line-height: 1.6;
-        max-width: 380px;
-        margin: 0 auto 20px auto;
-    }
-    .empty-features {
-        text-align: left;
-        display: inline-block;
-        font-size: 12.5px;
-        color: #c9d1d9;
-        line-height: 2;
-        margin-bottom: 20px;
-    }
-    .empty-tip {
-        background: rgba(0, 229, 255, 0.06);
-        border: 1px solid rgba(0, 229, 255, 0.18);
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-size: 12px;
-        color: #8b949e;
-        text-align: left;
-    }
-
-    /* Pricing Cards */
-    .pricing-card {
-        background: #0d1017;
-        border: 1px solid #182030;
-        border-radius: 14px;
-        padding: 26px 22px;
+        margin-bottom: 10px;
         display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        min-height: 340px;
+        align-items: center;
+        gap: 8px;
+    }
+    .diag-blocked {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #F87171;
+    }
+    .diag-warning {
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        color: #FBBF24;
+    }
+    .diag-clean {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #34D399;
+    }
+
+    div[data-testid="stExpander"] {
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 6px !important;
+        background: #121214 !important;
+        margin-bottom: 8px !important;
+    }
+    div[data-testid="stExpander"] summary {
+        font-size: 12.5px !important;
+        font-weight: 600 !important;
+        padding: 6px 10px !important;
+    }
+
+    /* 8. Pricing Cards */
+    .pricing-card {
+        background: #121214;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 22px 20px;
         position: relative;
-        transition: transform 0.15s ease, border-color 0.15s ease;
     }
     .pricing-card-popular {
-        border: 2px solid #00e5ff;
-        background: #09121f;
-        box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.25);
+        background: #16161A;
     }
     .popular-pill {
         position: absolute;
-        top: -12px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #00e5ff;
-        color: #000000;
+        top: 12px;
+        right: 14px;
         font-size: 10.5px;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        padding: 3px 12px;
+        font-weight: 600;
+        background: #FAFAFA;
+        color: #09090B;
+        padding: 2px 8px;
         border-radius: 12px;
-        box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
     }
     .card-tier-title {
-        font-size: 13.5px;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
+        font-size: 14.5px;
+        font-weight: 600;
+        color: #FAFAFA;
+        margin-bottom: 6px;
     }
     .card-tier-amt {
-        font-size: 2.3rem;
-        font-weight: 900;
-        color: #ffffff;
-        font-family: 'JetBrains Mono', monospace;
-        margin: 8px 0 2px 0;
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: #FFFFFF;
+        letter-spacing: -0.02em;
+        margin-bottom: 4px;
     }
     .card-tier-sub {
-        font-size: 11.5px;
-        color: #8b949e;
-        margin-bottom: 16px;
+        font-size: 12px;
+        color: #71717A;
+        margin-bottom: 14px;
     }
     .card-features-list {
         font-size: 12.5px;
-        color: #c9d1d9;
-        line-height: 1.85;
-        text-align: left;
-        margin-bottom: 20px;
-    }
-
-    /* Buttons */
-    .stButton > button {
-        border-radius: 8px !important;
-        font-weight: 700 !important;
-        transition: all 0.15s ease !important;
-    }
-    .stButton > button[kind="primary"] {
-        background-color: #00e5ff !important;
-        color: #000000 !important;
-        border: none !important;
-        box-shadow: 0 0 15px rgba(0, 229, 255, 0.3) !important;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background-color: #33ebff !important;
-        box-shadow: 0 0 22px rgba(0, 229, 255, 0.5) !important;
-        transform: translateY(-1px) !important;
-    }
-    .stTextArea textarea {
-        background: #06080d !important;
-        border: 1px solid #182030 !important;
-        color: #f0f6fc !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        font-size: 13px !important;
-        border-radius: 8px !important;
-    }
-
-    /* ================= MOBILE RESPONSIVE SUITE (< 768px) ================= */
-    @media (max-width: 768px) {
-        /* 1. App container & horizontal scroll lock */
-        html, body, .stApp {
-            overflow-x: hidden !important;
-            max-width: 100vw !important;
-        }
-
-        /* 2. Remove desktop padding waste */
-        .block-container {
-            padding-top: 1rem !important;
-            padding-bottom: 2.5rem !important;
-            padding-left: 0.75rem !important;
-            padding-right: 0.75rem !important;
-            max-width: 100% !important;
-        }
-
-        /* 3. Header bar reduction */
-        header[data-testid="stHeader"] {
-            background: transparent !important;
-            height: 2.5rem !important;
-        }
-
-        /* 4. Top Navbar mobile stacking */
-        div[data-testid="stHorizontalBlock"]:has(.brand-group) {
-            flex-direction: column !important;
-            gap: 10px !important;
-            margin-bottom: 8px !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(.brand-group) > div[data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-        }
-        .brand-group {
-            gap: 10px !important;
-        }
-        .brand-logo-img {
-            width: 36px !important;
-            height: 36px !important;
-        }
-        .brand-title {
-            font-size: 1.15rem !important;
-            gap: 6px !important;
-        }
-        .brand-badge {
-            font-size: 10px !important;
-            padding: 1px 6px !important;
-        }
-        .brand-sub {
-            display: none !important; /* Hide long subtitle on mobile to preserve screen space */
-        }
-        .plan-pill {
-            font-size: 10.5px !important;
-            padding: 4px 10px !important;
-        }
-        .mobile-only {
-            display: inline !important;
-        }
-        .desktop-only {
-            display: none !important;
-        }
-
-        /* 5. Hero section scaling */
-        .hero-box {
-            margin-bottom: 14px !important;
-            text-align: left !important;
-        }
-        .hero-title {
-            font-size: 1.3rem !important;
-            line-height: 1.25 !important;
-            margin-bottom: 4px !important;
-        }
-        .hero-desc {
-            font-size: 12px !important;
-            line-height: 1.45 !important;
-        }
-        .hero-tag {
-            font-size: 10px !important;
-            padding: 2px 8px !important;
-            margin-bottom: 6px !important;
-        }
-
-        /* 6. Tabs styling - mobile swipeable pills */
-        .stTabs [data-baseweb="tab-list"] {
-            overflow-x: auto !important;
-            flex-wrap: nowrap !important;
-            gap: 6px !important;
-            padding-bottom: 6px !important;
-            margin-bottom: 14px !important;
-            scrollbar-width: none !important;
-            -webkit-overflow-scrolling: touch !important;
-        }
-        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {
-            display: none !important;
-        }
-        .stTabs [data-baseweb="tab"] {
-            font-size: 12.5px !important;
-            padding: 6px 12px !important;
-            white-space: nowrap !important;
-            flex-shrink: 0 !important;
-        }
-
-        /* 7. Workspace Split-Pane: Stack Editor & Results vertically on phone */
-        div[data-testid="stHorizontalBlock"]:has(.split-pane-anchor) {
-            flex-direction: column !important;
-            gap: 20px !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(.split-pane-anchor) > div[data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-        }
-
-        /* Fallback for split pane columns */
-        div[data-testid="stHorizontalBlock"]:has(> div > div > .card-head-title) {
-            flex-direction: column !important;
-            gap: 20px !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(> div > div > .card-head-title) > div[data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-        }
-
-        /* 8. Quick Sample Chips: Stay horizontal in one row on mobile */
-        div[data-testid="stHorizontalBlock"]:has(.quick-sample-anchor) {
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            gap: 6px !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(.quick-sample-anchor) > div[data-testid="column"] {
-            width: auto !important;
-            flex: 1 1 0 !important;
-            min-width: 0 !important;
-        }
-
-        /* 9. Code Input area on mobile */
-        .stTextArea textarea {
-            font-size: 12px !important;
-            height: 220px !important;
-            min-height: 200px !important;
-        }
-
-        /* 10. Finding Expanders & Full-Width Code Comparison */
-        div[data-testid="stExpander"] {
-            border: 1px solid #1c2638 !important;
-            border-radius: 10px !important;
-            background: #080b11 !important;
-            margin-bottom: 12px !important;
-        }
-        div[data-testid="stExpander"] summary {
-            font-size: 13px !important;
-            font-weight: 700 !important;
-            padding: 8px 12px !important;
-        }
-        /* Make Vulnerable Code and 1-Click Patch stack 100% width on phone */
-        div[data-testid="stExpander"] div[data-testid="stHorizontalBlock"] {
-            flex-direction: column !important;
-            gap: 8px !important;
-        }
-        div[data-testid="stExpander"] div[data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-            margin-bottom: 6px !important;
-        }
-
-        /* 11. Empty State Card on mobile */
-        .empty-state-box {
-            padding: 20px 14px !important;
-        }
-        .empty-title {
-            font-size: 15px !important;
-        }
-        .empty-desc {
-            font-size: 12px !important;
-            margin-bottom: 14px !important;
-        }
-        .empty-features {
-            font-size: 11.5px !important;
-            line-height: 1.7 !important;
-            margin-bottom: 14px !important;
-        }
-        .empty-tip {
-            font-size: 11px !important;
-            padding: 8px 10px !important;
-        }
-
-        /* 12. Pricing Cards: Stack vertically on phone */
-        div[data-testid="stHorizontalBlock"]:has(.pricing-card) {
-            flex-direction: column !important;
-            gap: 18px !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(.pricing-card) > div[data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-            margin-bottom: 8px !important;
-        }
-        .pricing-card {
-            min-height: auto !important;
-            padding: 20px 18px !important;
-        }
-        .card-tier-amt {
-            font-size: 1.9rem !important;
-        }
-
-        /* 13. License Key Strip on mobile */
-        div[data-testid="stHorizontalBlock"]:has(.license-strip-anchor) {
-            flex-direction: column !important;
-            gap: 10px !important;
-        }
-        div[data-testid="stHorizontalBlock"]:has(.license-strip-anchor) > div[data-testid="column"] {
-            width: 100% !important;
-            flex: 1 1 100% !important;
-            min-width: 100% !important;
-        }
-
-        /* 14. Mobile Touch Buttons */
-        .stButton > button {
-            min-height: 40px !important;
-            font-size: 13px !important;
-            padding: 8px 12px !important;
-        }
-        .stButton > button[kind="primary"] {
-            font-size: 14px !important;
-            letter-spacing: 0.02em !important;
-        }
+        line-height: 1.8;
+        color: #D4D4D8;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------- TOP NAVBAR -----------------
+# ----------------- SLIM SINGLE-ROW TOP NAVBAR -----------------
 logo_b64 = get_logo_base64()
 if logo_b64:
-    logo_tag = f'<img src="data:image/png;base64,{logo_b64}" class="brand-logo-img" alt="Kavach AI Logo" />'
+    logo_tag = f'<img src="data:image/png;base64,{logo_b64}" class="brand-logo-img" alt="Logo" />'
 else:
-    logo_tag = '<span style="font-size:32px;">🛡️</span>'
+    logo_tag = '<span style="font-size:20px;">🛡️</span>'
 
 if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value:
-    badge_html = '<span class="plan-pill pill-team">● 👑 <span class="desktop-only">Team Active ($99/mo)</span><span class="mobile-only">Team</span></span>'
+    badge_html = '<span class="plan-pill pill-team">● 👑 Team Enterprise ($99/mo)</span>'
 elif st.session_state.is_pro_user:
-    badge_html = '<span class="plan-pill pill-pro">● ⚡ <span class="desktop-only">Developer Pro Active ($1/mo)</span><span class="mobile-only">Pro</span></span>'
+    badge_html = '<span class="plan-pill pill-pro">● ⚡ Developer Pro ($1/mo)</span>'
 else:
-    badge_html = '<span class="plan-pill pill-free">● 🆓 <span class="desktop-only">Community Free Active</span><span class="mobile-only">Free</span></span>'
+    badge_html = '<span class="plan-pill pill-free">● 🆓 Community Free</span>'
 
-nav_col1, nav_col2 = st.columns([2.0, 2.0])
+nav_col1, nav_col2 = st.columns([1.5, 1.5])
 with nav_col1:
     st.markdown(f"""
-    <div class="brand-group">
+    <div class="brand-group" style="padding-top:2px;">
         {logo_tag}
-        <div>
-            <div class="brand-title">Kavach AI <span class="brand-badge">v1.3.0 Secure</span></div>
-            <div class="brand-sub">Autonomous Zero-Noise Code Security Inspector & 1-Click Surgical Patcher</div>
-        </div>
+        <span class="brand-title">Kavach AI <span class="brand-pill">v1.3.0</span></span>
     </div>
     """, unsafe_allow_html=True)
 
 with nav_col2:
-    nav_auth_col, nav_badge_col = st.columns([1.15, 0.85])
+    nav_auth_col, nav_badge_col = st.columns([1.2, 1.1])
     with nav_auth_col:
         if st.session_state.github_user:
             u = st.session_state.github_user
             with st.popover(f"👤 @{u['login']}", use_container_width=True):
                 st.markdown(f"""
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
-                    <img src="{u['avatar_url']}" style="width:44px; height:44px; border-radius:50%; border:2px solid #00e5ff;" />
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <img src="{u['avatar_url']}" style="width:38px; height:38px; border-radius:50%; border:1px solid #FAFAFA;" />
                     <div>
-                        <div style="font-weight:700; color:#fff; font-size:14.5px;">{html.escape(u['name'])}</div>
-                        <div style="font-size:12px; color:#8b949e;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
+                        <div style="font-weight:600; color:#fff; font-size:13.5px;">{html.escape(u['name'])}</div>
+                        <div style="font-size:11.5px; color:#A1A1AA;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown(badge_html, unsafe_allow_html=True)
-                st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
                 st.button("🚪 Sign Out", key="btn_signout", on_click=logout_github, use_container_width=True)
         else:
             with st.popover("🐙 Sign in with GitHub", use_container_width=True):
-                st.markdown("<div style='font-weight:700; font-size:14px; margin-bottom:4px;'>🐙 Connect GitHub Account</div>", unsafe_allow_html=True)
-                st.caption("Link your GitHub handle to bind licenses and scan private repos.")
+                st.markdown("<div style='font-weight:600; font-size:13px; margin-bottom:4px;'>Connect GitHub Handle</div>", unsafe_allow_html=True)
+                st.caption("Links licenses to your GitHub identity.")
                 st.text_input("GitHub Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
                 st.text_input("Personal Access Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
                 c_in1, c_in2 = st.columns(2)
                 with c_in1:
                     st.button("⚡ Connect", key="btn_do_login", on_click=login_github, use_container_width=True)
                 with c_in2:
-                    st.button("👤 Demo Login", key="btn_demo_login", on_click=demo_login_github, use_container_width=True)
+                    st.button("Demo", key="btn_demo_login", on_click=demo_login_github, use_container_width=True)
                 if st.session_state.get("auth_error"):
                     st.error(st.session_state.auth_error)
     with nav_badge_col:
         st.markdown(f"""
-        <div style="display:flex; justify-content:flex-end; align-items:center; height:100%; padding-top:4px;">
+        <div style="display:flex; justify-content:flex-end; align-items:center; height:100%; padding-top:2px;">
             {badge_html}
         </div>
         """, unsafe_allow_html=True)
 
-st.markdown("<div style='border-bottom: 1px solid #161b26; margin: 12px 0 20px 0;'></div>", unsafe_allow_html=True)
-
-# ----------------- CLEAN 3-TAB SUITE -----------------
+# ----------------- CLEAN SEGMENTED NAVIGATION TABS -----------------
 tab_scan, tab_pricing, tab_setup = st.tabs([
     "🔍 Inspector",
     "💎 Pricing",
     "🔌 GitHub"
 ])
 
-# ================= TAB 1: CODE INSPECTOR WORKSPACE =================
 SQL_SAMPLE = '''import sqlite3
 
 def find_user(username):
@@ -800,149 +646,143 @@ def find_user(username):
     return cursor.fetchall()
 '''
 
+# ================= TAB 1: GOLDEN RATIO CODE INSPECTOR =================
 with tab_scan:
-    # Hero Title Bar
-    st.markdown("""
-    <div class="hero-box">
-        <span class="hero-tag">🛡️ Security Workspace</span>
-        <div class="hero-title">Inspect code before it reaches production.</div>
-        <div class="hero-desc">Paste a snippet or run a committed scan. Search for pre-production patterns, secret leaks, and unsafe blocks with focused remediation.</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<div class='split-pane-anchor'></div>", unsafe_allow_html=True)
-    col_editor, col_result = st.columns([1.15, 1.15], gap="large")
-
-    # LEFT PANEL: SOURCE TO INSPECT
-    with col_editor:
-        st.markdown("""
-        <div class="card-head-title">
-            <span>Sources to inspect</span>
-            <span style="font-size:11px; color:#8b949e; font-family:'JetBrains Mono';">demo.py • UTF-8</span>
-        </div>
-        <div class="card-head-sub">Python, JavaScript, TypeScript, C++, or raw git diff format</div>
-        """, unsafe_allow_html=True)
-
-        # Quick Samples Bar
-        st.markdown("<div class='quick-sample-anchor'></div>", unsafe_allow_html=True)
-        c1, c2, c3 = st.columns([1.2, 1.4, 0.8])
-        with c1:
-            st.button("🔑 Secrets", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), use_container_width=True)
-        with c2:
-            st.button("💉 SQL Injection", on_click=load_code_sample, args=(SQL_SAMPLE,), use_container_width=True)
-        with c3:
-            st.button("🧹 Clear", on_click=clear_code_box, use_container_width=True)
-
-        st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
-
-        code_input = st.text_area(
-            "Code Input:",
-            key="user_code",
-            height=330,
-            label_visibility="collapsed",
-            placeholder="// Paste code here to inspect for SQL injection, leaked keys, command injection, and more..."
-        )
-
-        inspect_btn = st.button("⚡ Inspect Code Now", type="primary", use_container_width=True)
-        st.markdown("<div style='text-align:center; font-size:11.5px; color:#6e7681; margin-top:6px;'>🔒 No external servers contacted • Runs in local zero-trust sandbox</div>", unsafe_allow_html=True)
+    col_editor, col_result = st.columns([1.45, 1.0], gap="medium")
 
     # RUN ANALYSIS (CACHED)
-    code_to_check = code_input.strip() if code_input else ""
-    if code_to_check:
-        analysis = analyze_code_cached(code_to_check)
+    current_code = st.session_state.get("user_code", "").strip()
+    if current_code:
+        analysis = analyze_code_cached(current_code)
         findings = analysis['findings']
         metrics = analysis['metrics']
     else:
         findings = []
         metrics = {'critical': 0, 'security': 0, 'performance': 0}
 
-    # RIGHT PANEL: INSPECTION RESULT
-    with col_result:
-        status_label = "Awaiting scan" if not code_to_check else ("Clean" if not findings else f"{metrics['critical']} Critical / {metrics['security']} Security")
-        st.markdown(f"""
-        <div class="card-head-title">
-            <span>Inspection result</span>
-            <span style="font-size:11px; color:#00e5ff; background:rgba(0,229,255,0.1); padding:2px 8px; border-radius:12px; border:1px solid rgba(0,229,255,0.25); font-family:'JetBrains Mono';">{status_label}</span>
-        </div>
-        <div class="card-head-sub">Interactive findings & 1-click surgical remediation</div>
-        """, unsafe_allow_html=True)
-
-        if not code_to_check:
+    # LEFT COLUMN: 60% CODE EDITOR
+    with col_editor:
+        # Unified Header Toolbar
+        tb_col1, tb_col2, tb_col3 = st.columns([1.1, 1.7, 1.2], gap="small")
+        with tb_col1:
             st.markdown("""
-            <div class="empty-state-box">
-                <div style="font-size:36px;">🛡️</div>
-                <div class="empty-title">Ready when your code is.</div>
-                <div class="empty-desc">Paste a snippet on the left or choose a sample to see detected vulnerabilities, severity, and safe patches.</div>
-                <div class="empty-features">
-                    ✓ <b>Zero-noise signal filtering</b> (Ignores lockfiles & stylistic noise)<br>
-                    ✓ <b>Direct-in-patch suggestions</b> (1-click surgical remediation)<br>
-                    ✓ <b>Local data privacy</b> (Code never leaves your runner or browser)
-                </div>
-                <div class="empty-tip">
-                    💡 <b>Or start with a sample:</b> Click <code>Secret leak</code> or <code>SQL injection</code> on the left to test a pre-loaded exploit.
-                </div>
+            <div class="ide-file-pill">
+                <span class="ide-file-dot"></span>
+                <span>demo.py</span>
+                <span class="ide-file-meta">UTF-8</span>
             </div>
             """, unsafe_allow_html=True)
-        elif not findings:
-            st.success("🟢 **CLEAN - READY TO MERGE**\n\nZero security vulnerabilities or resource leaks detected in this code.")
-        else:
-            if metrics['critical'] > 0:
-                st.error(f"🔴 **MERGE BLOCKED**: Found {metrics['critical']} Critical Security Exploit(s)")
+        with tb_col2:
+            q1, q2, q3 = st.columns([1.0, 1.1, 0.9], gap="small")
+            with q1:
+                st.button("🔑 Secrets", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), key="btn_sec", use_container_width=True)
+            with q2:
+                st.button("💉 SQLi", on_click=load_code_sample, args=(SQL_SAMPLE,), key="btn_sqli", use_container_width=True)
+            with q3:
+                st.button("🧹 Clear", on_click=clear_code_box, key="btn_clr", use_container_width=True)
+        with tb_col3:
+            st.button("Inspect Code ⌘↵", key="btn_inspect_code", type="primary", use_container_width=True)
+
+        code_input = st.text_area(
+            "Code Input:",
+            key="user_code",
+            height=450,
+            label_visibility="collapsed",
+            placeholder="// Paste code here or select a sample above to inspect..."
+        )
+        st.markdown("<div class='ide-footer-note'>🔒 Local sandbox inspection • 0 bytes transmitted outside your runner</div>", unsafe_allow_html=True)
+
+    # RIGHT COLUMN: 40% DIAGNOSTIC INSPECTOR
+    with col_result:
+        # Header Toolbar
+        r_head1, r_head2 = st.columns([1.2, 1.8], gap="small")
+        with r_head1:
+            status_text = "Awaiting Scan" if not current_code else ("Clean" if not findings else f"{len(findings)} Issue(s)")
+            st.markdown(f"""
+            <div class="ide-file-pill">
+                <span>Diagnostics</span>
+                <span class="ide-file-meta">• {status_text}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        with r_head2:
+            if findings:
+                crit_badge = f'<span style="color:#F87171; font-weight:600;">{metrics["critical"]} Crit</span>'
+                sec_badge = f'<span style="color:#FBBF24; font-weight:600;">{metrics["security"]} Sec</span>'
+                perf_badge = f'<span style="color:#60A5FA; font-weight:600;">{metrics["performance"]} Perf</span>'
+                st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:7px;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
             else:
-                st.warning(f"🟠 **WARNING**: Found {metrics['security']} Security Vulnerability / Leak(s)")
+                st.markdown("<div style='text-align:right; font-size:11.5px; color:#71717A; font-family:\"JetBrains Mono\"; padding-top:7px;'>Ready</div>", unsafe_allow_html=True)
 
-            for i, f in enumerate(findings, 1):
-                cat_safe = html.escape(f.category)
-                exp_safe = html.escape(f.explanation)
-                cwe_safe = html.escape(f.cwe_id or "CWE-General")
-                
-                with st.expander(f"Issue #{i}: {cat_safe} ({f.severity}) • {cwe_safe}", expanded=True):
-                    st.write(exp_safe)
-                    c_sub1, c_sub2 = st.columns(2)
-                    with c_sub1:
-                        st.caption("❌ Vulnerable Code:")
-                        st.code(f.problem_code, language=f.language)
-                    with c_sub2:
-                        st.caption("✅ 1-Click Surgical Patch:")
-                        st.code(f.fixed_code, language=f.language)
+        # 450px Matched Height Container
+        with st.container(height=450):
+            if not current_code:
+                st.markdown("""
+                <div class="terminal-empty-box">
+                    <div class="terminal-bar">
+                        <span class="term-dot red"></span>
+                        <span class="term-dot yellow"></span>
+                        <span class="term-dot green"></span>
+                        <span class="term-title">kavach-engine — ready</span>
+                    </div>
+                    <div class="term-body">
+                        <div class="term-line"><span class="term-prompt">$</span>kavach inspect --mode=zero-noise</div>
+                        <div class="term-line muted">AST Parser: initialized (Python 3.14, JS, C++)</div>
+                        <div class="term-line muted">Taint Flow: active (Intra-procedural tracking)</div>
+                        <div class="term-line muted">Constant Folding: active (CWE-798 resolver)</div>
+                        <div class="term-line success">✓ Engine idle. Ready when your code is.</div>
+                        <div class="term-line info">ℹ Select 'Secrets' or 'SQLi' above to test.</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif not findings:
+                st.markdown("""
+                <div class="diag-banner diag-clean">
+                    <span>🟢</span>
+                    <div><b>CLEAN - READY TO MERGE</b><br><span style="font-size:11.5px;">Zero security vulnerabilities or resource leaks detected in this code.</span></div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                if metrics['critical'] > 0:
+                    st.markdown(f"""
+                    <div class="diag-banner diag-blocked">
+                        <span>🔴</span>
+                        <div><b>MERGE BLOCKED</b> • {metrics['critical']} Critical Exploit(s) Detected</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div class="diag-banner diag-warning">
+                        <span>🟠</span>
+                        <div><b>SECURITY WARNING</b> • {metrics['security']} Vulnerability/Leak(s) Detected</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                    st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-                    st.button(
-                        f"🪄 1-Click Apply Patch to Code Box",
-                        key=f"btn_apply_fix_{i}",
-                        type="primary",
-                        on_click=apply_patch_to_editor,
-                        args=(f.problem_code, f.fixed_code),
-                        use_container_width=True
-                    )
+                for i, f in enumerate(findings, 1):
+                    cat_safe = html.escape(f.category)
+                    exp_safe = html.escape(f.explanation)
+                    cwe_safe = html.escape(f.cwe_id or "CWE-General")
+
+                    with st.expander(f"L{f.line_number} [{f.severity}] {cat_safe} • {cwe_safe}", expanded=(i <= 2)):
+                        st.markdown(f"<div style='font-size:12px; color:#A1A1AA; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
+                        c_sub1, c_sub2 = st.columns(2)
+                        with c_sub1:
+                            st.caption("❌ Current:")
+                            st.code(f.problem_code, language=f.language)
+                        with c_sub2:
+                            st.caption("✅ Patch:")
+                            st.code(f.fixed_code, language=f.language)
+
+                        st.button(
+                            f"🪄 Apply Patch #{i}",
+                            key=f"btn_apply_fix_{i}",
+                            type="primary",
+                            on_click=apply_patch_to_editor,
+                            args=(f.problem_code, f.fixed_code),
+                            use_container_width=True
+                        )
 
 # ================= TAB 2: PRICING & LICENSING =================
 with tab_pricing:
-    st.markdown("""
-    <div class="hero-box" style="text-align:center; max-width:750px; margin: 0 auto 20px auto;">
-        <span class="hero-tag">💎 Simple, Transparent Licensing</span>
-        <div class="hero-title">Secure every commit with Kavach AI.</div>
-        <div class="hero-desc">Start free for public repositories, then unlock private repo remediation and team-wide protection when you need it.</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.session_state.github_user:
-        u = st.session_state.github_user
-        st.markdown(f"""
-        <div style="background: rgba(0, 229, 255, 0.08); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 10px; padding: 10px 16px; margin: 0 auto 20px auto; max-width: 750px; display:flex; align-items:center; gap:12px;">
-            <img src="{u['avatar_url']}" style="width:34px; height:34px; border-radius:50%; border:1px solid #00e5ff;" />
-            <div style="font-size:12.5px; color:#f0f6fc;">
-                Subscribing as <b>{html.escape(u['name'])}</b> (<code>@{html.escape(u['login'])}</code>). All purchased licenses attach to this GitHub profile.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div style="text-align:center; font-size:12px; color:#8b949e; margin: 0 auto 18px auto; max-width: 600px;">
-            💡 <i>Tip: Click <b>🐙 Sign in with GitHub</b> in the top right to link your Developer Pro license to your account.</i>
-        </div>
-        """, unsafe_allow_html=True)
-
     is_free = (st.session_state.license_tier == PlanTier.FREE.value)
     is_pro = (st.session_state.license_tier == PlanTier.DEVELOPER_PRO.value)
     is_team = (st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value)
@@ -953,57 +793,53 @@ with tab_pricing:
     with p1:
         st.markdown(f"""
         <div class="pricing-card">
-            <div>
-                <div class="card-tier-title" style="color:#34d399;">🆓 Community</div>
-                <div class="card-tier-amt">$0</div>
-                <div class="card-tier-sub">Forever free for public repositories</div>
-                <div class="card-features-list">
-                    ✓ <b>Unlimited public repositories</b><br>
-                    ✓ High-speed offline AST scanning<br>
-                    ✓ Local CLI execution (<code>kavach .</code>)<br>
-                    ✓ Free for students & open source<br>
-                    ✓ Zero data retention
-                </div>
+            <div class="card-tier-title" style="color:#34D399;">Community</div>
+            <div class="card-tier-amt">$0</div>
+            <div class="card-tier-sub">Forever free for public repositories</div>
+            <div class="card-features-list">
+                ✓ <b>Unlimited public repositories</b><br>
+                ✓ High-speed offline AST scanning<br>
+                ✓ Local CLI execution (<code>kavach .</code>)<br>
+                ✓ Free for students & open source<br>
+                ✓ Zero data retention
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "✅ Active Plan" if is_free else "🆓 Use Free Plan ($0)",
+            "Active Plan" if is_free else "Use Free Plan ($0)",
             key="btn_activate_free",
             disabled=is_free,
             on_click=select_plan,
-            args=(PlanTier.FREE.value, "", False, "Community Free ($0)"),
+            args=(PlanTier.FREE.value, "Community Free ($0)"),
             use_container_width=True
         )
 
-    # 2. DEVELOPER PRO ($1) - MOST POPULAR
+    # 2. DEVELOPER PRO ($1)
     with p2:
         st.markdown(f"""
         <div class="pricing-card pricing-card-popular">
-            <div class="popular-pill">🔥 Most Popular</div>
-            <div>
-                <div class="card-tier-title" style="color:#00e5ff;">⚡ Developer Pro</div>
-                <div class="card-tier-amt">$1<span style="font-size:14px; color:#8b949e;">/mo</span></div>
-                <div class="card-tier-sub" style="color:#00e5ff; font-weight:700;">$12 Billed Annually • Independent devs</div>
-                <div class="card-features-list">
-                    ✓ <b>Up to 5 personal private repos</b><br>
-                    ✓ 1-click surgical auto-remediations<br>
-                    ✓ Local Git pre-commit hooks<br>
-                    ✓ Personal GitHub account support<br>
-                    ✓ Priority email updates
-                </div>
+            <div class="popular-pill">Most Popular</div>
+            <div class="card-tier-title" style="color:#FAFAFA;">Developer Pro</div>
+            <div class="card-tier-amt">$1<span style="font-size:14px; color:#71717A;">/mo</span></div>
+            <div class="card-tier-sub">$12 billed annually • Independent devs</div>
+            <div class="card-features-list">
+                ✓ <b>Up to 5 personal private repos</b><br>
+                ✓ Cryptographic signed token verification<br>
+                ✓ 1-click surgical auto-remediations<br>
+                ✓ Local Git pre-commit hooks<br>
+                ✓ Priority email updates
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "✅ Active Plan" if is_pro else "⚡ Select Developer Pro ($1)",
+            "Active Plan" if is_pro else "Select Developer Pro ($1)",
             key="btn_activate_pro",
             disabled=is_pro,
             type="primary" if not is_pro else "secondary",
             on_click=select_plan,
-            args=(PlanTier.DEVELOPER_PRO.value, "BUILDER-DEV-1", True, "Developer Pro ($1/mo)"),
+            args=(PlanTier.DEVELOPER_PRO.value, "Developer Pro ($1/mo)"),
             use_container_width=True
         )
 
@@ -1011,44 +847,42 @@ with tab_pricing:
     with p3:
         st.markdown(f"""
         <div class="pricing-card">
-            <div>
-                <div class="card-tier-title" style="color:#fbbf24;">🏢 Team Enterprise</div>
-                <div class="card-tier-amt">$99<span style="font-size:14px; color:#8b949e;">/mo</span></div>
-                <div class="card-tier-sub">For startups & companies</div>
-                <div class="card-features-list">
-                    ✓ <b>GitHub Organizations support</b><br>
-                    ✓ <b>Unlimited team repositories</b><br>
-                    ✓ Autonomous PR review bot & blocker<br>
-                    ✓ Pytest self-healing engine<br>
-                    ✓ SLA support & custom rules
-                </div>
+            <div class="card-tier-title" style="color:#FBBF24;">Team Enterprise</div>
+            <div class="card-tier-amt">$99<span style="font-size:14px; color:#71717A;">/mo</span></div>
+            <div class="card-tier-sub">For startups & GitHub Organizations</div>
+            <div class="card-features-list">
+                ✓ <b>GitHub Organizations support</b><br>
+                ✓ <b>Unlimited team repositories</b><br>
+                ✓ Autonomous PR review bot & blocker<br>
+                ✓ Pytest self-healing engine<br>
+                ✓ SLA support & custom rules
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         st.button(
-            "✅ Active Plan" if is_team else "🏢 Select Team Enterprise ($99)",
+            "Active Plan" if is_team else "Select Team Enterprise ($99)",
             key="btn_activate_team",
             disabled=is_team,
             on_click=select_plan,
-            args=(PlanTier.TEAM_ENTERPRISE.value, "KV-TEAM-ORG-99", True, "Team Enterprise ($99/mo)"),
+            args=(PlanTier.TEAM_ENTERPRISE.value, "Team Enterprise ($99/mo)"),
             use_container_width=True
         )
 
-    # WIDE LICENSE ACTIVATION STRIP
-    st.markdown("<div class='license-strip-anchor' style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    # LICENSE ACTIVATION STRIP
+    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
     lk_col1, lk_col2, lk_col3 = st.columns([2, 1.8, 1])
     with lk_col1:
         st.markdown("""
-        <div style="padding-top:6px;">
-            <div style="font-size:14px; font-weight:700; color:#ffffff;">🔑 Already have a license key?</div>
-            <div style="font-size:12px; color:#8b949e;">Enter your key to unlock developer or team features instantly.</div>
+        <div style="padding-top:4px;">
+            <div style="font-size:13.5px; font-weight:600; color:#FAFAFA;">🔑 Activate Customer License Key</div>
+            <div style="font-size:11.5px; color:#71717A;">Supports LemonSqueezy license keys or offline signed Ed25519 tokens.</div>
         </div>
         """, unsafe_allow_html=True)
     with lk_col2:
-        st.text_input("License Key:", key="custom_key_input", placeholder="e.g. BUILDER-DEV-1 or KV-TEAM-ORG-99", label_visibility="collapsed")
+        st.text_input("License Key:", key="custom_key_input", placeholder="LemonSqueezy UUID or KAVACH-PRO-... token", label_visibility="collapsed")
     with lk_col3:
-        st.button("⚡ Activate License", key="btn_activate_key", on_click=activate_custom_key, use_container_width=True)
+        st.button("Activate Key", key="btn_activate_key", type="primary", on_click=activate_custom_key, use_container_width=True)
 
     if st.session_state.get("key_feedback"):
         status, msg = st.session_state.key_feedback
@@ -1057,23 +891,16 @@ with tab_pricing:
         else:
             st.error(msg)
 
-    st.markdown("""
-    <div style="text-align:center; font-size:12px; color:#6e7681; margin-top:24px;">
-        Need help choosing? Kavach AI runs 100% locally with zero cloud compute cost for Raja Rajak.
-    </div>
-    """, unsafe_allow_html=True)
-
 # ================= TAB 3: GITHUB SETUP =================
 with tab_setup:
     st.markdown("""
-    <div class="hero-box">
-        <span class="hero-tag">🔌 CI / CD Integration</span>
-        <div class="hero-title">1-Minute GitHub Actions Security Gate</div>
-        <div class="hero-desc">Protect your GitHub repository from bad code and vulnerabilities automatically before merges.</div>
+    <div style="margin-bottom:12px;">
+        <div style="font-size:14px; font-weight:600; color:#FAFAFA;">1-Minute GitHub Actions Security Gate</div>
+        <div style="font-size:12px; color:#71717A;">Block vulnerable pull requests before they reach your production branch.</div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("Create file `.github/workflows/kavach.yml` in your repo:")
+    st.markdown("Create `.github/workflows/kavach.yml` in your repository:")
     st.code('''name: 🛡️ Kavach AI Security Gate
 
 on:
@@ -1095,7 +922,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run Kavach AI
-        uses: rajrajak99/kavach-ai@v1.2.1
+        uses: rajrajak99/kavach-ai@v1.3.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on: 'CRITICAL'
