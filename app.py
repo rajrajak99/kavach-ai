@@ -736,7 +736,7 @@ with nav_col1:
     <div class="brand-group">
         {logo_tag}
         <div>
-            <div class="brand-title">Kavach AI <span class="brand-badge">v1.2.1 Secure</span></div>
+            <div class="brand-title">Kavach AI <span class="brand-badge">v1.3.0 Secure</span></div>
             <div class="brand-sub">Autonomous Zero-Noise Code Security Inspector & 1-Click Surgical Patcher</div>
         </div>
     </div>

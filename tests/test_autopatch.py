@@ -208,3 +208,29 @@ def dump_data(filename, payload):
     findings = analyzer.analyze_file_diff(diff)
     assert any("Resource Leak" in f.category for f in findings)
 
+def test_cli_license_gating(monkeypatch, tmp_path):
+    from cli import scan_path
+    from core.license_manager import LicenseManager, PlanTier
+
+    # Mock organization context requiring Team tier
+    monkeypatch.setattr(
+        LicenseManager,
+        "inspect_github_context",
+        lambda: {"is_ci": True, "repository": "mega-corp/core", "owner": "mega-corp", "visibility": "private", "owner_type": "Organization"}
+    )
+
+    test_file = tmp_path / "test.py"
+    test_file.write_text("x = 1\n", encoding="utf-8")
+
+    # 1. Blocked when running without Team license key in Org context
+    code = scan_path(str(test_file), as_json=True, license_key=None)
+    assert code == 1
+
+    # 2. Blocked with Developer Pro key in Org context
+    code = scan_path(str(test_file), as_json=True, license_key="BUILDER-DEV-1")
+    assert code == 1
+
+    # 3. Authorized with Team Enterprise key in Org context
+    code = scan_path(str(test_file), as_json=True, license_key="KV-TEAM-ORG-99")
+    assert code == 0
+

@@ -22,6 +22,10 @@ inputs:
     description: 'Test command to execute for regression safety (e.g. pytest, npm test)'
     required: false
     default: 'pytest'
+  license-key:
+    description: 'Kavach AI License Key (required for private repos and organizations)'
+    required: false
+    default: ''
 runs:
   using: 'composite'
   steps:
@@ -33,6 +37,7 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        KAVACH_LICENSE_KEY: ${{ inputs.license-key }}
         INPUT_SCAN_PATH: ${{ inputs.scan-path }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_HEAL: ${{ inputs.heal }}

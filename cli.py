@@ -18,6 +18,7 @@ from core.diff_parser import DiffParser
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.ai_reasoner import AIReasoner
 from core.self_healing import SelfHealingTestRunner
+from core.license_manager import LicenseManager, PlanTier
 
 IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
@@ -36,8 +37,26 @@ def scan_path(
     explain: bool = False,
     heal: bool = False,
     test_cmd: str = "pytest",
-    as_json: bool = False
+    as_json: bool = False,
+    license_key: Optional[str] = None
 ) -> int:
+    is_auth, active_tier, auth_msg = LicenseManager.validate_execution_policy(license_key=license_key)
+    if not is_auth:
+        if as_json:
+            print(json.dumps({
+                "error": "LICENSE_POLICY_VIOLATION",
+                "tier": active_tier.value,
+                "message": auth_msg,
+                "upgrade_url": "https://kavach-ai.streamlit.app"
+            }, indent=2))
+        else:
+            print("\n=======================================================")
+            print("  🛡️ Kavach AI - Autonomous Security Inspector (v1.3.0)")
+            print("=======================================================")
+            print(f"[!] ACCESS BLOCKED: {auth_msg}")
+            print("[+] Upgrade or activate license at: https://kavach-ai.streamlit.app\n")
+        return 1
+
     path = Path(target_path)
     if not path.exists():
         if as_json:
@@ -59,7 +78,8 @@ def scan_path(
 
     if not as_json:
         print("\n=======================================================")
-        print("  🛡️ Kavach AI - Autonomous Security Inspector")
+        print("  🛡️ Kavach AI - Autonomous Security Inspector (v1.3.0)")
+        print(f"  Plan: {active_tier.value} — {auth_msg}")
         print("=======================================================")
         print(f"Target: {path.resolve()}")
         print(f"Files to inspect: {len(files_to_scan)}")
@@ -139,6 +159,11 @@ def scan_path(
     if as_json:
         output_data = {
             "target": str(path.resolve()),
+            "license": {
+                "tier": active_tier.value,
+                "authorized": is_auth,
+                "status": auth_msg
+            },
             "total_files": len(files_to_scan),
             "total_findings": len(total_findings),
             "summary": {
@@ -204,12 +229,13 @@ def scan_path(
         return 0
 
 def main():
-    p = argparse.ArgumentParser(description="AutoPatch Enterprise CLI Code Reviewer & Auto-Patcher")
+    p = argparse.ArgumentParser(description="Kavach AI Enterprise CLI Code Reviewer & Auto-Patcher")
     p.add_argument("path", help="File or directory path to inspect")
     p.add_argument("--patch", dest="patch_file", default="autopatch.patch", help="Output .patch file destination")
     p.add_argument("--explain", "--ai", dest="explain", action="store_true", help="Generate deep threat intelligence and exploit attack vectors")
     p.add_argument("--heal", "--self-heal", dest="heal", action="store_true", help="Enable autonomous patch application with test verification & atomic rollback")
     p.add_argument("--test-cmd", dest="test_cmd", default="pytest", help="Test runner command for self-healing verification (default: 'pytest')")
+    p.add_argument("--license-key", dest="license_key", default=os.getenv("KAVACH_LICENSE_KEY"), help="Kavach AI License Key (Pro / Team)")
     p.add_argument("--json", dest="as_json", action="store_true", help="Output results in JSON format for IDE/CI integrations")
     args = p.parse_args()
 
@@ -219,7 +245,8 @@ def main():
         explain=args.explain,
         heal=args.heal,
         test_cmd=args.test_cmd,
-        as_json=args.as_json
+        as_json=args.as_json,
+        license_key=args.license_key
     )
     sys.exit(exit_code)
 

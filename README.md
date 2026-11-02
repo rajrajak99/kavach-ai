@@ -9,7 +9,7 @@
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blue.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://python.org)
 [![Security Policy: OWASP 2026](https://img.shields.io/badge/Security-OWASP%202026-green.svg)](https://owasp.org)
-[![PyPI: v1.2.1](https://img.shields.io/badge/PyPI-v1.2.1-blue.svg)](https://pypi.org/project/kavach-ai/)
+[![PyPI: v1.3.0](https://img.shields.io/badge/PyPI-v1.3.0-blue.svg)](https://pypi.org/project/kavach-ai/)
 [![Web Console](https://img.shields.io/badge/Web%20Console-Live-brightgreen.svg)](https://kavach-ai.streamlit.app)
 
 Kavach AI is an autonomous, high-speed static security inspector and surgical code repair engine. Operating like an impenetrable armor across your **GitHub Pull Requests (CI/CD)**, local CLI, VS Code editor, and Web Console, it eliminates critical security hazards (CWE-89 SQLi, CWE-798 Secret Leaks, CWE-120 Buffer Overflows) and generates **1-click ready-to-merge patches** with zero-regression self-healing verification.
