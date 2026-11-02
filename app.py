@@ -69,8 +69,7 @@ if "license_tier" not in st.session_state:
 if "license_key" not in st.session_state:
     st.session_state.license_key = ""
 if "user_code" not in st.session_state:
-    # Pre-populate demo code so first-time visitors immediately see the engine in action
-    st.session_state.user_code = SAMPLE_PYTHON_MULTI
+    st.session_state.user_code = ""
 if "toast_msg" not in st.session_state:
     st.session_state.toast_msg = None
 if "key_feedback" not in st.session_state:
@@ -998,13 +997,10 @@ if active_tab == "Inspector":
 
                     with st.expander(f"L{f.line_number} [{f.severity}] {cat_safe} • {cwe_safe}", expanded=(i <= 2)):
                         st.markdown(f"<div style='font-size:12px; color:#C7C7D1; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
-                        c_sub1, c_sub2 = st.columns(2)
-                        with c_sub1:
-                            st.caption("❌ Current Problem Code:")
-                            st.code(f.problem_code, language=f.language)
-                        with c_sub2:
-                            st.caption("✅ Surgical 1-Click Patch:")
-                            st.code(f.fixed_code, language=f.language)
+                        st.caption("❌ Current Problem Code:")
+                        st.code(f.problem_code, language=f.language)
+                        st.caption("✅ Surgical 1-Click Patch:")
+                        st.code(f.fixed_code, language=f.language)
 
                         st.button(
                             f"🪄 Apply Patch #{i}",
