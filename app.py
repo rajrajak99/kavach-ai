@@ -38,8 +38,11 @@ def get_analyzer():
 def get_parser():
     return DiffParser()
 
-@st.cache_data(ttl=3600)
+_ANALYSIS_CACHE = {}
+
 def analyze_code_cached(code_str: str):
+    if code_str in _ANALYSIS_CACHE:
+        return _ANALYSIS_CACHE[code_str]
     analyzer = get_analyzer()
     parser = get_parser()
     diffs = []
@@ -52,7 +55,11 @@ def analyze_code_cached(code_str: str):
         elif "#include" in code_str:
             sn_name = "snippet.cpp"
         diffs = [parser.parse_raw_snippet(sn_name, code_str)]
-    return analyzer.generate_pull_request_review(diffs)
+    res = analyzer.generate_pull_request_review(diffs)
+    if len(_ANALYSIS_CACHE) > 100:
+        _ANALYSIS_CACHE.clear()
+    _ANALYSIS_CACHE[code_str] = res
+    return res
 
 # ----------------- STATE INITIALIZATION -----------------
 if "is_pro_user" not in st.session_state:
