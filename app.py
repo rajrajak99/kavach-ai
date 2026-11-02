@@ -119,7 +119,7 @@ def login_github():
     if profile.get("success"):
         st.session_state.github_user = profile
         st.session_state.auth_error = None
-        st.session_state.toast_msg = f"👋 Connected as @{profile['login']}!"
+        st.session_state.toast_msg = f"Connected as @{profile['login']}!"
     else:
         st.session_state.auth_error = profile.get("error", "GitHub user not found.")
 
@@ -128,7 +128,7 @@ def demo_login_github():
     if profile.get("success"):
         st.session_state.github_user = profile
         st.session_state.auth_error = None
-        st.session_state.toast_msg = "👋 Signed in as Founder @rajrajak99!"
+        st.session_state.toast_msg = "Signed in as Founder @rajrajak99"
 
 def logout_github():
     st.session_state.github_user = None
@@ -150,7 +150,7 @@ def select_plan(tier_val: str, plan_name: str):
 
     st.session_state.license_tier = tier_val
     st.session_state.license_key = key_val
-    st.session_state.toast_msg = f"🎉 {plan_name} Active!"
+    st.session_state.toast_msg = f"{plan_name} Active!"
 
 def activate_custom_key():
     key = st.session_state.get("custom_key_input", "").strip()
@@ -162,10 +162,10 @@ def activate_custom_key():
         st.session_state.license_tier = tier.value
         st.session_state.license_key = key
         st.session_state.is_pro_user = (tier != PlanTier.FREE)
-        st.session_state.key_feedback = ("success", f"✅ Key Verified: {tier.value} Activated!")
-        st.session_state.toast_msg = f"✅ Verified: {tier.value}"
+        st.session_state.key_feedback = ("success", f"Verified: {tier.value} Activated!")
+        st.session_state.toast_msg = f"Verified: {tier.value}"
     else:
-        st.session_state.key_feedback = ("error", "❌ Invalid or expired key! Must be a signed Ed25519 token or LemonSqueezy license key.")
+        st.session_state.key_feedback = ("error", "Invalid or expired key! Must be an authentic Ed25519 token or LemonSqueezy key.")
 
 def load_code_sample(code: str):
     st.session_state.user_code = code
@@ -177,7 +177,7 @@ def apply_patch_to_editor(problem_code: str, fixed_code: str):
     current = st.session_state.get("user_code", "")
     if problem_code in current:
         st.session_state.user_code = current.replace(problem_code, fixed_code)
-        st.session_state.toast_msg = "🪄 1-Click Patch Applied! Code is now secure."
+        st.session_state.toast_msg = "Patch Applied! Code is now secure."
     else:
         lines = current.splitlines()
         replaced = False
@@ -192,13 +192,13 @@ def apply_patch_to_editor(problem_code: str, fixed_code: str):
                 new_lines.append(line)
         if replaced:
             st.session_state.user_code = "\n".join(new_lines)
-            st.session_state.toast_msg = "🪄 1-Click Patch Applied! Code is now secure."
+            st.session_state.toast_msg = "Patch Applied! Code is now secure."
 
 if st.session_state.get("toast_msg"):
     st.toast(st.session_state.toast_msg)
     st.session_state.toast_msg = None
 
-# ----------------- MONOCHROME ZINC SYSTEM & VERCEL/LINEAR CSS -----------------
+# ----------------- MONOCHROME ZINC SYSTEM & LINEAR/VERCEL CSS -----------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -213,55 +213,55 @@ st.markdown("""
         background-color: #09090B !important;
     }
 
-    /* 2. Hide Streamlit Boilerplate Padding & Chrome */
+    /* 2. Hide Streamlit Boilerplate Chrome & Restrict to 100vh */
     #MainMenu { visibility: hidden !important; display: none !important; }
     header[data-testid="stHeader"] { display: none !important; }
     footer { visibility: hidden !important; display: none !important; }
 
     .block-container {
-        padding-top: 0.75rem !important;
-        padding-bottom: 0.75rem !important;
+        padding-top: 1.1rem !important;
+        padding-bottom: 0.8rem !important;
         padding-left: 1.25rem !important;
         padding-right: 1.25rem !important;
-        max-width: 1440px !important;
+        max-width: 1380px !important;
     }
 
-    /* 3. Top Navbar (Single-Row Slim Container) */
-    .brand-group {
+    /* 3. Top Navbar (Compact Single-Row Container) */
+    .brand-wrap {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 9px;
     }
     .brand-logo-img {
-        width: 26px;
-        height: 26px;
+        width: 24px;
+        height: 24px;
         border-radius: 6px;
         object-fit: cover;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.14);
     }
     .brand-title {
-        font-size: 14.5px;
+        font-size: 14px;
         font-weight: 600;
         color: #FAFAFA;
         letter-spacing: -0.01em;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 7px;
     }
     .brand-pill {
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 500;
         color: #A1A1AA;
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.06);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 1px 7px;
-        border-radius: 12px;
+        padding: 1px 6px;
+        border-radius: 10px;
         font-family: 'JetBrains Mono', monospace;
     }
     .plan-pill {
         font-size: 11px;
         font-weight: 500;
-        padding: 3px 10px;
+        padding: 3px 9px;
         border-radius: 12px;
         font-family: 'JetBrains Mono', monospace;
         letter-spacing: 0.02em;
@@ -277,60 +277,55 @@ st.markdown("""
     .pill-pro {
         color: #FAFAFA;
         background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.22);
     }
     .pill-team {
         color: #FBBF24;
         background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.25);
+        border: 1px solid rgba(245, 158, 11, 0.22);
     }
 
-    /* 4. Vercel / Linear Segmented Tabs */
-    .stTabs [data-baseweb="tab-list"] {
+    /* 4. Linear Segmented Control Tabs */
+    div[data-testid="stSegmentedControl"] {
         background: #121214 !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 8px !important;
-        padding: 3px !important;
-        gap: 4px !important;
-        margin-bottom: 12px !important;
+        padding: 2px !important;
     }
-    .stTabs [data-baseweb="tab"] {
-        color: #A1A1AA !important;
-        border-radius: 6px !important;
-        padding: 5px 14px !important;
-        font-size: 13px !important;
-        font-weight: 500 !important;
-        border: none !important;
+    div[data-testid="stSegmentedControl"] button {
         background: transparent !important;
+        color: #A1A1AA !important;
+        font-size: 12.5px !important;
+        font-weight: 500 !important;
+        border-radius: 6px !important;
+        border: none !important;
+        padding: 3px 14px !important;
+        height: 28px !important;
+        min-height: 28px !important;
         transition: all 0.15s ease !important;
     }
-    .stTabs [data-baseweb="tab"]:hover {
+    div[data-testid="stSegmentedControl"] button:hover {
         color: #EDEDED !important;
     }
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
         background: #27272A !important;
         color: #FFFFFF !important;
         font-weight: 600 !important;
-    }
-    .stTabs [data-baseweb="tab-highlight"] {
-        display: none !important;
-    }
-    .stTabs [data-baseweb="tab-border"] {
-        display: none !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
     }
 
-    /* 5. Linear Crisp High-Contrast Primary & Secondary Buttons */
+    /* 5. Linear Crisp High-Contrast White Primary & Secondary Buttons */
     div[data-testid="stButton"] > button[kind="primary"] {
         background: #FAFAFA !important;
         color: #09090B !important;
         font-weight: 600 !important;
-        font-size: 13px !important;
-        height: 34px !important;
-        min-height: 34px !important;
+        font-size: 12.5px !important;
+        height: 36px !important;
+        min-height: 36px !important;
         padding: 0 14px !important;
         border-radius: 6px !important;
         border: none !important;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
@@ -342,8 +337,8 @@ st.markdown("""
         color: #D4D4D8 !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         font-size: 12px !important;
-        height: 34px !important;
-        min-height: 34px !important;
+        height: 36px !important;
+        min-height: 36px !important;
         border-radius: 6px !important;
         transition: all 0.15s ease !important;
     }
@@ -353,23 +348,24 @@ st.markdown("""
         border-color: rgba(255, 255, 255, 0.2) !important;
     }
 
-    /* Popover button */
+    /* GitHub Popover Button */
     div[data-testid="stPopover"] > button {
         background: #18181B !important;
         color: #D4D4D8 !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        font-size: 12px !important;
-        height: 32px !important;
-        min-height: 32px !important;
+        font-size: 11.5px !important;
+        height: 30px !important;
+        min-height: 30px !important;
         border-radius: 6px !important;
+        padding: 0 10px !important;
     }
     div[data-testid="stPopover"] > button:hover {
         background: #27272A !important;
         color: #FFFFFF !important;
     }
 
-    /* 6. IDE Code Editor Styling */
-    .ide-file-pill {
+    /* 6. IDE Code Editor Card */
+    .ide-tab-label {
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -378,16 +374,18 @@ st.markdown("""
         color: #D4D4D8;
         background: #121214;
         border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 5px 10px;
+        padding: 4px 10px;
         border-radius: 6px;
+        height: 36px;
+        box-sizing: border-box;
     }
-    .ide-file-dot {
+    .ide-dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
         background: #10B981;
     }
-    .ide-file-meta {
+    .ide-meta {
         color: #71717A;
         font-size: 11px;
     }
@@ -396,27 +394,18 @@ st.markdown("""
         background: #0C0D0F !important;
         color: #E4E4E7 !important;
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 12.5px !important;
+        font-size: 12px !important;
         line-height: 1.55 !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 8px !important;
-        padding: 12px 14px !important;
+        padding: 10px 12px !important;
     }
     div[data-testid="stTextArea"] textarea:focus {
-        border-color: rgba(255, 255, 255, 0.25) !important;
-        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+        border-color: rgba(255, 255, 255, 0.22) !important;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
     }
 
-    .ide-footer-note {
-        font-size: 11.5px;
-        color: #71717A;
-        margin-top: 6px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    /* 7. Diagnostic Container & Terminal Empty State */
+    /* 7. Diagnostic Container (440px Match) */
     div[data-testid="stVerticalBlock"]:has(> div[data-testid="stContainer"]) {
         gap: 0 !important;
     }
@@ -426,25 +415,25 @@ st.markdown("""
         background: #0C0D0F !important;
     }
 
+    /* Minimal Terminal Empty State */
     .terminal-empty-box {
         background: #121214;
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
-        padding: 16px;
+        padding: 14px 16px;
         font-family: 'JetBrains Mono', monospace;
-        margin-top: 4px;
     }
     .terminal-bar {
         display: flex;
         align-items: center;
         gap: 6px;
-        padding-bottom: 12px;
+        padding-bottom: 10px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
     .term-dot {
-        width: 10px;
-        height: 10px;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
     }
     .term-dot.red { background: #EF4444; opacity: 0.8; }
@@ -452,11 +441,11 @@ st.markdown("""
     .term-dot.green { background: #10B981; opacity: 0.8; }
     .term-title {
         color: #71717A;
-        font-size: 11.5px;
+        font-size: 11px;
         margin-left: 6px;
     }
     .term-body {
-        font-size: 12px;
+        font-size: 11.5px;
         line-height: 1.65;
     }
     .term-line {
@@ -469,7 +458,7 @@ st.markdown("""
     }
     .term-line.muted {
         color: #71717A;
-        font-size: 11.5px;
+        font-size: 11px;
     }
     .term-line.success {
         color: #34D399;
@@ -481,29 +470,29 @@ st.markdown("""
         margin-top: 4px;
     }
 
-    /* Diagnostic Banners & Cards */
+    /* Diagnostics Banners & Expander Cards */
     .diag-banner {
         border-radius: 6px;
-        padding: 8px 12px;
-        font-size: 12.5px;
-        margin-bottom: 10px;
+        padding: 7px 11px;
+        font-size: 12px;
+        margin-bottom: 8px;
         display: flex;
         align-items: center;
         gap: 8px;
     }
     .diag-blocked {
         background: rgba(239, 68, 68, 0.12);
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        border: 1px solid rgba(239, 68, 68, 0.28);
         color: #F87171;
     }
     .diag-warning {
         background: rgba(245, 158, 11, 0.12);
-        border: 1px solid rgba(245, 158, 11, 0.3);
+        border: 1px solid rgba(245, 158, 11, 0.28);
         color: #FBBF24;
     }
     .diag-clean {
         background: rgba(16, 185, 129, 0.12);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        border: 1px solid rgba(16, 185, 129, 0.28);
         color: #34D399;
     }
 
@@ -511,12 +500,12 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 6px !important;
         background: #121214 !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 7px !important;
     }
     div[data-testid="stExpander"] summary {
-        font-size: 12.5px !important;
+        font-size: 12px !important;
         font-weight: 600 !important;
-        padding: 6px 10px !important;
+        padding: 5px 8px !important;
     }
 
     /* 8. Pricing Cards */
@@ -524,117 +513,122 @@ st.markdown("""
         background: #121214;
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
-        padding: 22px 20px;
+        padding: 20px 18px;
         position: relative;
     }
     .pricing-card-popular {
-        border-color: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.22);
         background: #16161A;
     }
     .popular-pill {
         position: absolute;
         top: 12px;
         right: 14px;
-        font-size: 10.5px;
+        font-size: 10px;
         font-weight: 600;
         background: #FAFAFA;
         color: #09090B;
-        padding: 2px 8px;
-        border-radius: 12px;
+        padding: 2px 7px;
+        border-radius: 10px;
     }
     .card-tier-title {
-        font-size: 14.5px;
+        font-size: 14px;
         font-weight: 600;
         color: #FAFAFA;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
     .card-tier-amt {
-        font-size: 2.1rem;
+        font-size: 1.9rem;
         font-weight: 700;
         color: #FFFFFF;
         letter-spacing: -0.02em;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
     .card-tier-sub {
-        font-size: 12px;
+        font-size: 11.5px;
         color: #71717A;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
     }
     .card-features-list {
-        font-size: 12.5px;
-        line-height: 1.8;
+        font-size: 12px;
+        line-height: 1.75;
         color: #D4D4D8;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------- SLIM SINGLE-ROW TOP NAVBAR -----------------
+# ----------------- COMPACT SINGLE-ROW TOP NAVBAR -----------------
 logo_b64 = get_logo_base64()
 if logo_b64:
     logo_tag = f'<img src="data:image/png;base64,{logo_b64}" class="brand-logo-img" alt="Logo" />'
 else:
-    logo_tag = '<span style="font-size:20px;">🛡️</span>'
+    logo_tag = '<span style="font-size:18px;">🛡️</span>'
 
 if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value:
-    badge_html = '<span class="plan-pill pill-team">● 👑 Team Enterprise ($99/mo)</span>'
+    badge_html = '<span class="plan-pill pill-team">● 👑 Team ($99/mo)</span>'
 elif st.session_state.is_pro_user:
-    badge_html = '<span class="plan-pill pill-pro">● ⚡ Developer Pro ($1/mo)</span>'
+    badge_html = '<span class="plan-pill pill-pro">● ⚡ Pro ($1/mo)</span>'
 else:
-    badge_html = '<span class="plan-pill pill-free">● 🆓 Community Free</span>'
+    badge_html = '<span class="plan-pill pill-free">● 🆓 Free</span>'
 
-nav_col1, nav_col2 = st.columns([1.5, 1.5])
+nav_col1, nav_col2, nav_col3 = st.columns([1.1, 1.25, 1.35], gap="small", vertical_alignment="center")
+
 with nav_col1:
     st.markdown(f"""
-    <div class="brand-group" style="padding-top:2px;">
+    <div class="brand-wrap">
         {logo_tag}
         <span class="brand-title">Kavach AI <span class="brand-pill">v1.3.0</span></span>
     </div>
     """, unsafe_allow_html=True)
 
 with nav_col2:
-    nav_auth_col, nav_badge_col = st.columns([1.2, 1.1])
-    with nav_auth_col:
+    active_tab = st.segmented_control(
+        "Navigation",
+        ["Inspector", "Pricing", "GitHub"],
+        default="Inspector",
+        label_visibility="collapsed",
+        key="main_nav_tab"
+    ) or "Inspector"
+
+with nav_col3:
+    auth_subcol1, auth_subcol2 = st.columns([1.1, 1.0], gap="small", vertical_alignment="center")
+    with auth_subcol1:
         if st.session_state.github_user:
             u = st.session_state.github_user
             with st.popover(f"👤 @{u['login']}", use_container_width=True):
                 st.markdown(f"""
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                    <img src="{u['avatar_url']}" style="width:38px; height:38px; border-radius:50%; border:1px solid #FAFAFA;" />
+                    <img src="{u['avatar_url']}" style="width:36px; height:36px; border-radius:50%; border:1px solid #FAFAFA;" />
                     <div>
-                        <div style="font-weight:600; color:#fff; font-size:13.5px;">{html.escape(u['name'])}</div>
-                        <div style="font-size:11.5px; color:#A1A1AA;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
+                        <div style="font-weight:600; color:#fff; font-size:13px;">{html.escape(u['name'])}</div>
+                        <div style="font-size:11px; color:#A1A1AA;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
                 st.markdown(badge_html, unsafe_allow_html=True)
-                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
                 st.button("🚪 Sign Out", key="btn_signout", on_click=logout_github, use_container_width=True)
         else:
-            with st.popover("🐙 Sign in with GitHub", use_container_width=True):
-                st.markdown("<div style='font-weight:600; font-size:13px; margin-bottom:4px;'>Connect GitHub Handle</div>", unsafe_allow_html=True)
-                st.caption("Links licenses to your GitHub identity.")
-                st.text_input("GitHub Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
-                st.text_input("Personal Access Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
+            with st.popover("🐙 Sign in", use_container_width=True):
+                st.markdown("<div style='font-weight:600; font-size:12.5px; margin-bottom:3px;'>GitHub Identity</div>", unsafe_allow_html=True)
+                st.caption("Link username to bind licenses.")
+                st.text_input("Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
+                st.text_input("Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
                 c_in1, c_in2 = st.columns(2)
                 with c_in1:
-                    st.button("⚡ Connect", key="btn_do_login", on_click=login_github, use_container_width=True)
+                    st.button("Connect", key="btn_do_login", on_click=login_github, use_container_width=True)
                 with c_in2:
                     st.button("Demo", key="btn_demo_login", on_click=demo_login_github, use_container_width=True)
                 if st.session_state.get("auth_error"):
                     st.error(st.session_state.auth_error)
-    with nav_badge_col:
+    with auth_subcol2:
         st.markdown(f"""
-        <div style="display:flex; justify-content:flex-end; align-items:center; height:100%; padding-top:2px;">
+        <div style="display:flex; justify-content:flex-end; align-items:center; height:100%;">
             {badge_html}
         </div>
         """, unsafe_allow_html=True)
 
-# ----------------- CLEAN SEGMENTED NAVIGATION TABS -----------------
-tab_scan, tab_pricing, tab_setup = st.tabs([
-    "🔍 Inspector",
-    "💎 Pricing",
-    "🔌 GitHub"
-])
+st.markdown("<div style='border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin: 6px 0 12px 0;'></div>", unsafe_allow_html=True)
 
 SQL_SAMPLE = '''import sqlite3
 
@@ -647,7 +641,7 @@ def find_user(username):
 '''
 
 # ================= TAB 1: GOLDEN RATIO CODE INSPECTOR =================
-with tab_scan:
+if active_tab == "Inspector":
     col_editor, col_result = st.columns([1.45, 1.0], gap="medium")
 
     # RUN ANALYSIS (CACHED)
@@ -662,18 +656,18 @@ with tab_scan:
 
     # LEFT COLUMN: 60% CODE EDITOR
     with col_editor:
-        # Unified Header Toolbar
-        tb_col1, tb_col2, tb_col3 = st.columns([1.1, 1.7, 1.2], gap="small")
+        # IDE Header Bar
+        tb_col1, tb_col2, tb_col3 = st.columns([1.0, 1.7, 1.3], gap="small", vertical_alignment="center")
         with tb_col1:
             st.markdown("""
-            <div class="ide-file-pill">
-                <span class="ide-file-dot"></span>
+            <div class="ide-tab-label">
+                <span class="ide-dot"></span>
                 <span>demo.py</span>
-                <span class="ide-file-meta">UTF-8</span>
+                <span class="ide-meta">UTF-8</span>
             </div>
             """, unsafe_allow_html=True)
         with tb_col2:
-            q1, q2, q3 = st.columns([1.0, 1.1, 0.9], gap="small")
+            q1, q2, q3 = st.columns([1.0, 1.2, 0.8], gap="small")
             with q1:
                 st.button("🔑 Secrets", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), key="btn_sec", use_container_width=True)
             with q2:
@@ -686,22 +680,21 @@ with tab_scan:
         code_input = st.text_area(
             "Code Input:",
             key="user_code",
-            height=450,
+            height=440,
             label_visibility="collapsed",
-            placeholder="// Paste code here or select a sample above to inspect..."
+            placeholder="// Paste code here or click Secrets / SQLi above to inspect..."
         )
-        st.markdown("<div class='ide-footer-note'>🔒 Local sandbox inspection • 0 bytes transmitted outside your runner</div>", unsafe_allow_html=True)
 
     # RIGHT COLUMN: 40% DIAGNOSTIC INSPECTOR
     with col_result:
-        # Header Toolbar
-        r_head1, r_head2 = st.columns([1.2, 1.8], gap="small")
+        # Diagnostic Header Bar
+        r_head1, r_head2 = st.columns([1.2, 1.8], gap="small", vertical_alignment="center")
         with r_head1:
             status_text = "Awaiting Scan" if not current_code else ("Clean" if not findings else f"{len(findings)} Issue(s)")
             st.markdown(f"""
-            <div class="ide-file-pill">
+            <div class="ide-tab-label">
                 <span>Diagnostics</span>
-                <span class="ide-file-meta">• {status_text}</span>
+                <span class="ide-meta">• {status_text}</span>
             </div>
             """, unsafe_allow_html=True)
         with r_head2:
@@ -709,12 +702,12 @@ with tab_scan:
                 crit_badge = f'<span style="color:#F87171; font-weight:600;">{metrics["critical"]} Crit</span>'
                 sec_badge = f'<span style="color:#FBBF24; font-weight:600;">{metrics["security"]} Sec</span>'
                 perf_badge = f'<span style="color:#60A5FA; font-weight:600;">{metrics["performance"]} Perf</span>'
-                st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:7px;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:6px;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='text-align:right; font-size:11.5px; color:#71717A; font-family:\"JetBrains Mono\"; padding-top:7px;'>Ready</div>", unsafe_allow_html=True)
+                st.markdown("<div style='text-align:right; font-size:11.5px; color:#71717A; font-family:\"JetBrains Mono\"; padding-top:6px;'>Zero Noise</div>", unsafe_allow_html=True)
 
-        # 450px Matched Height Container
-        with st.container(height=450):
+        # 440px Matched Height Container
+        with st.container(height=440):
             if not current_code:
                 st.markdown("""
                 <div class="terminal-empty-box">
@@ -782,7 +775,7 @@ with tab_scan:
                         )
 
 # ================= TAB 2: PRICING & LICENSING =================
-with tab_pricing:
+elif active_tab == "Pricing":
     is_free = (st.session_state.license_tier == PlanTier.FREE.value)
     is_pro = (st.session_state.license_tier == PlanTier.DEVELOPER_PRO.value)
     is_team = (st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value)
@@ -791,7 +784,7 @@ with tab_pricing:
 
     # 1. COMMUNITY ($0)
     with p1:
-        st.markdown(f"""
+        st.markdown("""
         <div class="pricing-card">
             <div class="card-tier-title" style="color:#34D399;">Community</div>
             <div class="card-tier-amt">$0</div>
@@ -817,7 +810,7 @@ with tab_pricing:
 
     # 2. DEVELOPER PRO ($1)
     with p2:
-        st.markdown(f"""
+        st.markdown("""
         <div class="pricing-card pricing-card-popular">
             <div class="popular-pill">Most Popular</div>
             <div class="card-tier-title" style="color:#FAFAFA;">Developer Pro</div>
@@ -845,7 +838,7 @@ with tab_pricing:
 
     # 3. TEAM ENTERPRISE ($99)
     with p3:
-        st.markdown(f"""
+        st.markdown("""
         <div class="pricing-card">
             <div class="card-tier-title" style="color:#FBBF24;">Team Enterprise</div>
             <div class="card-tier-amt">$99<span style="font-size:14px; color:#71717A;">/mo</span></div>
@@ -870,7 +863,7 @@ with tab_pricing:
         )
 
     # LICENSE ACTIVATION STRIP
-    st.markdown("<div style='margin-top:24px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
     lk_col1, lk_col2, lk_col3 = st.columns([2, 1.8, 1])
     with lk_col1:
         st.markdown("""
@@ -892,7 +885,7 @@ with tab_pricing:
             st.error(msg)
 
 # ================= TAB 3: GITHUB SETUP =================
-with tab_setup:
+elif active_tab == "GitHub":
     st.markdown("""
     <div style="margin-bottom:12px;">
         <div style="font-size:14px; font-weight:600; color:#FAFAFA;">1-Minute GitHub Actions Security Gate</div>
