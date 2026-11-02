@@ -8,7 +8,6 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import streamlit as st
-import pandas as pd
 import requests
 import html
 import base64
@@ -17,7 +16,6 @@ from core.diff_parser import DiffParser
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.ai_reasoner import AIReasoner
 from kavach_license import LicenseManager, PlanTier
-from scripts.mint_license import mint_license
 from samples.vulnerable_samples import SAMPLE_PYTHON_MULTI
 
 # ----------------- PAGE CONFIG -----------------
@@ -138,11 +136,20 @@ def logout_github():
 # ----------------- CALLBACKS -----------------
 def select_plan(tier_val: str, plan_name: str):
     user_handle = st.session_state.github_user['login'] if st.session_state.github_user else "local-builder"
+    key_val = ""
     if tier_val == PlanTier.DEVELOPER_PRO.value:
-        key_val = mint_license(tier="pro", subject=user_handle, days=365)
+        try:
+            from scripts.mint_license import mint_license
+            key_val = mint_license(tier="pro", subject=user_handle, days=365)
+        except Exception:
+            key_val = "KV-PRO-INDIE"
         st.session_state.is_pro_user = True
     elif tier_val == PlanTier.TEAM_ENTERPRISE.value:
-        key_val = mint_license(tier="team", subject=user_handle, days=365)
+        try:
+            from scripts.mint_license import mint_license
+            key_val = mint_license(tier="team", subject=user_handle, days=365)
+        except Exception:
+            key_val = "KV-TEAM-ORG"
         st.session_state.is_pro_user = True
     else:
         key_val = ""
