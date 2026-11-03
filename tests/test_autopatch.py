@@ -288,3 +288,31 @@ def test_cli_license_gating(monkeypatch, tmp_path):
     code = scan_path(str(test_file), as_json=True, license_key=team_token)
     assert code == 0
 
+def test_gibberish_syntax_error_not_passed():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    diff = parser.parse_raw_snippet("snippet.py", "hello random invalid text 123")
+    res = analyzer.generate_pull_request_review([diff])
+    assert res['status'] == "SYNTAX_ERROR"
+    assert res['status'] != "PASSED"
+    assert res['syntax_error'] is not None
+    assert "line" in res['syntax_error']
+
+def test_broken_python_syntax_error_not_passed():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    diff = parser.parse_raw_snippet("snippet.py", "def broken_func(:\n    pass\n")
+    res = analyzer.generate_pull_request_review([diff])
+    assert res['status'] == "SYNTAX_ERROR"
+    assert res['status'] != "PASSED"
+    assert res['syntax_error'] is not None
+
+def test_valid_code_passes():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    diff = parser.parse_raw_snippet("snippet.py", "def safe_func():\n    return 42\n")
+    res = analyzer.generate_pull_request_review([diff])
+    assert res['status'] == "PASSED"
+    assert res['syntax_error'] is None
+
+

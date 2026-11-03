@@ -417,8 +417,8 @@ st.markdown("""
         color: #EDEDF2 !important;
         border: 1px solid #1E1E28 !important;
         font-size: 12px !important;
-        height: 32px !important;
-        min-height: 32px !important;
+        height: 36px !important;
+        min-height: 36px !important;
         border-radius: 8px !important;
         padding: 0 12px !important;
         transition: all 0.18s ease !important;
@@ -614,6 +614,11 @@ st.markdown("""
         background: rgba(61, 220, 151, 0.1);
         border: 1px solid rgba(61, 220, 151, 0.25);
         color: #3DDC97;
+    }
+    .diag-syntax {
+        background: rgba(255, 180, 84, 0.12);
+        border: 1px solid rgba(255, 180, 84, 0.35);
+        color: #FFB454;
     }
 
     div[data-testid="stExpander"] {
@@ -846,6 +851,18 @@ def find_user(username):
     return cursor.fetchall()
 '''
 
+SECRETS_SAMPLE = '''import os
+import requests
+
+def fetch_data():
+    # Hardcoded sensitive tokens (CWE-798)
+    github_token = "ghp_A1b2C3d4E5f6G7h8I9j0K1L2M3N4O5P6Q7R8"
+    aws_secret = "AKIAIOSFODNN7EXAMPLE"
+    
+    headers = {"Authorization": f"token {github_token}"}
+    return requests.get("https://api.github.com/user", headers=headers)
+'''
+
 # ================= TAB 1: GOLDEN RATIO CODE INSPECTOR =================
 if active_tab == "Inspector":
     # Hero Positioning & Trust Bar
@@ -873,27 +890,35 @@ if active_tab == "Inspector":
         analysis = analyze_code_cached(current_code)
         findings = analysis['findings']
         metrics = analysis['metrics']
+        analysis_status = analysis.get('status', 'PASSED')
+        syntax_err = analysis.get('syntax_error')
     else:
         findings = []
         metrics = {'critical': 0, 'security': 0, 'performance': 0}
+        analysis_status = "IDLE"
+        syntax_err = None
 
     # LEFT COLUMN: 60% CODE EDITOR
     with col_editor:
         # IDE Header Bar
-        tb_col1, tb_col2 = st.columns([1.5, 1.3], gap="small", vertical_alignment="center")
+        tb_col1, tb_col2 = st.columns([1.1, 1.9], gap="small", vertical_alignment="center")
         with tb_col1:
             st.markdown("""
             <div class="ide-tab-label">
                 <span class="ide-dot"></span>
                 <span style="font-weight:600; color:#EDEDF2;">editor.py</span>
-                <span class="ide-meta">Python / JS / C++ • UTF-8</span>
+                <span class="ide-meta">• UTF-8</span>
             </div>
             """, unsafe_allow_html=True)
         with tb_col2:
-            act_col1, act_col2 = st.columns([0.8, 1.3], gap="small")
-            with act_col1:
+            c_demo, c_clear, c_inspect = st.columns([1.0, 0.7, 1.4], gap="small")
+            with c_demo:
+                with st.popover("⚡ Demos", use_container_width=True):
+                    st.button("💉 SQL Injection", on_click=load_code_sample, args=(SQL_SAMPLE,), key="demo_sqli", use_container_width=True)
+                    st.button("🔑 Secret Leaks", on_click=load_code_sample, args=(SECRETS_SAMPLE,), key="demo_secrets", use_container_width=True)
+            with c_clear:
                 st.button("Clear", on_click=clear_code_box, key="btn_clr", use_container_width=True)
-            with act_col2:
+            with c_inspect:
                 st.button("Inspect Code ⌘↵", key="btn_inspect_code", type="primary", use_container_width=True)
 
         code_input = st.text_area(
@@ -911,6 +936,8 @@ if active_tab == "Inspector":
         with r_head1:
             if not current_code:
                 status_text = "Awaiting Scan"
+            elif analysis_status == "SYNTAX_ERROR":
+                status_text = "Syntax Error"
             elif not findings:
                 status_text = "Clean (0 Issues)"
             else:
@@ -923,7 +950,9 @@ if active_tab == "Inspector":
             </div>
             """, unsafe_allow_html=True)
         with r_head2:
-            if findings:
+            if analysis_status == "SYNTAX_ERROR":
+                st.markdown("<div style='text-align:right; font-size:11.5px; color:#FFB454; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Invalid Syntax</div>", unsafe_allow_html=True)
+            elif findings:
                 crit_badge = f'<span style="color:#FF5C6C; font-weight:600;">{metrics["critical"]} Crit</span>'
                 sec_badge = f'<span style="color:#FFB454; font-weight:600;">{metrics["security"]} Sec</span>'
                 perf_badge = f'<span style="color:#7C6CFF; font-weight:600;">{metrics["performance"]} Perf</span>'
@@ -952,6 +981,24 @@ if active_tab == "Inspector":
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+            elif analysis_status == "SYNTAX_ERROR":
+                err_line = syntax_err.get('line', 1) if syntax_err else 1
+                err_col = syntax_err.get('column', 1) if syntax_err else 1
+                err_msg = syntax_err.get('msg', 'Invalid syntax') if syntax_err else 'Invalid syntax'
+                err_text = syntax_err.get('text', '') if syntax_err else ''
+
+                st.markdown(f"""
+                <div class="diag-banner diag-syntax">
+                    <span style="font-size:16px;">⚠</span>
+                    <div>
+                        <div style="font-weight:600; font-size:12.5px;">SYNTAX ERROR — Unable to parse AST</div>
+                        <div style="font-size:11.5px; opacity:0.9;">Fix syntax errors before security verification. (Line {err_line}, Col {err_col}: {html.escape(err_msg)})</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if err_text:
+                    st.caption("Faulty code construct:")
+                    st.code(err_text, language="python")
             elif not findings:
                 st.markdown("""
                 <div class="diag-banner diag-clean">

@@ -141,14 +141,26 @@ class SurgicalAnalyzer:
         full_code: str,
         lines_by_num: Dict[int, str],
         changed_line_nums: Set[int]
-    ) -> Tuple[List[PatchFinding], Set[str]]:
+    ) -> Tuple[List[PatchFinding], Set[str], Optional[Dict[str, Any]]]:
         ast_findings: List[PatchFinding] = []
         safely_closed_handles: Set[str] = set()
+        syntax_error: Optional[Dict[str, Any]] = None
 
         try:
             tree = ast.parse(full_code)
+        except SyntaxError as se:
+            is_c_cpp = bool(re.search(r'(#include\s*<|\bstd::|\bcout\b|\bprintf\b|\bstrcpy\b|\bgets\b|\bint\s+main\b|\bchar\s*\*)', full_code))
+            is_js = bool(re.search(r'(\bfunction\b|\bconst\b|\bvar\b|\blet\b|=>|console\.log\b|\bmodule\.exports\b|\brequire\s*\()', full_code))
+            if not is_c_cpp and not is_js and full_code.strip():
+                syntax_error = {
+                    'line': se.lineno or 1,
+                    'column': se.offset or 1,
+                    'msg': str(se.msg) if hasattr(se, 'msg') else str(se),
+                    'text': se.text.strip() if getattr(se, 'text', None) else ""
+                }
+            return ast_findings, safely_closed_handles, syntax_error
         except Exception:
-            return ast_findings, safely_closed_handles
+            return ast_findings, safely_closed_handles, None
 
         safely_closed_handles = self._prescan_finally_closes(tree)
         symbol_table: Dict[str, str] = {}
@@ -303,7 +315,7 @@ class SurgicalAnalyzer:
                                 language="python"
                             ))
 
-        return ast_findings, safely_closed_handles
+        return ast_findings, safely_closed_handles, None
 
     def analyze_file_diff(self, file_diff: ParsedFileDiff) -> List[PatchFinding]:
         findings: List[PatchFinding] = []
@@ -329,7 +341,9 @@ class SurgicalAnalyzer:
         if lang == "python":
             max_ln = max(lines_by_num.keys()) if lines_by_num else 0
             full_code = "\n".join([lines_by_num.get(i, "") for i in range(1, max_ln + 1)])
-            ast_findings, safely_closed_handles = self._analyze_python_ast(full_code, lines_by_num, changed_line_nums)
+            ast_findings, safely_closed_handles, syn_err = self._analyze_python_ast(full_code, lines_by_num, changed_line_nums)
+            if syn_err:
+                file_diff.syntax_error = syn_err
             findings.extend(ast_findings)
             for af in ast_findings:
                 ast_flagged_lines.add(af.line_number)
@@ -637,20 +651,27 @@ class SurgicalAnalyzer:
         sec_count = sum(1 for f in all_findings if f.severity == 'SECURITY')
         perf_count = sum(1 for f in all_findings if f.severity == 'PERFORMANCE')
 
-        status = "PASSED" if not all_findings else ("BLOCKED" if (crit_count + sec_count) > 0 else "WARNING")
-        
-        summary_md = "### AutoPatch Code Review Summary\n\n"
-        if not all_findings:
-            summary_md += "All security checks passed. Zero blocking vulnerabilities detected.\n"
+        syntax_errors = [fd.syntax_error for fd in file_diffs if getattr(fd, 'syntax_error', None)]
+        first_err = syntax_errors[0] if syntax_errors else None
+
+        if syntax_errors and not all_findings:
+            status = "SYNTAX_ERROR"
+            summary_md = f"### AutoPatch Code Review Summary\n\nSyntax error detected in input code. AST could not be parsed:\n- Line {first_err.get('line', 1)}, Col {first_err.get('column', 1)}: {first_err.get('msg', 'Invalid syntax')}\n"
         else:
-            summary_md += f"Detected {len(all_findings)} high-priority issues across changeset:\n"
-            summary_md += f"- Critical: {crit_count}\n"
-            summary_md += f"- Security: {sec_count}\n"
-            summary_md += f"- Performance: {perf_count}\n"
+            status = "PASSED" if not all_findings else ("BLOCKED" if (crit_count + sec_count) > 0 else "WARNING")
+            summary_md = "### AutoPatch Code Review Summary\n\n"
+            if not all_findings:
+                summary_md += "All security checks passed. Zero blocking vulnerabilities detected.\n"
+            else:
+                summary_md += f"Detected {len(all_findings)} high-priority issues across changeset:\n"
+                summary_md += f"- Critical: {crit_count}\n"
+                summary_md += f"- Security: {sec_count}\n"
+                summary_md += f"- Performance: {perf_count}\n"
 
         return {
             'status': status,
             'findings': all_findings,
+            'syntax_error': first_err,
             'summary_markdown': summary_md,
             'metrics': {
                 'critical': crit_count,

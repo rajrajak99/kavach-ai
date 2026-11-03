@@ -93,7 +93,10 @@ def build_github_markdown_report(
     crit = metrics['critical']
     sec = metrics['security']
     perf = metrics['performance']
-    status_badge = "🔴 MERGE BLOCKED" if (crit + sec) > 0 else ("🟡 WARNINGS DETECTED" if perf > 0 else "🟢 CLEAN - READY TO MERGE")
+    if analysis.get('status') == 'SYNTAX_ERROR':
+        status_badge = "🔴 SYNTAX ERROR — MERGE BLOCKED"
+    else:
+        status_badge = "🔴 MERGE BLOCKED" if (crit + sec) > 0 else ("🟡 WARNINGS DETECTED" if perf > 0 else "🟢 CLEAN - READY TO MERGE")
 
     lines = []
     lines.append(f"{BOT_SIGNATURE}")
@@ -118,8 +121,17 @@ def build_github_markdown_report(
     lines.append("")
 
     if not findings:
-        lines.append("### ✅ All Security Checks Passed")
-        lines.append("No zero-day vulnerabilities, secret leaks, or fatal unhandled exceptions detected in this pull request.")
+        if analysis.get('status') == 'SYNTAX_ERROR':
+            syn = analysis.get('syntax_error') or {}
+            err_line = syn.get('line', '?')
+            err_col = syn.get('column', '?')
+            err_msg = syn.get('msg', 'Invalid syntax')
+            lines.append("### ❌ Syntax Error Detected — Unable to Parse AST")
+            lines.append(f"Input code could not be parsed by AST engine due to syntax error at line {err_line}, col {err_col}: `{err_msg}`.")
+            lines.append("Fix syntax errors before Kavach can perform deterministic security verification.")
+        else:
+            lines.append("### ✅ All Security Checks Passed")
+            lines.append("No zero-day vulnerabilities, secret leaks, or fatal unhandled exceptions detected in this pull request.")
         lines.append("")
         lines.append("---")
         lines.append("*Protected by [Kavach AI](https://github.com/rajrajak99/kavach-ai) • [Live Dashboard](https://kavach-ai.streamlit.app)*")
@@ -330,7 +342,9 @@ def main():
     perf = metrics['performance']
 
     should_fail = False
-    if args.fail_on == "CRITICAL" and (crit > 0 or sec > 0):
+    if analysis.get('status') == 'SYNTAX_ERROR':
+        should_fail = True
+    elif args.fail_on == "CRITICAL" and (crit > 0 or sec > 0):
         should_fail = True
     elif args.fail_on == "HIGH" and (crit > 0 or sec > 0):
         should_fail = True

@@ -24,6 +24,7 @@ class ParsedFileDiff:
     filename_new: str
     hunks: List[DiffHunk] = field(default_factory=list)
     is_noise: bool = False
+    syntax_error: Optional[Dict[str, Any]] = None
 
 class DiffParser:
     """
