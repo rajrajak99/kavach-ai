@@ -880,32 +880,28 @@ if active_tab == "Inspector":
     # LEFT COLUMN: 60% CODE EDITOR
     with col_editor:
         # IDE Header Bar
-        tb_col1, tb_col2, tb_col3 = st.columns([1.1, 2.0, 1.2], gap="small", vertical_alignment="center")
+        tb_col1, tb_col2 = st.columns([1.5, 1.3], gap="small", vertical_alignment="center")
         with tb_col1:
             st.markdown("""
             <div class="ide-tab-label">
                 <span class="ide-dot"></span>
-                <span style="font-weight:600; color:#EDEDF2;">demo.py</span>
-                <span class="ide-meta">UTF-8</span>
+                <span style="font-weight:600; color:#EDEDF2;">editor.py</span>
+                <span class="ide-meta">Python / JS / C++ • UTF-8</span>
             </div>
             """, unsafe_allow_html=True)
         with tb_col2:
-            q1, q2, q3 = st.columns([1.1, 1.0, 0.9], gap="small")
-            with q1:
-                st.button("🔑 Secrets", on_click=load_code_sample, args=(SAMPLE_PYTHON_MULTI,), key="btn_sec", use_container_width=True)
-            with q2:
-                st.button("💉 SQLi", on_click=load_code_sample, args=(SQL_SAMPLE,), key="btn_sqli", use_container_width=True)
-            with q3:
-                st.button("🧹 Clear", on_click=clear_code_box, key="btn_clr", use_container_width=True)
-        with tb_col3:
-            st.button("Inspect Code ⌘↵", key="btn_inspect_code", type="primary", use_container_width=True)
+            act_col1, act_col2 = st.columns([0.8, 1.3], gap="small")
+            with act_col1:
+                st.button("Clear", on_click=clear_code_box, key="btn_clr", use_container_width=True)
+            with act_col2:
+                st.button("Inspect Code ⌘↵", key="btn_inspect_code", type="primary", use_container_width=True)
 
         code_input = st.text_area(
             "Code Input:",
             key="user_code",
             height=440,
             label_visibility="collapsed",
-            placeholder="// Paste code here or select Secrets / SQLi above to inspect..."
+            placeholder="// Paste your Python, JavaScript, or C++ code here to inspect for vulnerabilities..."
         )
 
     # RIGHT COLUMN: 40% DIAGNOSTIC INSPECTOR
@@ -952,7 +948,7 @@ if active_tab == "Inspector":
                         <div class="term-line muted">Taint Flow: active (Intra-procedural tracking)</div>
                         <div class="term-line muted">Constant Folding: active (CWE-798 resolver)</div>
                         <div class="term-line success">✓ Engine idle. Ready when your code is.</div>
-                        <div class="term-line info">ℹ Select 'Secrets' or 'SQLi' above to run live AST analysis.</div>
+                        <div class="term-line info">ℹ Paste code into the editor and click 'Inspect Code' to run live AST analysis.</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
