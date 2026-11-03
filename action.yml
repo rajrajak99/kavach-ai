@@ -1,4 +1,4 @@
-name: '🛡️ Kavach AI - Autonomous PR Security Gate'
+name: 'Kavach AI Security Inspector'
 description: 'Autonomous zero-noise PR security reviewer, self-healing test runner, and 1-click surgical patcher'
 author: 'Raja Rajak (@rajrajak99)'
 inputs:
@@ -33,6 +33,11 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests cryptography
     - name: Run Kavach AI CI Gate
       shell: bash
       env:
@@ -50,4 +55,4 @@ runs:
         python "${{ github.action_path }}/ci_bot.py" --path "$INPUT_SCAN_PATH" --fail-on "$INPUT_FAIL_ON" "${HEAL_ARGS[@]}"
 branding:
   icon: 'shield'
-  color: 'blue'
+  color: 'purple'
