@@ -51,7 +51,7 @@ def scan_path(
             }, indent=2))
         else:
             print("\n=======================================================")
-            print("  🛡️ Kavach AI - Autonomous Security Inspector (v1.3.0)")
+            print("  [+] Kavach AI - Autonomous Security Inspector (v1.3.0)")
             print("=======================================================")
             print(f"[!] ACCESS BLOCKED: {auth_msg}")
             print("[+] Upgrade or activate license at: https://kavach-ai.streamlit.app\n")
@@ -78,8 +78,8 @@ def scan_path(
 
     if not as_json:
         print("\n=======================================================")
-        print("  🛡️ Kavach AI - Autonomous Security Inspector (v1.3.0)")
-        print(f"  Plan: {active_tier.value} — {auth_msg}")
+        print("  [+] Kavach AI - Autonomous Security Inspector (v1.3.0)")
+        print(f"  Plan: {active_tier.value} - {auth_msg}")
         print("=======================================================")
         print(f"Target: {path.resolve()}")
         print(f"Files to inspect: {len(files_to_scan)}")
@@ -230,7 +230,8 @@ def scan_path(
 
 def main():
     p = argparse.ArgumentParser(description="Kavach AI Enterprise CLI Code Reviewer & Auto-Patcher")
-    p.add_argument("path", help="File or directory path to inspect")
+    p.add_argument("-v", "--version", action="version", version="kavach-ai 1.3.0")
+    p.add_argument("path", nargs="?", default=".", help="File or directory path to inspect (default: current directory)")
     p.add_argument("--patch", dest="patch_file", default="autopatch.patch", help="Output .patch file destination")
     p.add_argument("--explain", "--ai", dest="explain", action="store_true", help="Generate deep threat intelligence and exploit attack vectors")
     p.add_argument("--heal", "--self-heal", dest="heal", action="store_true", help="Enable autonomous patch application with test verification & atomic rollback")

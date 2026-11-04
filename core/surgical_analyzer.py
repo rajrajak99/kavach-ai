@@ -211,33 +211,17 @@ class SurgicalAnalyzer:
                                     language="python"
                                 ))
 
-                    # Feature 1: Mark Tainted SQL Query Variables
-                    is_tainted_sql = False
-                    if isinstance(node.value, ast.JoinedStr):
-                        raw_text = "".join([c.value for c in node.value.values if isinstance(c, ast.Constant)])
-                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', raw_text):
-                            if any(isinstance(v, ast.FormattedValue) for v in node.value.values):
-                                is_tainted_sql = True
-                    elif isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Add):
-                        concat_str = self._resolve_string(node.value.left, symbol_table) or ""
-                        if not concat_str and isinstance(node.value.left, ast.Constant):
-                            concat_str = str(node.value.left.value)
-                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', concat_str):
-                            is_tainted_sql = True
-                    elif isinstance(node.value, ast.BinOp) and isinstance(node.value.op, ast.Mod):
-                        mod_str = self._resolve_string(node.value.left, symbol_table) or ""
-                        if not mod_str and isinstance(node.value.left, ast.Constant):
-                            mod_str = str(node.value.left.value)
-                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', mod_str):
-                            is_tainted_sql = True
-                    elif isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "format":
-                        fmt_str = self._resolve_string(node.value.func.value, symbol_table) or ""
-                        if not fmt_str and isinstance(node.value.func.value, ast.Constant):
-                            fmt_str = str(node.value.func.value.value)
-                        if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', fmt_str):
-                            is_tainted_sql = True
-
-                    if is_tainted_sql:
+                    # Feature 1: Mark Tainted SQL Query Variables (AST Constant & Dynamic Extraction)
+                    str_constants = [
+                        sub.value for sub in ast.walk(node.value)
+                        if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+                    ]
+                    has_dynamic_sub = any(
+                        isinstance(sub, (ast.Name, ast.Call, ast.Attribute, ast.FormattedValue))
+                        for sub in ast.walk(node.value)
+                    )
+                    combined_sql = " ".join(str_constants)
+                    if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', combined_sql) and has_dynamic_sub:
                         tainted_sql_vars[target_name] = (node.lineno, node.value, target_name)
 
             # 2. Function Calls: Env Fallbacks & Tainted SQL Sinks
@@ -293,7 +277,7 @@ class SurgicalAnalyzer:
                                     language="python"
                                 ))
 
-                # Feature 1: Indirect / Variable-Aliased SQL Injection Sink
+                # Feature 1: SQL Injection Sink (Direct or Indirect / Variable-Aliased)
                 if isinstance(node.func, ast.Attribute) and node.func.attr in ("execute", "executemany"):
                     if node.args and node.lineno in changed_line_nums:
                         arg0 = node.args[0]
@@ -314,6 +298,31 @@ class SurgicalAnalyzer:
                                 cwe_id="CWE-89",
                                 language="python"
                             ))
+                        else:
+                            arg_constants = [
+                                sub.value for sub in ast.walk(arg0)
+                                if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+                            ]
+                            has_arg_dynamic = any(
+                                isinstance(sub, (ast.Name, ast.Call, ast.Attribute, ast.FormattedValue))
+                                for sub in ast.walk(arg0)
+                            )
+                            if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', " ".join(arg_constants)) and has_arg_dynamic:
+                                line_str = lines_by_num.get(node.lineno, "cursor.execute(...)")
+                                indent = len(line_str) - len(line_str.lstrip())
+                                indent_str = " " * indent
+                                fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE param = ?", (param_value,))'
+                                ast_findings.append(PatchFinding(
+                                    severity="CRITICAL",
+                                    category="SQL Injection via Dynamic String Formatting",
+                                    line_number=node.lineno,
+                                    problem_code=line_str.strip(),
+                                    fixed_code=fixed.strip(),
+                                    explanation="SQL query constructed with dynamic concatenation/interpolation inside execute(). Use parameterized queries with tuples instead.",
+                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                    cwe_id="CWE-89",
+                                    language="python"
+                                ))
 
         return ast_findings, safely_closed_handles, None
 

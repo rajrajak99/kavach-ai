@@ -40,3 +40,4 @@ htmlcov/
 # Binaries & local tools
 bin/
 *.exe
+*.patch

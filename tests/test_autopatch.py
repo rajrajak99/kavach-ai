@@ -315,4 +315,32 @@ def test_valid_code_passes():
     assert res['status'] == "PASSED"
     assert res['syntax_error'] is None
 
+def test_ast_variable_aliased_sql_injection():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    vuln_code = (
+        "def login(user):\n"
+        "    query = \"SELECT * FROM users WHERE name = '\" + user + \"'\"\n"
+        "    cursor.execute(query)\n"
+    )
+    diff = parser.parse_raw_snippet("auth.py", vuln_code)
+    res = analyzer.generate_pull_request_review([diff])
+    assert res['status'] == "BLOCKED"
+    assert len(res['findings']) >= 1
+    assert any(f.cwe_id == "CWE-89" for f in res['findings'])
+    assert any("SQL Injection" in f.category for f in res['findings'])
+
+def test_ast_direct_dynamic_sql_injection():
+    parser = DiffParser()
+    analyzer = SurgicalAnalyzer()
+    vuln_code = (
+        "def login(user):\n"
+        "    cursor.execute(\"SELECT * FROM users WHERE name = '\" + user + \"'\")\n"
+    )
+    diff = parser.parse_raw_snippet("auth.py", vuln_code)
+    res = analyzer.generate_pull_request_review([diff])
+    assert res['status'] == "BLOCKED"
+    assert len(res['findings']) >= 1
+    assert any(f.cwe_id == "CWE-89" for f in res['findings'])
+
 

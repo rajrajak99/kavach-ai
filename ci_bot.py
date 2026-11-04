@@ -6,6 +6,15 @@ import subprocess
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 try:
     import requests
 except ImportError:
@@ -240,7 +249,7 @@ def main():
 
     # Enforce Zero-Loss License Policy (Free for Public / Pro for Personal / Team for Orgs)
     is_auth, active_tier, auth_msg = LicenseManager.validate_execution_policy(license_key=args.license_key)
-    print(f"[+] License Policy: {active_tier.value} — {auth_msg}")
+    print(f"[+] License Policy: {active_tier.value} - {auth_msg}")
     if not is_auth:
         print(f"\n[!] ACCESS BLOCKED: {auth_msg}\n")
         sys.exit(1)
@@ -292,7 +301,7 @@ def main():
                 h_res = healing_runner.heal_file(fpath, file_findings, test_command=args.test_cmd)
                 if h_res.status == "VERIFIED_PASSED":
                     passed_count += 1
-                    print(f"[✓] Verified safe patch on {fpath}: All tests passed!")
+                    print(f"[+] Verified safe patch on {fpath}: All tests passed!")
                 else:
                     print(f"[!] Self-healing notice on {fpath}: {h_res.message}")
 
