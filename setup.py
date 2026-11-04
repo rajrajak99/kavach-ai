@@ -20,7 +20,7 @@ setup(
         "cryptography>=41.0.0",
     ],
     extras_require={
-        "ui": ["streamlit>=1.35.0", "pandas>=2.0.0"],
+        "ui": ["streamlit>=1.35.0", "pandas>=2.0.0", "streamlit-ace>=0.1.1"],
         "dev": ["pytest>=8.0.0"],
     },
     entry_points={
