@@ -69,6 +69,19 @@ def is_non_production_path(path_str: str) -> bool:
         return True
     return False
 
+FORBIDDEN_REPO_KEYWORDS: Set[str] = {
+    "template", "boilerplate", "cookbook", "tutorial", "starter", "example",
+    "awesome-", "homework", "sample", "demo", "blueprint", "playground", "learn", "study"
+}
+
+def is_template_or_toy_repo(repo_info: Dict[str, Any]) -> bool:
+    """Detects and excludes template repositories, tutorials, and boilerplates."""
+    name = (repo_info.get("name") or "").lower()
+    desc = (repo_info.get("description") or "").lower()
+    full_name = (repo_info.get("full_name") or "").lower()
+    target_str = f"{name} {desc} {full_name}"
+    return any(kw in target_str for kw in FORBIDDEN_REPO_KEYWORDS)
+
 # Curated high-yield public candidate repositories for startup AppSec hunting
 CURATED_FALLBACK_REPOS = [
     {
@@ -76,7 +89,14 @@ CURATED_FALLBACK_REPOS = [
         "html_url": "https://github.com/Gurtejhundal/Traqu",
         "stargazers_count": 15,
         "owner": {"login": "Gurtejhundal", "html_url": "https://github.com/Gurtejhundal"},
-        "description": "FastAPI + SQLAlchemy tracker backend"
+        "description": "FastAPI tracking SaaS backend service"
+    },
+    {
+        "name": "adminsite",
+        "html_url": "https://github.com/nimaxin/adminsite",
+        "stargazers_count": 74,
+        "owner": {"login": "nimaxin", "html_url": "https://github.com/nimaxin"},
+        "description": "Flask database administration SaaS dashboard"
     },
     {
         "name": "Hyperion",
@@ -84,48 +104,6 @@ CURATED_FALLBACK_REPOS = [
         "stargazers_count": 21,
         "owner": {"login": "aeecleclair", "html_url": "https://github.com/aeecleclair"},
         "description": "FastAPI and database microservice app"
-    },
-    {
-        "name": "fastapi-realworld-example-app",
-        "html_url": "https://github.com/nsidnev/fastapi-realworld-example-app",
-        "stargazers_count": 2100,
-        "owner": {"login": "nsidnev", "html_url": "https://github.com/nsidnev"},
-        "description": "Backend codebase for RealWorld using FastAPI, SQLAlchemy and PostgreSQL"
-    },
-    {
-        "name": "full-stack-fastapi-template",
-        "html_url": "https://github.com/tiangolo/full-stack-fastapi-template",
-        "stargazers_count": 28000,
-        "owner": {"login": "tiangolo", "html_url": "https://github.com/tiangolo"},
-        "description": "Full stack, modern web application template using FastAPI and PostgreSQL"
-    },
-    {
-        "name": "FastSQLA",
-        "html_url": "https://github.com/hadrien/FastSQLA",
-        "stargazers_count": 85,
-        "owner": {"login": "hadrien", "html_url": "https://github.com/hadrien"},
-        "description": "FastAPI + SQLAlchemy async backend boilerplate"
-    },
-    {
-        "name": "fastapi-sqlalchemy-template",
-        "html_url": "https://github.com/modern-python/fastapi-sqlalchemy-template",
-        "stargazers_count": 218,
-        "owner": {"login": "modern-python", "html_url": "https://github.com/modern-python"},
-        "description": "Production template for FastAPI with SQLAlchemy 2.0"
-    },
-    {
-        "name": "fastapi-agent-blueprint",
-        "html_url": "https://github.com/Mr-DooSun/fastapi-agent-blueprint",
-        "stargazers_count": 30,
-        "owner": {"login": "Mr-DooSun", "html_url": "https://github.com/Mr-DooSun"},
-        "description": "FastAPI backend agent blueprint with SQLite and async workers"
-    },
-    {
-        "name": "adminsite",
-        "html_url": "https://github.com/nimaxin/adminsite",
-        "stargazers_count": 74,
-        "owner": {"login": "nimaxin", "html_url": "https://github.com/nimaxin"},
-        "description": "Flask and database admin dashboard"
     },
     {
         "name": "kavach-enterprise-demo",
@@ -159,6 +137,8 @@ def search_github_repositories(queries: List[str], token: Optional[str] = None, 
             with urllib.request.urlopen(req, timeout=12) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 for item in data.get("items", []):
+                    if is_template_or_toy_repo(item):
+                        continue
                     u = item.get("html_url")
                     if u and u not in seen_urls:
                         seen_urls.add(u)
@@ -168,6 +148,8 @@ def search_github_repositories(queries: List[str], token: Optional[str] = None, 
 
     # Supplement with curated fallbacks if API was rate limited
     for fb in CURATED_FALLBACK_REPOS:
+        if is_template_or_toy_repo(fb):
+            continue
         if fb["html_url"] not in seen_urls:
             seen_urls.add(fb["html_url"])
             all_candidates.append(fb)
@@ -456,11 +438,12 @@ def main():
     print(f"Strict Security Filter: {'ACTIVE' if args.security_only else 'OFF'}\n")
 
     queries = [
-        args.query if args.query else "language:python fastapi sqlalchemy stars:10..300",
-        "language:python flask sqlite3 stars:10..300",
-        "language:python django raw stars:10..300",
-        "language:python subprocess shell=True stars:5..300",
-        "language:javascript express stars:15..300"
+        args.query if args.query else "language:python fastapi sqlalchemy api -template -boilerplate stars:10..500",
+        "language:python fastapi stripe payment stars:10..500",
+        "language:python flask sqlite3 saas -template stars:10..500",
+        "language:python django postgresql api -tutorial -example stars:15..600",
+        "language:python openai agent fastapi -boilerplate stars:15..600",
+        "language:javascript express stripe api stars:15..500"
     ]
 
     candidates = search_github_repositories(queries, token=args.token, max_total=args.max_leads * 4)
@@ -476,32 +459,44 @@ def main():
             verified_leads.append(lead_data)
             print(f"    [+] QUALIFIED HIGH-SEVERITY LEAD: {lead_data['owner_login']}/{lead_data['repo_name']} -> {lead_data['cwe_id']} ({lead_data['target_file']})")
 
-    # Generate master outbound pack
-    pack_filename = "HIGH_SEVERITY_B2B_PACK.md" if args.security_only else "DAY1_B2B_OUTBOUND_PACK.md"
-    master_pack_path = out_dir / pack_filename
+    # Generate master outbound pack & verified true positive report
+    master_pack_path = out_dir / "VERIFIED_TRUE_POSITIVE_LEADS.md"
+    legacy_pack_path = out_dir / "HIGH_SEVERITY_B2B_PACK.md"
+
+    soc2_map = {
+        "CWE-798": "CC6.1 Logical Access & Hardcoded Secret Prevention",
+        "CWE-89": "CC7.1 Vulnerability Remediation & Production Code Integrity",
+        "CWE-78": "CC7.1 Remote Command Injection Prevention",
+        "CWE-502": "CC7.1 Insecure Deserialization Guard",
+        "CWE-347": "CC6.1 Authentication Token Signature Integrity",
+        "CWE-1336": "CC7.1 Server-Side Template Injection Guard",
+        "CWE-79": "CC7.1 Cross-Site Scripting Guard",
+    }
 
     pack_lines = [
-        f"# 🛡️ KAVACH AI — HIGH-SEVERITY PRODUCTION SECURITY PACK (v1.4.0)",
+        f"# 🛡️ KAVACH AI — VERIFIED TRUE-POSITIVE SECURITY LEADS (v1.4.0)",
         f"**Generated:** {len(verified_leads)} Verified Exploitable Startup Security Leads",
-        "**Filter Criteria:** Strict Production Security (Zero Non-Prod Paths • Zero Non-Security Bugs)",
+        "**Filter Criteria:** Strict True-Positive Security (Zero Non-Prod Paths • Zero Non-Security Bugs • Anti-Template Filter)",
         f"**Target CWEs:** {', '.join(sorted(ALLOWED_SECURITY_CWES))} + Reachable Supply-Chain CVEs",
         "",
         "---",
         "",
         "## 📊 Verified High-Severity Prospect Roster",
-        "| # | Target Repository | Owner / Org | Stars | Weakness | Target Production File | Action |",
-        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+        "| # | Target Repository | Owner / Org | Stars | Weakness | Target Production File | SOC 2 Control | Action |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
     ]
 
     for idx, vl in enumerate(verified_leads, 1):
         clean_file = vl['target_file'].replace("\\", "/")
-        pack_lines.append(f"| {idx:02d} | [{vl['repo_name']}]({vl['repo_url']}) | [{vl['owner_login']}]({vl['owner_url']}) | ⭐ {vl['stars']} | **{vl['cwe_id']}** | `{clean_file}` | [View Advisory & Pitch](#lead-{idx:02d}-{vl['repo_name'].lower()}) |")
+        soc2_ctrl = soc2_map.get(vl['cwe_id'], "CC7.1 Vulnerability Management")
+        pack_lines.append(f"| {idx:02d} | [{vl['repo_name']}]({vl['repo_url']}) | [{vl['owner_login']}]({vl['owner_url']}) | ⭐ {vl['stars']} | **{vl['cwe_id']}** | `{clean_file}` | `{soc2_ctrl}` | [View Advisory & Pitch](#lead-{idx:02d}-{vl['repo_name'].lower()}) |")
 
     pack_lines.append("\n---\n")
 
     for idx, vl in enumerate(verified_leads, 1):
         lead_file_name = f"{vl['repo_name']}_Security_Advisory.md"
         lead_file_path = out_dir / lead_file_name
+        soc2_ctrl = soc2_map.get(vl['cwe_id'], "CC7.1 Vulnerability Management")
 
         indiv_content = f"""# 🛡️ Kavach AI High-Severity Security Advisory: {vl['owner_login']}/{vl['repo_name']}
 
@@ -510,6 +505,7 @@ def main():
 - **Stars**: ⭐ {vl['stars']}
 - **Security Weakness**: `{vl['finding_type']}` [{vl['cwe_id']}]
 - **Target File Link**: [{vl['target_file']}]({vl['github_file_link']})
+- **SOC 2 Compliance Impact**: `{soc2_ctrl}`
 
 ---
 
@@ -556,6 +552,7 @@ def main():
             f"## Lead {idx:02d}: [{vl['owner_login']}/{vl['repo_name']}]({vl['repo_url']})",
             f"- **Stars:** ⭐ {vl['stars']} | **Vulnerability:** `{vl['cwe_id']}` ({vl['finding_type']})",
             f"- **Production File:** [`{vl['target_file']}`]({vl['github_file_link']})",
+            f"- **SOC 2 Control:** `{soc2_ctrl}`",
             f"- **Individual Advisory File:** `leads/{lead_file_name}`",
             "",
             "### 🛡️ 1-Click GitHub Security Advisory Template",
@@ -579,10 +576,12 @@ def main():
             ""
         ])
 
-    master_pack_path.write_text("\n".join(pack_lines), encoding="utf-8")
+    final_content = "\n".join(pack_lines)
+    master_pack_path.write_text(final_content, encoding="utf-8")
+    legacy_pack_path.write_text(final_content, encoding="utf-8")
 
     print("\n=================================================================")
-    print(f"  [OK] HIGH-SEVERITY PACK GENERATED: {master_pack_path}")
+    print(f"  [OK] TRUE-POSITIVE PACK GENERATED: {master_pack_path}")
     print(f"  Total Verified High-Severity Leads: {len(verified_leads)}")
     print("=================================================================")
     for idx, vl in enumerate(verified_leads, 1):

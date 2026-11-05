@@ -282,7 +282,18 @@ class ProjectASTScanner:
         if isinstance(call_node.func, ast.Attribute) and call_node.func.attr in ("execute", "executemany", "raw", "text"):
             if call_node.args:
                 arg0 = call_node.args[0]
+                # Static string constants are 100% safe (e.g. cursor.execute("SELECT 1"))
+                if isinstance(arg0, ast.Constant):
+                    return None
+                # SQLAlchemy text("SELECT 1") with static literal is safe
+                if isinstance(arg0, ast.Call) and getattr(arg0.func, "id", getattr(arg0.func, "attr", None)) in ("text", "literal_column"):
+                    if arg0.args and isinstance(arg0.args[0], ast.Constant):
+                        return None
+
                 for p in func_params:
+                    # Exclude database connection/session handles
+                    if p.lower() in ("db", "session", "conn", "connection", "cursor", "engine", "self", "cls"):
+                        continue
                     # Parameter passed directly as SQL string without tuple
                     if (isinstance(arg0, ast.Name) and arg0.id == p) or any(isinstance(sub, ast.Name) and sub.id == p for sub in ast.walk(arg0)):
                         ln = call_node.lineno

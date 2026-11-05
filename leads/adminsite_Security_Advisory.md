@@ -5,6 +5,7 @@
 - **Stars**: ⭐ 74
 - **Security Weakness**: `High-Severity Application Security Vulnerability` [CWE-89]
 - **Target File Link**: [src/adminsite/_storage.py](https://github.com/nimaxin/adminsite/blob/main/src/adminsite/_storage.py#L84)
+- **SOC 2 Compliance Impact**: `CC7.1 Vulnerability Remediation & Production Code Integrity`
 
 ---
 
