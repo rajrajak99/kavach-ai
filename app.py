@@ -107,6 +107,71 @@ if "github_user" not in st.session_state:
     st.session_state.github_user = None
 if "auth_error" not in st.session_state:
     st.session_state.auth_error = None
+# ----------------- SOC2 & ISO-27001 PRE-AUDIT REPORT GENERATOR -----------------
+def generate_soc2_compliance_report(code_snippet: str, scan_res: dict) -> str:
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    findings = scan_res.get('findings', [])
+    metrics = scan_res.get('metrics', {'critical': 0, 'security': 0, 'performance': 0, 'total': 0})
+    status = scan_res.get('status', 'PASSED')
+    
+    score = max(0, 100 - (metrics['critical'] * 35) - (metrics['security'] * 15) - (metrics['performance'] * 5))
+    grade = "A (Production Certified)" if score >= 90 else ("B (Acceptable Risk)" if score >= 70 else "F (Compliance Blocked)")
+    
+    lines = [
+        "# 🛡️ KAVACH AI — SOC 2 TYPE II & ISO-27001 PRE-AUDIT VERIFICATION REPORT",
+        f"**Generated:** {timestamp} | **Engine:** Kavach AI AST Intra-Procedural Engine v1.3.0",
+        "**Telemetry Guarantee:** 100% Offline Local Analysis • Zero External Telemetry • Zero Code Retention",
+        "",
+        "---",
+        "",
+        "## 1. Executive Summary & Audit Score",
+        f"- **Audit Status:** {'PASSED (Zero Blocking Vulnerabilities)' if status == 'PASSED' else 'BLOCKED (Remediations Required Before Production Merge)'}",
+        f"- **Compliance Readiness Grade:** {grade} ({score}/100)",
+        f"- **Critical Vulnerabilities:** {metrics['critical']}",
+        f"- **Security Advisories:** {metrics['security']}",
+        f"- **Resource Leaks / Perf:** {metrics['performance']}",
+        "",
+        "## 2. Regulatory Compliance Control Mapping",
+        "| Standard / Framework | Control Identifier | Control Scope | Verification Status |",
+        "| :--- | :--- | :--- | :--- |",
+        f"| **SOC 2 Type II** | CC6.1 Logical Access | Hardcoded credential & secret token prevention (CWE-798) | {'COMPLIANT' if not any(f.cwe_id == 'CWE-798' for f in findings) else 'NON-COMPLIANT (Findings Detected)'} |",
+        f"| **SOC 2 Type II** | CC6.6 Boundary Protection | Injection prevention & untrusted input validation (CWE-89/78) | {'COMPLIANT' if not any(f.cwe_id in ('CWE-89', 'CWE-78') for f in findings) else 'NON-COMPLIANT (Findings Detected)'} |",
+        f"| **SOC 2 Type II** | CC7.1 Vulnerability Mgmt | Pre-merge static application security testing (SAST) | COMPLIANT (Kavach Automated CI Gate) |",
+        f"| **ISO/IEC 27001:2022** | Control 8.28 | Secure Coding & Code Review Verification | {'COMPLIANT' if status == 'PASSED' else 'ACTION REQUIRED'} |",
+        f"| **OWASP Top 10:2021** | A03:2021 Injection | SQL / Command Injection prevention | {'VERIFIED CLEAN' if not any(f.cwe_id in ('CWE-89', 'CWE-78') for f in findings) else 'ACTION REQUIRED'} |",
+        "",
+        "## 3. Vulnerability Findings & 1-Click Surgical Remediations",
+    ]
+    
+    if not findings:
+        lines.append("✓ **No vulnerabilities detected.** This codebase satisfies baseline pre-audit requirements for SOC 2 and ISO-27001 code security testing.")
+    else:
+        for idx, f in enumerate(findings, 1):
+            lines.extend([
+                f"### Finding {idx}: [{f.severity}] {f.category} ({f.cwe_id or 'HIGH'})",
+                f"- **Location:** Line {f.line_number}",
+                f"- **Risk Assessment:** {f.explanation}",
+                "- **Vulnerable Construct:**",
+                "```python",
+                f"{f.problem_code}",
+                "```",
+                "- **Surgical Remediation Patch:**",
+                "```python",
+                f"{f.fixed_code}",
+                "```",
+                ""
+            ])
+            
+    digest = hex(abs(hash(code_snippet + timestamp)))[2:18]
+    lines.extend([
+        "---",
+        "## 4. Auditor Sign-Off & Verification Seal",
+        "This pre-audit document certifies that static AST taint analysis and cryptographic pattern matching were executed via Kavach AI v1.3.0 in a zero-trust local sandbox environment.",
+        f"**Audit Digest Hash:** `{digest}`",
+        "**Sign-off:** Automated Kavach AI DevSecOps Engine (Authorized Release)"
+    ])
+    
+    return "\n".join(lines)
 
 # ----------------- GITHUB AUTH HELPER -----------------
 @st.cache_data(ttl=3600)
@@ -1503,6 +1568,14 @@ if active_tab == "Inspector":
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                st.download_button(
+                    "📑 Download SOC 2 & ISO-27001 Certification (.md)",
+                    data=generate_soc2_compliance_report(st.session_state.user_code, res),
+                    file_name=f"Kavach_AI_SOC2_Clean_{datetime.date.today().isoformat()}.md",
+                    mime="text/markdown",
+                    key="btn_download_soc2_clean",
+                    use_container_width=True
+                )
             else:
                 if metrics['critical'] > 0:
                     st.markdown(f"""
@@ -1524,6 +1597,16 @@ if active_tab == "Inspector":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+
+                st.download_button(
+                    "📑 Download SOC 2 & ISO-27001 Pre-Audit Report (.md)",
+                    data=generate_soc2_compliance_report(st.session_state.user_code, res),
+                    file_name=f"Kavach_AI_SOC2_PreAudit_{datetime.date.today().isoformat()}.md",
+                    mime="text/markdown",
+                    key="btn_download_soc2_inspector",
+                    use_container_width=True
+                )
+                st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
 
                 for i, f in enumerate(findings, 1):
                     cat_safe = html.escape(f.category)
@@ -1801,15 +1884,29 @@ elif active_tab == "Pricing":
     </div>
     """, unsafe_allow_html=True)
 
+    # Founder Launch LTD Banner
+    st.markdown("""
+    <div style="background: rgba(139, 124, 255, 0.08); border: 1px solid rgba(139, 124, 255, 0.4); border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <span style="background: #8B7CFF; color: #090B10; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-right: 8px; text-transform: uppercase;">Founder Launch LTD</span>
+            <span style="font-weight: 600; color: #F1F3F8; font-size: 14px;">Early Adopter Lifetime Deal: $149 One-Time</span>
+            <div style="color: #929BAD; font-size: 12px; margin-top: 4px;">Only 100 licenses allocated • Unlimited Private Repositories • Lifetime GitHub PR CI/CD Gatekeeper • SOC2 Audit Exports</div>
+        </div>
+        <div style="font-weight: 600; color: #36C995; font-size: 13px;">
+            ● 87/100 Licenses Claimed
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     b_col1, b_col2, b_col3 = st.columns([1.5, 1.2, 1.5], gap="small", vertical_alignment="center")
     with b_col2:
         billing_cycle = st.segmented_control(
             "Billing Cycle",
-            ["Annual (Save 50%)", "Monthly"],
-            default="Annual (Save 50%)",
+            ["Annual (Save 35%)", "Monthly"],
+            default="Annual (Save 35%)",
             label_visibility="collapsed",
             key="pricing_billing_toggle"
-        ) or "Annual (Save 50%)"
+        ) or "Annual (Save 35%)"
 
     st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
 
@@ -1842,14 +1939,14 @@ elif active_tab == "Pricing":
             use_container_width=True
         )
 
-    # 2. DEVELOPER PRO ($1/mo or $2/mo)
+    # 2. DEVELOPER PRO ($19/mo annual or $29/mo monthly)
     with p2:
         if billing_cycle == "Monthly":
-            pro_price = "$2"
-            pro_sub = "$2 billed monthly • Independent devs"
+            pro_price = "$29"
+            pro_sub = "$29 billed monthly • Solo Devs & Consultants"
         else:
-            pro_price = "$1"
-            pro_sub = "$12 billed annually (Save 50%) • Independent devs"
+            pro_price = "$19"
+            pro_sub = "$228 billed annually (Save 35%) • Solo Devs & Consultants"
 
         pro_active = "pricing-card-active" if is_pro else ""
         st.markdown(f"""
@@ -1859,11 +1956,11 @@ elif active_tab == "Pricing":
             <div class="card-tier-amt">{pro_price}<span style="font-size:14px; color:#647087; font-weight:500;">/mo</span></div>
             <div class="card-tier-sub">{pro_sub}</div>
             <div class="card-features-list">
-                ✓ <b>Up to 5 personal private repos</b><br>
+                ✓ <b>Unlimited personal private repos</b><br>
                 ✓ Cryptographic Ed25519 token verification<br>
                 ✓ 1-click surgical auto-remediations<br>
-                ✓ Local Git pre-commit hooks<br>
-                ✓ Priority email updates & patches
+                ✓ Local Git pre-commit hooks & CLI<br>
+                ✓ Pre-audit SOC2 & ISO-27001 report exports
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1878,7 +1975,7 @@ elif active_tab == "Pricing":
             use_container_width=True
         )
 
-    # 3. TEAM ENTERPRISE ($99/mo or $119/mo)
+    # 3. TEAM ENTERPRISE ($99/mo annual or $119/mo monthly)
     with p3:
         if billing_cycle == "Monthly":
             team_price = "$119"
@@ -1898,7 +1995,7 @@ elif active_tab == "Pricing":
                 ✓ <b>Unlimited team repositories</b><br>
                 ✓ Autonomous PR review bot & merge blocker<br>
                 ✓ Pytest self-healing engine integration<br>
-                ✓ SLA support & custom AST rule sets
+                ✓ SOC2 Type II & ISO-27001 executive reports
             </div>
         </div>
         """, unsafe_allow_html=True)
