@@ -179,7 +179,7 @@ def generate_soc2_compliance_report(code_snippet: str, scan_res: dict, sca_findi
     
     lines = [
         "# 🛡️ KAVACH AI — SOC 2 TYPE II & ISO-27001 PRE-AUDIT VERIFICATION REPORT",
-        f"**Generated:** {timestamp} | **Engine:** Kavach AI AST Intra-Procedural Engine v1.3.0",
+        f"**Generated:** {timestamp} | **Engine:** Kavach AI AST Cross-File Engine v1.4.0",
         "**Telemetry Guarantee:** 100% Offline Local Analysis • Zero External Telemetry • Zero Code Retention",
         "",
         "---",
@@ -250,7 +250,7 @@ def generate_soc2_compliance_report(code_snippet: str, scan_res: dict, sca_findi
     lines.extend([
         "---",
         "## 6. Auditor Sign-Off & Verification Seal",
-        "This pre-audit document certifies that static AST taint analysis and cryptographic pattern matching were executed via Kavach AI v1.3.0 in a zero-trust local sandbox environment.",
+        "This pre-audit document certifies that static AST taint analysis and cryptographic pattern matching were executed via Kavach AI v1.4.0 in a zero-trust local sandbox environment.",
         f"**Audit Digest Hash:** `{digest}`",
         "**Sign-off:** Automated Kavach AI DevSecOps Engine (Authorized Release)"
     ])
@@ -436,7 +436,7 @@ def compute_security_posture(analysis_res: dict, code_str: str) -> dict:
 def generate_json_report(analysis_res: dict, code_str: str, posture: dict) -> str:
     report = {
         "engine": "Kavach AI Enterprise Security Platform",
-        "version": "1.3.0",
+        "version": "1.4.0",
         "timestamp": datetime.datetime.now().isoformat(),
         "summary": {
             "health_score": posture["score"],
@@ -470,7 +470,7 @@ def generate_markdown_report(analysis_res: dict, code_str: str, posture: dict) -
     
     lines = [
         "# 🛡️ Kavach AI — Executive Security Posture Audit",
-        f"**Generated**: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')} | **Engine**: Kavach AI v1.3.0 (Deterministic Intra-Procedural AST)",
+        f"**Generated**: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')} | **Engine**: Kavach AI v1.4.0 (Deterministic Cross-File AST)",
         "",
         "## Executive Summary",
         f"- **Security Health Score**: `{posture['score']} / 100` (Grade {posture['grade']})",
@@ -1269,7 +1269,7 @@ with nav_col1:
     st.markdown(f"""
     <div class="brand-wrap">
         {logo_tag}
-        <span class="brand-title">Kavach AI <span class="brand-pill">v1.3.0</span></span>
+        <span class="brand-title">Kavach AI <span class="brand-pill">v1.4.0</span></span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2040,7 +2040,7 @@ elif active_tab == "Live Benchmark":
         <thead>
             <tr>
                 <th class="bench-th">Capability / Benchmark Metric</th>
-                <th class="bench-th bench-highlight">🛡️ Kavach AI v1.3.0</th>
+                <th class="bench-th bench-highlight">🛡️ Kavach AI v1.4.0</th>
                 <th class="bench-th">Semgrep OSS</th>
                 <th class="bench-th">Snyk Open Source</th>
                 <th class="bench-th">Bandit (Python)</th>
@@ -2356,7 +2356,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run Kavach AI
-        uses: rajrajak99/kavach-ai@v1.3.0
+        uses: rajrajak99/kavach-ai@v1.4.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on: 'CRITICAL'

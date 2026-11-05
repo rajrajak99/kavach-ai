@@ -28,10 +28,21 @@ from core.surgical_analyzer import SurgicalAnalyzer
 from core.project_scanner import ProjectASTScanner
 from core.sca_scanner import SCAScanner
 
+def get_git_executable() -> str:
+    """Resolves git binary from workspace bin or system PATH."""
+    ws_git = _root / "bin" / "git" / "cmd" / "git.exe"
+    if ws_git.exists():
+        return str(ws_git)
+    sys_git = shutil.which("git")
+    if sys_git:
+        return sys_git
+    return "git"
+
 def clone_github_repo(repo_url: str, dest_dir: Path) -> bool:
     """Performs a shallow clone (--depth 1) of a public git repository."""
     try:
-        cmd = ["git", "clone", "--depth", "1", repo_url, str(dest_dir)]
+        git_bin = get_git_executable()
+        cmd = [git_bin, "clone", "--depth", "1", repo_url, str(dest_dir)]
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60)
         return res.returncode == 0
     except Exception as e:
@@ -123,7 +134,7 @@ We built Kavach AI so fast-moving engineering teams can block vulnerabilities li
 Takes 60 seconds to plug into GitHub Actions:
 ```yaml
 - name: Kavach AI Pre-Merge Gate
-  uses: rajrajak99/kavach-ai@v1.3.0
+  uses: rajrajak99/kavach-ai@v1.4.0
 ```
 
 Would love to grant {company_name} an Early Adopter pass if you want private repository scanning or SOC 2 compliance reports.
@@ -163,7 +174,7 @@ Unlike legacy tools that dump 50 false positives, Kavach runs locally in CI unde
 Plug-and-play GitHub Action:
 ```yaml
 - name: Kavach AI Pre-Merge Gate
-  uses: rajrajak99/kavach-ai@v1.3.0
+  uses: rajrajak99/kavach-ai@v1.4.0
 ```
 
 Happy to set up an Early Adopter pass for {company_name} if you want automated pre-merge gates across your private repositories.
@@ -210,7 +221,7 @@ We built Kavach AI to give teams sub-16ms local AST checks with 0 false positive
 
 ```yaml
 - name: Kavach AI Pre-Merge Gate
-  uses: rajrajak99/kavach-ai@v1.3.0
+  uses: rajrajak99/kavach-ai@v1.4.0
 ```
 
 Would love to grant {company_name} an Early Adopter pass to test it across your private repos.

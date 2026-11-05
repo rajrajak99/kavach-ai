@@ -106,7 +106,7 @@ class LicenseManager:
             resp = requests.post(
                 cls.LEMON_SQUEEZY_VALIDATE_URL,
                 json={"license_key": clean_key},
-                headers={"Accept": "application/json", "User-Agent": "KavachAI-Verifier/1.3.0"},
+                headers={"Accept": "application/json", "User-Agent": "KavachAI-Verifier/1.4.0"},
                 timeout=1.5
             )
             if resp.status_code == 200:

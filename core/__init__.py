@@ -1,6 +1,7 @@
 """
 Kavach AI Core Security Engine Package.
 """
+__version__ = "1.4.0"
 from .diff_parser import DiffParser, ParsedFileDiff, DiffHunk, ChangedLine
 from .surgical_analyzer import SurgicalAnalyzer, PatchFinding
 from .ai_reasoner import AIReasoner
