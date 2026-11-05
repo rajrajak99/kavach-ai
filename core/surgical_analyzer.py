@@ -324,6 +324,195 @@ class SurgicalAnalyzer:
                                     language="python"
                                 ))
 
+                # Feature 4: Insecure PyYAML Deserialization (CWE-502)
+                is_yaml_load = False
+                if isinstance(node.func, ast.Attribute) and node.func.attr == "load":
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id in ("yaml", "pyyaml"):
+                        is_yaml_load = True
+                elif isinstance(node.func, ast.Name) and node.func.id == "yaml_load":
+                    is_yaml_load = True
+
+                if is_yaml_load and node.lineno in changed_line_nums:
+                    has_safe_loader = False
+                    for kw in node.keywords:
+                        if kw.arg == "Loader":
+                            val_str = ""
+                            if isinstance(kw.value, ast.Attribute):
+                                val_str = kw.value.attr
+                            elif isinstance(kw.value, ast.Name):
+                                val_str = kw.value.id
+                            if "Safe" in val_str or "Base" in val_str:
+                                has_safe_loader = True
+                    if len(node.args) >= 2:
+                        val_str = ""
+                        arg1 = node.args[1]
+                        if isinstance(arg1, ast.Attribute):
+                            val_str = arg1.attr
+                        elif isinstance(arg1, ast.Name):
+                            val_str = arg1.id
+                        if "Safe" in val_str or "Base" in val_str:
+                            has_safe_loader = True
+
+                    if not has_safe_loader:
+                        line_str = lines_by_num.get(node.lineno, "yaml.load(...)")
+                        indent = len(line_str) - len(line_str.lstrip())
+                        indent_str = " " * indent
+                        fixed = line_str.replace("yaml.load(", "yaml.safe_load(")
+                        if fixed == line_str:
+                            fixed = f"{indent_str}yaml.safe_load(payload)"
+                        ast_findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category="Insecure Deserialization via yaml.load()",
+                            line_number=node.lineno,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation="yaml.load() without SafeLoader executes arbitrary Python code during deserialization. Use yaml.safe_load() to prevent Remote Code Execution (RCE).",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-502",
+                            language="python"
+                        ))
+
+                # Feature 5: Insecure Pickle Deserialization (CWE-502)
+                is_pickle = False
+                if isinstance(node.func, ast.Attribute) and node.func.attr in ("load", "loads"):
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id in ("pickle", "_pickle", "cPickle"):
+                        is_pickle = True
+
+                if is_pickle and node.lineno in changed_line_nums:
+                    line_str = lines_by_num.get(node.lineno, "pickle.loads(...)")
+                    indent = len(line_str) - len(line_str.lstrip())
+                    indent_str = " " * indent
+                    fixed = f"{indent_str}# SECURE: Replace untrusted pickle deserialization with json or signed payloads\n{indent_str}import json\n{indent_str}data = json.loads(payload)"
+                    ast_findings.append(PatchFinding(
+                        severity="CRITICAL",
+                        category="Insecure Deserialization via pickle.loads()",
+                        line_number=node.lineno,
+                        problem_code=line_str.strip(),
+                        fixed_code=fixed.strip(),
+                        explanation="pickle.loads() allows arbitrary object instantiations via __reduce__, leading directly to remote code execution. Replace with json.loads().",
+                        github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                        cwe_id="CWE-502",
+                        language="python"
+                    ))
+
+                # Feature 6: Improper JWT Signature Verification (CWE-347)
+                is_jwt = False
+                if isinstance(node.func, ast.Attribute) and node.func.attr == "decode":
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id in ("jwt", "jose", "auth_jwt"):
+                        is_jwt = True
+
+                if is_jwt and node.lineno in changed_line_nums:
+                    disabled_sig = False
+                    for kw in node.keywords:
+                        if kw.arg == "verify" and isinstance(kw.value, ast.Constant) and kw.value.value is False:
+                            disabled_sig = True
+                        elif kw.arg == "options" and isinstance(kw.value, ast.Dict):
+                            for k, v in zip(kw.value.keys, kw.value.values):
+                                if isinstance(k, ast.Constant) and k.value == "verify_signature":
+                                    if isinstance(v, ast.Constant) and v.value is False:
+                                        disabled_sig = True
+                    if disabled_sig:
+                        line_str = lines_by_num.get(node.lineno, "jwt.decode(...)")
+                        indent = len(line_str) - len(line_str.lstrip())
+                        indent_str = " " * indent
+                        fixed = re.sub(r'verify\s*=\s*False', 'verify=True', line_str)
+                        fixed = re.sub(r'["\']verify_signature["\']\s*:\s*False', '"verify_signature": True', fixed)
+                        ast_findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category="Improper JWT Signature Verification",
+                            line_number=node.lineno,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation="Bypassing JWT signature verification permits forged authentication tokens, allowing attackers to authenticate as any user.",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-347",
+                            language="python"
+                        ))
+
+                # Feature 7: Server-Side Template Injection / Jinja2 (CWE-1336)
+                is_ssti = False
+                if isinstance(node.func, ast.Name) and node.func.id == "render_template_string":
+                    is_ssti = True
+                elif isinstance(node.func, ast.Attribute) and node.func.attr == "render_template_string":
+                    is_ssti = True
+
+                if is_ssti and node.args and node.lineno in changed_line_nums:
+                    arg0 = node.args[0]
+                    is_literal = isinstance(arg0, ast.Constant) and isinstance(arg0.value, str)
+                    has_dyn = (not is_literal) or any(isinstance(sub, (ast.JoinedStr, ast.BinOp, ast.Call, ast.FormattedValue)) for sub in ast.walk(arg0))
+                    if has_dyn:
+                        line_str = lines_by_num.get(node.lineno, "render_template_string(...)")
+                        indent = len(line_str) - len(line_str.lstrip())
+                        indent_str = " " * indent
+                        fixed = f'{indent_str}# Safe Template Rendering: Pass user input via context parameters\n{indent_str}render_template_string("<p>{{ content }}</p>", content=untrusted_content)'
+                        ast_findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category="Server-Side Template Injection (SSTI)",
+                            line_number=node.lineno,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation="Passing interpolated user strings into render_template_string() allows Jinja2 template escape and arbitrary remote code execution.",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-1336",
+                            language="python"
+                        ))
+
+                # Feature 8: ORM Raw SQL Injection (Django raw() / SQLAlchemy text()) (CWE-89)
+                is_orm_raw = False
+                if isinstance(node.func, ast.Name) and node.func.id == "text":
+                    is_orm_raw = True
+                elif isinstance(node.func, ast.Attribute) and node.func.attr in ("raw", "extra", "text"):
+                    is_orm_raw = True
+
+                if is_orm_raw and node.args and node.lineno in changed_line_nums:
+                    arg0 = node.args[0]
+                    has_dyn = any(isinstance(sub, (ast.JoinedStr, ast.BinOp, ast.Call, ast.FormattedValue)) for sub in ast.walk(arg0))
+                    str_consts = [sub.value for sub in ast.walk(arg0) if isinstance(sub, ast.Constant) and isinstance(sub.value, str)]
+                    if (has_dyn and re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE|WHERE|FROM)\b', " ".join(str_consts))) or (isinstance(node.func, ast.Name) and node.func.id == "text" and has_dyn):
+                        line_str = lines_by_num.get(node.lineno, "text(...)")
+                        indent = len(line_str) - len(line_str.lstrip())
+                        indent_str = " " * indent
+                        fixed = f'{indent_str}# Safe Parameterized ORM Query\n{indent_str}text("SELECT * FROM table WHERE id = :id").bindparams(id=safe_value)'
+                        ast_findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category="Raw SQL Injection in ORM text()/raw()",
+                            line_number=node.lineno,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation="Dynamic string interpolation inside ORM raw query constructs (SQLAlchemy text() or Django raw()) bypasses ORM protections, introducing SQL injection.",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-89",
+                            language="python"
+                        ))
+
+                # Feature 9: Subprocess Command Injection via shell=True (CWE-78)
+                is_subp = False
+                if isinstance(node.func, ast.Attribute) and node.func.attr in ("run", "Popen", "call", "check_output", "check_call"):
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == "subprocess":
+                        is_subp = True
+
+                if is_subp and node.lineno in changed_line_nums:
+                    has_shell_true = any(kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value is True for kw in node.keywords)
+                    if has_shell_true and node.args:
+                        arg0 = node.args[0]
+                        has_dyn = any(isinstance(sub, (ast.JoinedStr, ast.BinOp, ast.Call, ast.FormattedValue, ast.Name)) for sub in ast.walk(arg0))
+                        if has_dyn:
+                            line_str = lines_by_num.get(node.lineno, "subprocess.run(..., shell=True)")
+                            indent = len(line_str) - len(line_str.lstrip())
+                            indent_str = " " * indent
+                            fixed = f"{indent_str}# Safe Process Execution: shell=False with argument vector\n{indent_str}import shlex\n{indent_str}subprocess.run(shlex.split(safe_command), shell=False, check=True)"
+                            ast_findings.append(PatchFinding(
+                                severity="CRITICAL",
+                                category="Remote Command Injection via subprocess(shell=True)",
+                                line_number=node.lineno,
+                                problem_code=line_str.strip(),
+                                fixed_code=fixed.strip(),
+                                explanation="Executing subprocess with shell=True and dynamic arguments routes commands through the system shell, allowing arbitrary command injection.",
+                                github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                cwe_id="CWE-78",
+                                language="python"
+                            ))
+
         return ast_findings, safely_closed_handles, None
 
     def analyze_file_diff(self, file_diff: ParsedFileDiff) -> List[PatchFinding]:
@@ -520,6 +709,38 @@ class SurgicalAnalyzer:
                             ))
                             break
 
+                    # 5. React DOM XSS via dangerouslySetInnerHTML (CWE-79)
+                    if "dangerouslySetInnerHTML" in line_str and "DOMPurify" not in line_str:
+                        fixed = f"{indent_str}// Safe DOM Injection with DOMPurify sanitization (Prevents XSS)\n{indent_str}dangerouslySetInnerHTML={{{{ __html: DOMPurify.sanitize(cleanPayload) }}}}"
+                        findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category="DOM Cross-Site Scripting (XSS) via dangerouslySetInnerHTML",
+                            line_number=line_num,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation="Directly assigning raw HTML to dangerouslySetInnerHTML in React/Next.js without DOMPurify sanitization allows stored/reflected XSS attacks.",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-79",
+                            language="javascript"
+                        ))
+
+                    # 6. Frontend Build Bundle Secret Exposure (CWE-798)
+                    pub_sec_match = re.search(r'(?:NEXT_PUBLIC_|REACT_APP_|VITE_)([A-Z0-9_]*(?:SECRET|KEY|TOKEN|PASSWORD|PRIVATE))\b', line_str)
+                    if pub_sec_match:
+                        sec_name = pub_sec_match.group(1)
+                        fixed = f"{indent_str}// Move secret token to server-side only runtime environment (remove NEXT_PUBLIC_ / REACT_APP_ / VITE_ prefix)"
+                        findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category="Client-Exposed Secret Token in Frontend Build Bundle",
+                            line_number=line_num,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation=f"Assigning sensitive credentials to client-prefixed build variables ({sec_name}) bakes private keys into public browser JavaScript bundles.",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-798",
+                            language="javascript"
+                        ))
+
                 # ==================== PYTHON RULES ====================
                 else:
                     # 1. Py Secrets
@@ -613,11 +834,23 @@ class SurgicalAnalyzer:
 
                     # 5. Py Unchecked Zero Division
                     stripped = line_str.strip()
-                    if stripped.startswith('#') or stripped.startswith('//'):
+                    if stripped.startswith(('#', '//', '/*', '*', '<!--', '"""', "'''")):
+                        continue
+                    if any(tag in stripped for tag in ('<', '>', '</', '/>', 'class=', 'style=', 'href=', 'xmlns', '@', ':')):
                         continue
                     # Skip if / is inside a quoted string literal (e.g. key = "abc/def/ghi")
                     if re.search(r'["\'][^"\']*/[^"\']*["\']', line_str):
                         continue
+
+                    # Validate with Python AST parser to guarantee it is valid Python code with division
+                    try:
+                        parsed_line = ast.parse(stripped)
+                        has_div = any(isinstance(n, ast.BinOp) and isinstance(n.op, ast.Div) for n in ast.walk(parsed_line))
+                        if not has_div:
+                            continue
+                    except Exception:
+                        continue
+
                     denom_match = None
                     if re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str) and not re.search(r'if\s+.*?!=\s*0', line_str):
                         # Ensure not inside a string literal

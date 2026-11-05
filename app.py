@@ -29,6 +29,9 @@ except ImportError:
 from kavach_license import PlanTier, LicenseManager
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.diff_parser import DiffParser
+from core.billing import BillingManager
+from core.project_scanner import ProjectASTScanner
+from core.sca_scanner import SCAScanner
 from samples.vulnerable_samples import (
     SAMPLE_PYTHON_MULTI, SAMPLE_NODE_JS_EXPRESS,
     SAMPLE_CPP_MEMORY_AND_SECURITY, SAMPLE_SQLI_AND_NONE
@@ -82,6 +85,41 @@ def analyze_code_cached(code_str: str):
     _ANALYSIS_CACHE[code_str] = res
     return res
 
+def create_demo_project_zip() -> bytes:
+    import io, zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("app/routes.py", (
+            "from flask import Flask, request\n"
+            "from app.services.user_service import fetch_user_by_query\n\n"
+            "app = Flask(__name__)\n\n"
+            "@app.route('/user')\n"
+            "def get_user():\n"
+            "    user_input = request.args.get('q')\n"
+            "    return fetch_user_by_query(user_input)\n"
+        ))
+        z.writestr("app/services/user_service.py", (
+            "from app.db.database import execute_raw_query\n\n"
+            "def fetch_user_by_query(query_filter):\n"
+            "    # Cross-file taint bridge: passes user input down to raw SQL sink\n"
+            "    return execute_raw_query(query_filter)\n"
+        ))
+        z.writestr("app/db/database.py", (
+            "import sqlite3\n\n"
+            "def execute_raw_query(raw_sql):\n"
+            "    conn = sqlite3.connect('prod.db')\n"
+            "    cursor = conn.cursor()\n"
+            "    # CWE-89: Raw unparameterized SQL execution\n"
+            "    cursor.execute(raw_sql)\n"
+            "    return cursor.fetchall()\n"
+        ))
+        z.writestr("requirements.txt", (
+            "flask==2.2.0\n"
+            "pyyaml==5.3.1\n"
+            "requests==2.28.0\n"
+        ))
+    return buf.getvalue()
+
 # ----------------- STATE INITIALIZATION -----------------
 if "is_pro_user" not in st.session_state:
     st.session_state.is_pro_user = False
@@ -107,14 +145,36 @@ if "github_user" not in st.session_state:
     st.session_state.github_user = None
 if "auth_error" not in st.session_state:
     st.session_state.auth_error = None
+if "project_scan_result" not in st.session_state:
+    st.session_state.project_scan_result = None
+if "project_sca_findings" not in st.session_state:
+    st.session_state.project_sca_findings = None
+
+# ----------------- PAYMENT GATEWAY REDIRECT ACTIVATION -----------------
+try:
+    if hasattr(st, "query_params"):
+        _act_res = BillingManager.inspect_and_activate_redirect(dict(st.query_params))
+        if _act_res and _act_res.get("activated"):
+            st.session_state.license_tier = _act_res["tier"]
+            st.session_state.license_key = _act_res["license_key"]
+            st.session_state.is_pro_user = (_act_res["tier"] != PlanTier.FREE.value)
+            st.session_state.toast_msg = f"🎉 {_act_res['message']}"
+except Exception:
+    pass
 # ----------------- SOC2 & ISO-27001 PRE-AUDIT REPORT GENERATOR -----------------
-def generate_soc2_compliance_report(code_snippet: str, scan_res: dict) -> str:
+def generate_soc2_compliance_report(code_snippet: str, scan_res: dict, sca_findings: list = None, cross_file_findings: list = None) -> str:
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     findings = scan_res.get('findings', [])
     metrics = scan_res.get('metrics', {'critical': 0, 'security': 0, 'performance': 0, 'total': 0})
     status = scan_res.get('status', 'PASSED')
     
-    score = max(0, 100 - (metrics['critical'] * 35) - (metrics['security'] * 15) - (metrics['performance'] * 5))
+    score = max(0, 100 - (metrics.get('critical', 0) * 35) - (metrics.get('security', 0) * 15) - (metrics.get('performance', 0) * 5))
+    if sca_findings:
+        reachable_cves = sum(1 for s in sca_findings if s.is_reachable)
+        score = max(0, score - (reachable_cves * 25))
+    if cross_file_findings:
+        score = max(0, score - (len(cross_file_findings) * 30))
+
     grade = "A (Production Certified)" if score >= 90 else ("B (Acceptable Risk)" if score >= 70 else "F (Compliance Blocked)")
     
     lines = [
@@ -125,25 +185,49 @@ def generate_soc2_compliance_report(code_snippet: str, scan_res: dict) -> str:
         "---",
         "",
         "## 1. Executive Summary & Audit Score",
-        f"- **Audit Status:** {'PASSED (Zero Blocking Vulnerabilities)' if status == 'PASSED' else 'BLOCKED (Remediations Required Before Production Merge)'}",
+        f"- **Audit Status:** {'PASSED (Zero Blocking Vulnerabilities)' if status == 'PASSED' and not cross_file_findings else 'BLOCKED (Remediations Required Before Production Merge)'}",
         f"- **Compliance Readiness Grade:** {grade} ({score}/100)",
-        f"- **Critical Vulnerabilities:** {metrics['critical']}",
-        f"- **Security Advisories:** {metrics['security']}",
-        f"- **Resource Leaks / Perf:** {metrics['performance']}",
+        f"- **Critical Vulnerabilities:** {metrics.get('critical', 0)}",
+        f"- **Security Advisories:** {metrics.get('security', 0)}",
+        f"- **Cross-File Taint Traces:** {len(cross_file_findings) if cross_file_findings else 0}",
+        f"- **Reachable Supply-Chain CVEs:** {sum(1 for s in sca_findings if s.is_reachable) if sca_findings else 0}",
         "",
         "## 2. Regulatory Compliance Control Mapping",
         "| Standard / Framework | Control Identifier | Control Scope | Verification Status |",
         "| :--- | :--- | :--- | :--- |",
         f"| **SOC 2 Type II** | CC6.1 Logical Access | Hardcoded credential & secret token prevention (CWE-798) | {'COMPLIANT' if not any(f.cwe_id == 'CWE-798' for f in findings) else 'NON-COMPLIANT (Findings Detected)'} |",
-        f"| **SOC 2 Type II** | CC6.6 Boundary Protection | Injection prevention & untrusted input validation (CWE-89/78) | {'COMPLIANT' if not any(f.cwe_id in ('CWE-89', 'CWE-78') for f in findings) else 'NON-COMPLIANT (Findings Detected)'} |",
+        f"| **SOC 2 Type II** | CC6.6 Boundary Protection | Injection prevention & untrusted input validation (CWE-89/78) | {'COMPLIANT' if not any(f.cwe_id in ('CWE-89', 'CWE-78') for f in findings) and not cross_file_findings else 'NON-COMPLIANT (Findings Detected)'} |",
         f"| **SOC 2 Type II** | CC7.1 Vulnerability Mgmt | Pre-merge static application security testing (SAST) | COMPLIANT (Kavach Automated CI Gate) |",
         f"| **ISO/IEC 27001:2022** | Control 8.28 | Secure Coding & Code Review Verification | {'COMPLIANT' if status == 'PASSED' else 'ACTION REQUIRED'} |",
         f"| **OWASP Top 10:2021** | A03:2021 Injection | SQL / Command Injection prevention | {'VERIFIED CLEAN' if not any(f.cwe_id in ('CWE-89', 'CWE-78') for f in findings) else 'ACTION REQUIRED'} |",
         "",
-        "## 3. Vulnerability Findings & 1-Click Surgical Remediations",
     ]
-    
-    if not findings:
+
+    # Section 3: Cross-File Taint Traces if present
+    if cross_file_findings:
+        lines.extend([
+            "## 3. Inter-Procedural Cross-File Taint Propagation Flows",
+            "| Flow ID | Source Origin | Call Bridge | Sink Execution Point | Weakness |",
+            "| :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for idx, cf in enumerate(cross_file_findings, 1):
+            lines.append(f"| CF-{idx:02d} | `{cf.source_file}:L{cf.source_line}` | `{cf.call_file}:L{cf.call_line}` | `{cf.sink_file}:L{cf.sink_line}` ({cf.sink_function}) | {cf.cwe_id} |")
+        lines.append("")
+
+    # Section 4: SCA & AST Reachability
+    if sca_findings:
+        lines.extend([
+            "## 4. Software Composition Analysis (SCA) & AST Reachability Matrix",
+            "| Package Name | Installed | Safe Minimal | Advisory CVE | AST Reachability | Active Exploit Callers |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for sca in sca_findings:
+            callers_str = ", ".join(sca.imported_files[:3]) if sca.imported_files else "None (Dormant)"
+            lines.append(f"| **{sca.package_name}** | `{sca.installed_version}` | `{sca.fixed_version}` | {sca.cve_id} | {sca.reachability_status} | `{callers_str}` |")
+        lines.append("")
+
+    lines.append("## 5. Vulnerability Findings & 1-Click Surgical Remediations")
+    if not findings and not cross_file_findings:
         lines.append("✓ **No vulnerabilities detected.** This codebase satisfies baseline pre-audit requirements for SOC 2 and ISO-27001 code security testing.")
     else:
         for idx, f in enumerate(findings, 1):
@@ -162,10 +246,10 @@ def generate_soc2_compliance_report(code_snippet: str, scan_res: dict) -> str:
                 ""
             ])
             
-    digest = hex(abs(hash(code_snippet + timestamp)))[2:18]
+    digest = hex(abs(hash(str(code_snippet) + timestamp)))[2:18]
     lines.extend([
         "---",
-        "## 4. Auditor Sign-Off & Verification Seal",
+        "## 6. Auditor Sign-Off & Verification Seal",
         "This pre-audit document certifies that static AST taint analysis and cryptographic pattern matching were executed via Kavach AI v1.3.0 in a zero-trust local sandbox environment.",
         f"**Audit Digest Hash:** `{digest}`",
         "**Sign-off:** Automated Kavach AI DevSecOps Engine (Authorized Release)"
@@ -1288,6 +1372,173 @@ void authenticate(const char* input_key) {
 }
 '''
 
+
+def render_project_archive_inspector():
+    st.markdown("""
+    <div style="background:#141820; border:1px solid #262D39; border-radius:8px; padding:16px 20px; margin-bottom:18px;">
+        <div style="font-weight:600; font-size:15px; color:#F1F3F8; margin-bottom:4px;">📦 Multi-File Project & Supply-Chain (SCA) Analyzer</div>
+        <div style="font-size:12.5px; color:#929BAD;">
+            Performs inter-procedural AST taint tracing across route handlers and database sinks, correlates manifest CVEs with AST imports to eliminate false alarms, and generates SOC 2 compliance reports.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    up_col1, up_col2 = st.columns([2.0, 1.2], gap="medium", vertical_alignment="center")
+    with up_col1:
+        uploaded_zip = st.file_uploader(
+            "Upload Project ZIP archive (.zip)",
+            type=["zip"],
+            key="zip_repo_uploader",
+            help="Upload a zip file containing Python, JavaScript, and requirements.txt / package.json"
+        )
+    with up_col2:
+        st.markdown("<div style='font-size:12px; color:#929BAD; margin-bottom:6px;'>Or test instant benchmark project:</div>", unsafe_allow_html=True)
+        btn_run_demo = st.button("⚡ Run Multi-File Demo Project", key="btn_run_demo_proj", type="primary", use_container_width=True)
+
+    if uploaded_zip or btn_run_demo:
+        zip_bytes = uploaded_zip.read() if uploaded_zip else create_demo_project_zip()
+        proj_name = uploaded_zip.name if uploaded_zip else "demo_flask_service.zip"
+        with st.spinner("Executing inter-procedural AST taint tracing & SCA reachability matrix..."):
+            proj_scanner = ProjectASTScanner()
+            proj_res = proj_scanner.scan_zip_archive(zip_bytes, project_name=proj_name)
+            sca_scanner = SCAScanner()
+            sca_findings = sca_scanner.scan_project_dict(proj_res.get("file_contents", {}))
+
+            st.session_state.project_scan_result = proj_res
+            st.session_state.project_sca_findings = sca_findings
+
+    if st.session_state.get("project_scan_result"):
+        p_res = st.session_state.project_scan_result
+        sca_f = st.session_state.get("project_sca_findings", [])
+        cf_findings = p_res.get("cross_file_findings", [])
+        metrics = p_res.get("metrics", {})
+
+        reachable_count = sum(1 for s in sca_f if s.is_reachable)
+        dormant_count = sum(1 for s in sca_f if not s.is_reachable)
+
+        # 4 KPI Summary Cards
+        k1, k2, k3, k4 = st.columns(4, gap="small")
+        with k1:
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Files Analyzed</div>
+                <div class="kpi-val">{p_res.get('files_scanned', 0)}</div>
+                <div class="kpi-sub">Multi-module AST bundle</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k2:
+            crit_color = "#EF6674" if cf_findings else "#36C995"
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Cross-File Taint Traces</div>
+                <div class="kpi-val" style="color:{crit_color};">{len(cf_findings)}</div>
+                <div class="kpi-sub">Inter-procedural flows</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k3:
+            sca_color = "#EF6674" if reachable_count > 0 else "#36C995"
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">Reachable CVEs</div>
+                <div class="kpi-val" style="color:{sca_color};">{reachable_count}</div>
+                <div class="kpi-sub">{dormant_count} dormant CVEs filtered</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k4:
+            is_passed = (len(cf_findings) == 0 and reachable_count == 0 and metrics.get('critical', 0) == 0)
+            verdict = "PASSED" if is_passed else "BLOCKED"
+            v_color = "#36C995" if is_passed else "#EF6674"
+            st.markdown(f"""
+            <div class="kpi-card">
+                <div class="kpi-label">CI Gate Verdict</div>
+                <div class="kpi-val" style="color:{v_color}; font-size:20px;">{verdict}</div>
+                <div class="kpi-sub">Pre-merge policy</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+
+        # Cross-File Taint Flows
+        st.markdown("<div style='font-size:14px; font-weight:600; color:#F1F3F8; margin-bottom:10px;'>🚨 Inter-Procedural Cross-File Taint Traces</div>", unsafe_allow_html=True)
+        if cf_findings:
+            for idx, cf in enumerate(cf_findings, 1):
+                st.markdown(f"""
+                <div style="background:#141820; border:1px solid #262D39; border-left:3px solid #EF6674; border-radius:6px; padding:14px 18px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="background:rgba(239,102,116,0.15); color:#EF6674; font-weight:700; font-size:11px; padding:3px 8px; border-radius:4px;">
+                            CRITICAL • {cf.cwe_id}
+                        </span>
+                        <span style="font-family:monospace; font-size:12px; color:#929BAD;">Trace #{idx:02d}</span>
+                    </div>
+                    <div style="font-size:13px; font-weight:600; color:#F1F3F8; margin-bottom:6px;">{cf.category}</div>
+                    <div style="font-size:12px; color:#929BAD; margin-bottom:10px;">{cf.explanation}</div>
+                    <div style="display:flex; gap:12px; font-size:11.5px; font-family:monospace; background:#090B10; padding:10px; border-radius:4px; border:1px solid #262D39;">
+                        <div style="flex:1;">
+                            <span style="color:#8B7CFF;">Caller Origin:</span> <code>{cf.source_file}:{cf.source_line}</code><br>
+                            <span style="color:#F1F3F8;">{cf.source_snippet}</span>
+                        </div>
+                        <div style="color:#647087; align-self:center;">➔</div>
+                        <div style="flex:1;">
+                            <span style="color:#EF6674;">Sink Execution:</span> <code>{cf.sink_file}:{cf.sink_line} ({cf.sink_function})</code><br>
+                            <span style="color:#F1F3F8;">{cf.sink_snippet}</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='font-size:12.5px; color:#36C995; background:rgba(54,201,149,0.08); border:1px solid rgba(54,201,149,0.3); padding:10px 14px; border-radius:6px; margin-bottom:14px;'>✓ No cross-file taint leaks detected across modules.</div>", unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+
+        # SCA Matrix
+        st.markdown("<div style='font-size:14px; font-weight:600; color:#F1F3F8; margin-bottom:10px;'>📦 Software Composition Analysis (SCA) & AST Reachability</div>", unsafe_allow_html=True)
+        if sca_f:
+            for s in sca_f:
+                b_color = "#EF6674" if s.is_reachable else "#36C995"
+                callers_str = ", ".join(f"`{f}`" for f in s.imported_files[:3]) if s.imported_files else "None (Unimported Library)"
+                st.markdown(f"""
+                <div style="background:#141820; border:1px solid #262D39; border-radius:6px; padding:12px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <span style="font-weight:600; font-size:13.5px; color:#F1F3F8;">{s.package_name}</span>
+                        <span style="font-size:12px; color:#647087; margin-left:6px;">Installed: <code>{s.installed_version}</code> • Safe: <code>{s.fixed_version}</code></span>
+                        <div style="font-size:12px; color:#929BAD; margin-top:3px;"><b>{s.cve_id}</b>: {s.advisory_title}</div>
+                        <div style="font-size:11.5px; color:#647087; margin-top:2px;">Callers in codebase: {callers_str}</div>
+                    </div>
+                    <div>
+                        <span style="background:rgba(255,255,255,0.05); border:1px solid {b_color}; color:{b_color}; font-weight:600; font-size:11px; padding:4px 10px; border-radius:12px;">
+                            {s.reachability_status}
+                        </span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='font-size:12.5px; color:#36C995; background:rgba(54,201,149,0.08); border:1px solid rgba(54,201,149,0.3); padding:10px 14px; border-radius:6px; margin-bottom:14px;'>✓ All declared dependencies pass known CVE advisory checks.</div>", unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+
+        # SOC 2 Download Button
+        all_intra = []
+        for flist in p_res.get("file_findings", {}).values():
+            all_intra.extend(flist)
+        report_md = generate_soc2_compliance_report(
+            f"Project: {p_res.get('project_name', 'Archive')}",
+            {'findings': all_intra, 'metrics': metrics, 'status': 'BLOCKED' if not is_passed else 'PASSED'},
+            sca_findings=sca_f,
+            cross_file_findings=cf_findings
+        )
+        c_rep1, c_rep2 = st.columns([2.0, 1.2], vertical_alignment="center")
+        with c_rep1:
+            st.markdown("<div style='font-size:12.5px; color:#929BAD;'>Export enterprise-grade SOC 2 Type II and ISO-27001 audit report covering cross-file taint flows and supply chain reachability.</div>", unsafe_allow_html=True)
+        with c_rep2:
+            st.download_button(
+                "📥 Download SOC 2 Pre-Audit (.md)",
+                report_md,
+                file_name=f"kavach_soc2_audit_{p_res.get('project_name', 'report')}.md",
+                mime="text/markdown",
+                use_container_width=True,
+                type="primary"
+            )
+
 # ================= TAB 1: CODE INSPECTOR =================
 if active_tab == "Inspector":
     # Hero Positioning & Trust Bar
@@ -1307,347 +1558,363 @@ if active_tab == "Inspector":
     </div>
     """, unsafe_allow_html=True)
 
-    col_editor, col_result = st.columns([1.45, 1.0], gap="medium")
+    insp_hdr_col1, insp_hdr_col2 = st.columns([2.2, 1.2], gap="small", vertical_alignment="center")
+    with insp_hdr_col2:
+        inspector_mode = st.segmented_control(
+            "Scan Mode",
+            ["Single File / Snippet", "Project / Multi-File (.zip)"],
+            default="Single File / Snippet",
+            label_visibility="collapsed",
+            key="sel_inspector_mode"
+        ) or "Single File / Snippet"
 
-    # RUN ANALYSIS (CACHED)
-    current_code = st.session_state.get("user_code", "").strip()
-    if current_code:
-        analysis = analyze_code_cached(current_code)
-        findings = analysis['findings']
-        metrics = analysis['metrics']
-        analysis_status = analysis.get('status', 'PASSED')
-        syntax_err = analysis.get('syntax_error')
-        posture = compute_security_posture(analysis, current_code)
+    st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
 
-        # Record scan into session audit history
-        code_hash = str(hash(current_code))
-        if not any(h.get('code_hash') == code_hash for h in st.session_state.scan_history):
-            st.session_state.scan_history.insert(0, {
-                'Timestamp': datetime.datetime.now().strftime('%H:%M:%S'),
-                'code_hash': code_hash,
-                'Language': st.session_state.get('editor_lang', 'python').upper(),
-                'Lines': len(current_code.splitlines()),
-                'Critical': metrics['critical'],
-                'Security': metrics['security'],
-                'Perf': metrics['performance'],
-                'Score': f"{posture['score']}/100 ({posture['grade']})",
-                'Verdict': analysis_status
-            })
-            if len(st.session_state.scan_history) > 50:
-                st.session_state.scan_history = st.session_state.scan_history[:50]
-    else:
-        findings = []
-        metrics = {'critical': 0, 'security': 0, 'performance': 0}
-        analysis_status = "IDLE"
-        syntax_err = None
-        posture = compute_security_posture({}, "")
+    if inspector_mode == "Single File / Snippet":
+        col_editor, col_result = st.columns([1.45, 1.0], gap="medium")
 
-    # LEFT COLUMN: 60% CODE EDITOR
-    with col_editor:
-        # IDE Header Bar
-        tb_col1, tb_col2 = st.columns([1.0, 2.2], gap="small", vertical_alignment="center")
-        with tb_col1:
-            st.markdown("""
-            <div class="ide-tab-label">
-                <span class="ide-dot"></span>
-                <span style="font-weight:600; color:#F1F3F8;">snippet.py</span>
-                <span class="ide-meta">• UTF-8</span>
-            </div>
-            """, unsafe_allow_html=True)
-        with tb_col2:
-            c_lang, c_demo, c_clear, c_inspect = st.columns([0.85, 0.9, 0.65, 1.3], gap="small")
-            with c_lang:
-                cur_lang = st.session_state.get("editor_lang", "python")
-                lang_opts = ["python", "javascript", "c_cpp"]
-                lang_idx = lang_opts.index(cur_lang) if cur_lang in lang_opts else 0
-                selected_lang = st.selectbox(
-                    "Language",
-                    lang_opts,
-                    index=lang_idx,
-                    label_visibility="collapsed",
-                    key="sel_editor_lang",
-                    format_func=lambda x: {"python": "Python", "javascript": "JavaScript", "c_cpp": "C++"}.get(x, x)
-                )
-                if selected_lang != cur_lang:
-                    st.session_state.editor_lang = selected_lang
-                    st.session_state.editor_version += 1
-            with c_demo:
-                with st.popover("⚡ Demos", use_container_width=True):
-                    st.button("💉 SQL Injection (Py)", on_click=load_code_sample, args=(SQL_SAMPLE, "python"), key="demo_sqli", use_container_width=True)
-                    st.button("🔑 Secret Leaks (Py)", on_click=load_code_sample, args=(SECRETS_SAMPLE, "python"), key="demo_secrets", use_container_width=True)
-                    st.button("⚡ Command Injection (JS)", on_click=load_code_sample, args=(NODE_SAMPLE, "javascript"), key="demo_node", use_container_width=True)
-                    st.button("🛡️ Memory Buffer (C++)", on_click=load_code_sample, args=(CPP_SAMPLE, "c_cpp"), key="demo_cpp", use_container_width=True)
-            with c_clear:
-                st.button("Clear", on_click=clear_code_box, key="btn_clr", use_container_width=True)
-            with c_inspect:
-                st.button("Inspect Code ⌘↵", key="btn_inspect_code", type="primary", use_container_width=True)
+        # RUN ANALYSIS (CACHED)
+        current_code = st.session_state.get("user_code", "").strip()
+        if current_code:
+            analysis = analyze_code_cached(current_code)
+            findings = analysis['findings']
+            metrics = analysis['metrics']
+            analysis_status = analysis.get('status', 'PASSED')
+            syntax_err = analysis.get('syntax_error')
+            posture = compute_security_posture(analysis, current_code)
 
-        if HAS_ACE:
-            annotations = []
-            for f in findings:
-                annotations.append({
-                    'row': max(0, f.line_number - 1),
-                    'column': 0,
-                    'text': f"[{f.severity}] {f.category}",
-                    'type': 'error' if f.severity == 'CRITICAL' else ('warning' if f.severity == 'SECURITY' else 'info')
+            # Record scan into session audit history
+            code_hash = str(hash(current_code))
+            if not any(h.get('code_hash') == code_hash for h in st.session_state.scan_history):
+                st.session_state.scan_history.insert(0, {
+                    'Timestamp': datetime.datetime.now().strftime('%H:%M:%S'),
+                    'code_hash': code_hash,
+                    'Language': st.session_state.get('editor_lang', 'python').upper(),
+                    'Lines': len(current_code.splitlines()),
+                    'Critical': metrics['critical'],
+                    'Security': metrics['security'],
+                    'Perf': metrics['performance'],
+                    'Score': f"{posture['score']}/100 ({posture['grade']})",
+                    'Verdict': analysis_status
                 })
-
-            ace_lang = st.session_state.get("editor_lang", "python")
-            ace_code = st_ace(
-                value=st.session_state.user_code,
-                placeholder="// Paste your Python, JavaScript, or C++ code here to inspect for vulnerabilities...",
-                language=ace_lang,
-                theme="dracula",
-                keybinding="vscode",
-                font_size=13,
-                tab_size=4,
-                show_gutter=True,
-                show_print_margin=False,
-                wrap=True,
-                annotations=annotations,
-                auto_update=True,
-                height=480,
-                key=f"ace_editor_{st.session_state.editor_version}"
-            )
-            if ace_code != st.session_state.user_code:
-                st.session_state.user_code = ace_code
+                if len(st.session_state.scan_history) > 50:
+                    st.session_state.scan_history = st.session_state.scan_history[:50]
         else:
-            code_input = st.text_area(
-                "Code Input:",
-                key="user_code",
-                height=480,
-                label_visibility="collapsed",
-                placeholder="// Paste your Python, JavaScript, or C++ code here to inspect for vulnerabilities..."
-            )
+            findings = []
+            metrics = {'critical': 0, 'security': 0, 'performance': 0}
+            analysis_status = "IDLE"
+            syntax_err = None
+            posture = compute_security_posture({}, "")
 
-    # RIGHT COLUMN: 40% DIAGNOSTIC INSPECTOR
-    with col_result:
-        # Diagnostic Header Bar
-        r_head1, r_head2 = st.columns([1.8, 1.2], gap="small", vertical_alignment="center")
-        with r_head1:
-            if not current_code:
-                status_text = "Awaiting Scan"
-            elif analysis_status == "SYNTAX_ERROR":
-                status_text = "Syntax Error"
-            elif not findings:
-                status_text = "Clean (0 Issues)"
+        # LEFT COLUMN: 60% CODE EDITOR
+        with col_editor:
+            # IDE Header Bar
+            tb_col1, tb_col2 = st.columns([1.0, 2.2], gap="small", vertical_alignment="center")
+            with tb_col1:
+                st.markdown("""
+                <div class="ide-tab-label">
+                    <span class="ide-dot"></span>
+                    <span style="font-weight:600; color:#F1F3F8;">snippet.py</span>
+                    <span class="ide-meta">• UTF-8</span>
+                </div>
+                """, unsafe_allow_html=True)
+            with tb_col2:
+                c_lang, c_demo, c_clear, c_inspect = st.columns([0.85, 0.9, 0.65, 1.3], gap="small")
+                with c_lang:
+                    cur_lang = st.session_state.get("editor_lang", "python")
+                    lang_opts = ["python", "javascript", "c_cpp"]
+                    lang_idx = lang_opts.index(cur_lang) if cur_lang in lang_opts else 0
+                    selected_lang = st.selectbox(
+                        "Language",
+                        lang_opts,
+                        index=lang_idx,
+                        label_visibility="collapsed",
+                        key="sel_editor_lang",
+                        format_func=lambda x: {"python": "Python", "javascript": "JavaScript", "c_cpp": "C++"}.get(x, x)
+                    )
+                    if selected_lang != cur_lang:
+                        st.session_state.editor_lang = selected_lang
+                        st.session_state.editor_version += 1
+                with c_demo:
+                    with st.popover("⚡ Demos", use_container_width=True):
+                        st.button("💉 SQL Injection (Py)", on_click=load_code_sample, args=(SQL_SAMPLE, "python"), key="demo_sqli", use_container_width=True)
+                        st.button("🔑 Secret Leaks (Py)", on_click=load_code_sample, args=(SECRETS_SAMPLE, "python"), key="demo_secrets", use_container_width=True)
+                        st.button("⚡ Command Injection (JS)", on_click=load_code_sample, args=(NODE_SAMPLE, "javascript"), key="demo_node", use_container_width=True)
+                        st.button("🛡️ Memory Buffer (C++)", on_click=load_code_sample, args=(CPP_SAMPLE, "c_cpp"), key="demo_cpp", use_container_width=True)
+                with c_clear:
+                    st.button("Clear", on_click=clear_code_box, key="btn_clr", use_container_width=True)
+                with c_inspect:
+                    st.button("Inspect Code ⌘↵", key="btn_inspect_code", type="primary", use_container_width=True)
+
+            if HAS_ACE:
+                annotations = []
+                for f in findings:
+                    annotations.append({
+                        'row': max(0, f.line_number - 1),
+                        'column': 0,
+                        'text': f"[{f.severity}] {f.category}",
+                        'type': 'error' if f.severity == 'CRITICAL' else ('warning' if f.severity == 'SECURITY' else 'info')
+                    })
+
+                ace_lang = st.session_state.get("editor_lang", "python")
+                ace_code = st_ace(
+                    value=st.session_state.user_code,
+                    placeholder="// Paste your Python, JavaScript, or C++ code here to inspect for vulnerabilities...",
+                    language=ace_lang,
+                    theme="dracula",
+                    keybinding="vscode",
+                    font_size=13,
+                    tab_size=4,
+                    show_gutter=True,
+                    show_print_margin=False,
+                    wrap=True,
+                    annotations=annotations,
+                    auto_update=True,
+                    height=480,
+                    key=f"ace_editor_{st.session_state.editor_version}"
+                )
+                if ace_code != st.session_state.user_code:
+                    st.session_state.user_code = ace_code
             else:
-                status_text = f"{len(findings)} Issue(s) Detected"
+                code_input = st.text_area(
+                    "Code Input:",
+                    key="user_code",
+                    height=480,
+                    label_visibility="collapsed",
+                    placeholder="// Paste your Python, JavaScript, or C++ code here to inspect for vulnerabilities..."
+                )
 
-            st.markdown(f"""
-            <div class="ide-tab-label">
-                <span style="font-weight:600; color:#F1F3F8;">Diagnostics</span>
-                <span class="ide-meta">• {status_text}</span>
-            </div>
-            """, unsafe_allow_html=True)
-        with r_head2:
-            if analysis_status == "SYNTAX_ERROR":
-                st.markdown("<div style='text-align:right; font-size:11.5px; color:#E5A84B; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Invalid Syntax</div>", unsafe_allow_html=True)
-            elif findings:
-                crit_badge = f'<span style="color:#EF6674; font-weight:600;">{metrics["critical"]} Crit</span>'
-                sec_badge = f'<span style="color:#E5A84B; font-weight:600;">{metrics["security"]} Sec</span>'
-                perf_badge = f'<span style="color:#8B7CFF; font-weight:600;">{metrics["performance"]} Perf</span>'
-                st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
-            else:
-                st.markdown("<div style='text-align:right; font-size:11.5px; color:#647087; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Operational</div>", unsafe_allow_html=True)
-
-        # 480px Matched Height Container
-        with st.container(height=480):
-            # 1. Security Posture Scorecard
-            if current_code and analysis_status != "IDLE":
-                crit_w = min(100, metrics['critical'] * 25)
-                sec_w = min(100 - crit_w, metrics['security'] * 15)
-                perf_w = min(100 - crit_w - sec_w, metrics['performance'] * 10)
-                clean_w = max(0, 100 - crit_w - sec_w - perf_w) if not findings else 0
+        # RIGHT COLUMN: 40% DIAGNOSTIC INSPECTOR
+        with col_result:
+            # Diagnostic Header Bar
+            r_head1, r_head2 = st.columns([1.8, 1.2], gap="small", vertical_alignment="center")
+            with r_head1:
+                if not current_code:
+                    status_text = "Awaiting Scan"
+                elif analysis_status == "SYNTAX_ERROR":
+                    status_text = "Syntax Error"
+                elif not findings:
+                    status_text = "Clean (0 Issues)"
+                else:
+                    status_text = f"{len(findings)} Issue(s) Detected"
 
                 st.markdown(f"""
-                <div class="posture-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span class="posture-grade-badge {posture['badge_class']}">{posture['grade']}</span>
-                            <div>
-                                <div style="font-weight:600; font-size:13.5px; color:#F1F3F8;">Security Health: {posture['score']}/100</div>
-                                <div style="font-size:11px; color:#647087;">{posture['grade_label']}</div>
+                <div class="ide-tab-label">
+                    <span style="font-weight:600; color:#F1F3F8;">Diagnostics</span>
+                    <span class="ide-meta">• {status_text}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            with r_head2:
+                if analysis_status == "SYNTAX_ERROR":
+                    st.markdown("<div style='text-align:right; font-size:11.5px; color:#E5A84B; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Invalid Syntax</div>", unsafe_allow_html=True)
+                elif findings:
+                    crit_badge = f'<span style="color:#EF6674; font-weight:600;">{metrics["critical"]} Crit</span>'
+                    sec_badge = f'<span style="color:#E5A84B; font-weight:600;">{metrics["security"]} Sec</span>'
+                    perf_badge = f'<span style="color:#8B7CFF; font-weight:600;">{metrics["performance"]} Perf</span>'
+                    st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='text-align:right; font-size:11.5px; color:#647087; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Operational</div>", unsafe_allow_html=True)
+
+            # 480px Matched Height Container
+            with st.container(height=480):
+                # 1. Security Posture Scorecard
+                if current_code and analysis_status != "IDLE":
+                    crit_w = min(100, metrics['critical'] * 25)
+                    sec_w = min(100 - crit_w, metrics['security'] * 15)
+                    perf_w = min(100 - crit_w - sec_w, metrics['performance'] * 10)
+                    clean_w = max(0, 100 - crit_w - sec_w - perf_w) if not findings else 0
+
+                    st.markdown(f"""
+                    <div class="posture-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span class="posture-grade-badge {posture['badge_class']}">{posture['grade']}</span>
+                                <div>
+                                    <div style="font-weight:600; font-size:13.5px; color:#F1F3F8;">Security Health: {posture['score']}/100</div>
+                                    <div style="font-size:11px; color:#647087;">{posture['grade_label']}</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:10.5px; color:#647087;">CVSS v3.1 Impact</div>
+                                <div style="font-size:12.5px; font-weight:600; color:{posture['color']}; font-family:'JetBrains Mono';">MAX {posture['cvss_max']}</div>
                             </div>
                         </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:10.5px; color:#647087;">CVSS v3.1 Impact</div>
-                            <div style="font-size:12.5px; font-weight:600; color:{posture['color']}; font-family:'JetBrains Mono';">MAX {posture['cvss_max']}</div>
-                        </div>
-                    </div>
-                    <div class="posture-bar-track">
-                        <div class="posture-bar-crit" style="width:{crit_w}%;"></div>
-                        <div class="posture-bar-sec" style="width:{sec_w}%;"></div>
-                        <div class="posture-bar-perf" style="width:{perf_w}%;"></div>
-                        <div class="posture-bar-clean" style="width:{clean_w}%;"></div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # Export Action Buttons
-                exp_col1, exp_col2 = st.columns(2, gap="small")
-                with exp_col1:
-                    st.download_button(
-                        "📥 JSON Report",
-                        data=generate_json_report(analysis, current_code, posture),
-                        file_name=f"kavach_audit_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                        mime="application/json",
-                        use_container_width=True,
-                        key="btn_dl_json"
-                    )
-                with exp_col2:
-                    st.download_button(
-                        "📄 Executive Summary",
-                        data=generate_markdown_report(analysis, current_code, posture),
-                        file_name=f"kavach_executive_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
-                        mime="text/markdown",
-                        use_container_width=True,
-                        key="btn_dl_md"
-                    )
-
-            if not current_code:
-                st.markdown("""
-                <div class="terminal-empty-box">
-                    <div class="terminal-header">
-                        <div class="term-brand">
-                            <span style="font-weight:700; color:#F1F3F8; letter-spacing:0.04em; font-size:12px;">KAVACH SECURITY ENGINE</span>
-                            <span class="term-badge">Enterprise Defense</span>
-                        </div>
-                        <div class="term-status-pill"><span class="status-dot-green"></span> Operational</div>
-                    </div>
-                    <div class="term-headline">Security engineered with precision.</div>
-                    <div class="term-subhead">Deterministic intra-procedural AST taint flow & recursive constant folding engine.</div>
-                    <div class="term-specs-grid">
-                        <div class="term-spec-row">
-                            <span class="spec-label">AST Analysis Engine</span>
-                            <span class="spec-val">Ready (Python, JS, C++)</span>
-                        </div>
-                        <div class="term-spec-row">
-                            <span class="spec-label">Taint Flow Analysis</span>
-                            <span class="spec-val">Active (Intra-Procedural)</span>
-                        </div>
-                        <div class="term-spec-row">
-                            <span class="spec-label">Constant Folding</span>
-                            <span class="spec-val">Active (CWE-798 Key Resolver)</span>
-                        </div>
-                        <div class="term-spec-row">
-                            <span class="spec-label">Telemetry & Retention</span>
-                            <span class="spec-val">0.00% (Strictly Local)</span>
-                        </div>
-                    </div>
-                    <div class="term-footer-tip">
-                        Select a sample from the toolbar or paste code to inspect for vulnerabilities.
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            elif analysis_status == "SYNTAX_ERROR":
-                err_line = syntax_err.get('line', 1) if syntax_err else 1
-                err_col = syntax_err.get('column', 1) if syntax_err else 1
-                err_msg = syntax_err.get('msg', 'Invalid syntax') if syntax_err else 'Invalid syntax'
-                err_text = syntax_err.get('text', '') if syntax_err else ''
-
-                st.markdown(f"""
-                <div class="diag-banner diag-syntax">
-                    <span style="font-size:15px;">⚠</span>
-                    <div>
-                        <div style="font-weight:600; font-size:12.5px;">SYNTAX ERROR — Unable to parse AST</div>
-                        <div style="font-size:11.5px; opacity:0.9;">Fix syntax errors before security verification. (Line {err_line}, Col {err_col}: {html.escape(err_msg)})</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                if err_text:
-                    st.caption("Faulty code construct:")
-                    st.code(err_text, language="python")
-            elif not findings:
-                st.markdown("""
-                <div class="diag-banner diag-clean">
-                    <span style="font-size:15px;">✓</span>
-                    <div>
-                        <div style="font-weight:600; font-size:12.5px;">ALL CHECKS PASSED — READY TO MERGE</div>
-                        <div style="font-size:11.5px; opacity:0.9;">Zero security vulnerabilities or resource leaks detected in this code.</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.download_button(
-                    "📑 Download SOC 2 & ISO-27001 Certification (.md)",
-                    data=generate_soc2_compliance_report(st.session_state.user_code, res),
-                    file_name=f"Kavach_AI_SOC2_Clean_{datetime.date.today().isoformat()}.md",
-                    mime="text/markdown",
-                    key="btn_download_soc2_clean",
-                    use_container_width=True
-                )
-            else:
-                if metrics['critical'] > 0:
-                    st.markdown(f"""
-                    <div class="diag-banner diag-blocked">
-                        <span style="font-size:15px;">✕</span>
-                        <div>
-                            <div style="font-weight:600; font-size:12.5px;">MERGE BLOCKED • {metrics['critical']} Critical Exploit(s)</div>
-                            <div style="font-size:11.5px; opacity:0.9;">High-risk attack vectors identified. Apply surgical patches below.</div>
+                        <div class="posture-bar-track">
+                            <div class="posture-bar-crit" style="width:{crit_w}%;"></div>
+                            <div class="posture-bar-sec" style="width:{sec_w}%;"></div>
+                            <div class="posture-bar-perf" style="width:{perf_w}%;"></div>
+                            <div class="posture-bar-clean" style="width:{clean_w}%;"></div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-                else:
+
+                    # Export Action Buttons
+                    exp_col1, exp_col2 = st.columns(2, gap="small")
+                    with exp_col1:
+                        st.download_button(
+                            "📥 JSON Report",
+                            data=generate_json_report(analysis, current_code, posture),
+                            file_name=f"kavach_audit_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                            mime="application/json",
+                            use_container_width=True,
+                            key="btn_dl_json"
+                        )
+                    with exp_col2:
+                        st.download_button(
+                            "📄 Executive Summary",
+                            data=generate_markdown_report(analysis, current_code, posture),
+                            file_name=f"kavach_executive_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                            mime="text/markdown",
+                            use_container_width=True,
+                            key="btn_dl_md"
+                        )
+
+                if not current_code:
+                    st.markdown("""
+                    <div class="terminal-empty-box">
+                        <div class="terminal-header">
+                            <div class="term-brand">
+                                <span style="font-weight:700; color:#F1F3F8; letter-spacing:0.04em; font-size:12px;">KAVACH SECURITY ENGINE</span>
+                                <span class="term-badge">Enterprise Defense</span>
+                            </div>
+                            <div class="term-status-pill"><span class="status-dot-green"></span> Operational</div>
+                        </div>
+                        <div class="term-headline">Security engineered with precision.</div>
+                        <div class="term-subhead">Deterministic intra-procedural AST taint flow & recursive constant folding engine.</div>
+                        <div class="term-specs-grid">
+                            <div class="term-spec-row">
+                                <span class="spec-label">AST Analysis Engine</span>
+                                <span class="spec-val">Ready (Python, JS, C++)</span>
+                            </div>
+                            <div class="term-spec-row">
+                                <span class="spec-label">Taint Flow Analysis</span>
+                                <span class="spec-val">Active (Intra-Procedural)</span>
+                            </div>
+                            <div class="term-spec-row">
+                                <span class="spec-label">Constant Folding</span>
+                                <span class="spec-val">Active (CWE-798 Key Resolver)</span>
+                            </div>
+                            <div class="term-spec-row">
+                                <span class="spec-label">Telemetry & Retention</span>
+                                <span class="spec-val">0.00% (Strictly Local)</span>
+                            </div>
+                        </div>
+                        <div class="term-footer-tip">
+                            Select a sample from the toolbar or paste code to inspect for vulnerabilities.
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                elif analysis_status == "SYNTAX_ERROR":
+                    err_line = syntax_err.get('line', 1) if syntax_err else 1
+                    err_col = syntax_err.get('column', 1) if syntax_err else 1
+                    err_msg = syntax_err.get('msg', 'Invalid syntax') if syntax_err else 'Invalid syntax'
+                    err_text = syntax_err.get('text', '') if syntax_err else ''
+
                     st.markdown(f"""
-                    <div class="diag-banner diag-warning">
+                    <div class="diag-banner diag-syntax">
                         <span style="font-size:15px;">⚠</span>
                         <div>
-                            <div style="font-weight:600; font-size:12.5px;">SECURITY AUDIT • {metrics['security']} Warning(s)</div>
-                            <div style="font-size:11.5px; opacity:0.9;">Vulnerabilities or resource leaks flagged for review.</div>
+                            <div style="font-weight:600; font-size:12.5px;">SYNTAX ERROR — Unable to parse AST</div>
+                            <div style="font-size:11.5px; opacity:0.9;">Fix syntax errors before security verification. (Line {err_line}, Col {err_col}: {html.escape(err_msg)})</div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-
-                st.download_button(
-                    "📑 Download SOC 2 & ISO-27001 Pre-Audit Report (.md)",
-                    data=generate_soc2_compliance_report(st.session_state.user_code, res),
-                    file_name=f"Kavach_AI_SOC2_PreAudit_{datetime.date.today().isoformat()}.md",
-                    mime="text/markdown",
-                    key="btn_download_soc2_inspector",
-                    use_container_width=True
-                )
-                st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
-
-                for i, f in enumerate(findings, 1):
-                    cat_safe = html.escape(f.category)
-                    exp_safe = html.escape(f.explanation)
-                    cwe_safe = html.escape(f.cwe_id or "CWE-General")
-                    is_crit = (f.severity.upper() == "CRITICAL")
-                    sev_color = "#EF6674" if is_crit else ("#E5A84B" if f.severity.upper() == "WARNING" else "#8B7CFF")
-
-                    with st.expander(f"L{f.line_number} [{f.severity}] {cat_safe} • {cwe_safe}", expanded=(i <= 2)):
-                        # Taint Flow Breadcrumb
+                    if err_text:
+                        st.caption("Faulty code construct:")
+                        st.code(err_text, language="python")
+                elif not findings:
+                    st.markdown("""
+                    <div class="diag-banner diag-clean">
+                        <span style="font-size:15px;">✓</span>
+                        <div>
+                            <div style="font-weight:600; font-size:12.5px;">ALL CHECKS PASSED — READY TO MERGE</div>
+                            <div style="font-size:11.5px; opacity:0.9;">Zero security vulnerabilities or resource leaks detected in this code.</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.download_button(
+                        "📑 Download SOC 2 & ISO-27001 Certification (.md)",
+                        data=generate_soc2_compliance_report(st.session_state.user_code, res),
+                        file_name=f"Kavach_AI_SOC2_Clean_{datetime.date.today().isoformat()}.md",
+                        mime="text/markdown",
+                        key="btn_download_soc2_clean",
+                        use_container_width=True
+                    )
+                else:
+                    if metrics['critical'] > 0:
                         st.markdown(f"""
-                        <div class="taint-flow-box">
-                            <span class="taint-step" style="background:rgba(239,102,116,0.12); color:#EF6674;">Source: L{f.line_number}</span>
-                            <span>➔</span>
-                            <span class="taint-step" style="background:rgba(229,168,75,0.12); color:#E5A84B;">Taint Tracking</span>
-                            <span>➔</span>
-                            <span class="taint-step" style="background:rgba(139,124,255,0.12); color:#8B7CFF;">Sink: {cat_safe}</span>
+                        <div class="diag-banner diag-blocked">
+                            <span style="font-size:15px;">✕</span>
+                            <div>
+                                <div style="font-weight:600; font-size:12.5px;">MERGE BLOCKED • {metrics['critical']} Critical Exploit(s)</div>
+                                <div style="font-size:11.5px; opacity:0.9;">High-risk attack vectors identified. Apply surgical patches below.</div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div class="diag-banner diag-warning">
+                            <span style="font-size:15px;">⚠</span>
+                            <div>
+                                <div style="font-weight:600; font-size:12.5px;">SECURITY AUDIT • {metrics['security']} Warning(s)</div>
+                                <div style="font-size:11.5px; opacity:0.9;">Vulnerabilities or resource leaks flagged for review.</div>
+                            </div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                        st.markdown(f"<div style='font-size:12px; color:#929BAD; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
+                    st.download_button(
+                        "📑 Download SOC 2 & ISO-27001 Pre-Audit Report (.md)",
+                        data=generate_soc2_compliance_report(st.session_state.user_code, res),
+                        file_name=f"Kavach_AI_SOC2_PreAudit_{datetime.date.today().isoformat()}.md",
+                        mime="text/markdown",
+                        key="btn_download_soc2_inspector",
+                        use_container_width=True
+                    )
+                    st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
 
-                        # GitHub-Grade Unified Diff Visualizer
-                        prob_lines = f.problem_code.splitlines()
-                        fix_lines = f.fixed_code.splitlines()
-                        diff_html_parts = ['<div class="diff-unified-box">']
-                        for pl in prob_lines:
-                            diff_html_parts.append(f'<div class="diff-del-line"><span class="diff-gutter-sym">-</span>{html.escape(pl)}</div>')
-                        for fl in fix_lines:
-                            diff_html_parts.append(f'<div class="diff-add-line"><span class="diff-gutter-sym">+</span>{html.escape(fl)}</div>')
-                        diff_html_parts.append('</div>')
-                        st.markdown("".join(diff_html_parts), unsafe_allow_html=True)
+                    for i, f in enumerate(findings, 1):
+                        cat_safe = html.escape(f.category)
+                        exp_safe = html.escape(f.explanation)
+                        cwe_safe = html.escape(f.cwe_id or "CWE-General")
+                        is_crit = (f.severity.upper() == "CRITICAL")
+                        sev_color = "#EF6674" if is_crit else ("#E5A84B" if f.severity.upper() == "WARNING" else "#8B7CFF")
 
-                        st.button(
-                            f"🪄 Apply Patch #{i}",
-                            key=f"btn_apply_fix_{i}",
-                            type="primary",
-                            on_click=apply_patch_to_editor,
-                            args=(f.problem_code, f.fixed_code),
-                            use_container_width=True
-                        )
+                        with st.expander(f"L{f.line_number} [{f.severity}] {cat_safe} • {cwe_safe}", expanded=(i <= 2)):
+                            # Taint Flow Breadcrumb
+                            st.markdown(f"""
+                            <div class="taint-flow-box">
+                                <span class="taint-step" style="background:rgba(239,102,116,0.12); color:#EF6674;">Source: L{f.line_number}</span>
+                                <span>➔</span>
+                                <span class="taint-step" style="background:rgba(229,168,75,0.12); color:#E5A84B;">Taint Tracking</span>
+                                <span>➔</span>
+                                <span class="taint-step" style="background:rgba(139,124,255,0.12); color:#8B7CFF;">Sink: {cat_safe}</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                            st.markdown(f"<div style='font-size:12px; color:#929BAD; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
+
+                            # GitHub-Grade Unified Diff Visualizer
+                            prob_lines = f.problem_code.splitlines()
+                            fix_lines = f.fixed_code.splitlines()
+                            diff_html_parts = ['<div class="diff-unified-box">']
+                            for pl in prob_lines:
+                                diff_html_parts.append(f'<div class="diff-del-line"><span class="diff-gutter-sym">-</span>{html.escape(pl)}</div>')
+                            for fl in fix_lines:
+                                diff_html_parts.append(f'<div class="diff-add-line"><span class="diff-gutter-sym">+</span>{html.escape(fl)}</div>')
+                            diff_html_parts.append('</div>')
+                            st.markdown("".join(diff_html_parts), unsafe_allow_html=True)
+
+                            st.button(
+                                f"🪄 Apply Patch #{i}",
+                                key=f"btn_apply_fix_{i}",
+                                type="primary",
+                                on_click=apply_patch_to_editor,
+                                args=(f.problem_code, f.fixed_code),
+                                use_container_width=True
+                            )
+
+    else:
+        render_project_archive_inspector()
 
 # ================= TAB 2: POSTURE DASHBOARD =================
 elif active_tab == "Posture Dashboard":
@@ -1884,19 +2151,28 @@ elif active_tab == "Pricing":
     </div>
     """, unsafe_allow_html=True)
 
-    # Founder Launch LTD Banner
+    # Founder Launch LTD Banner & Real Checkout Pipeline
+    checkout_urls = BillingManager.get_checkout_urls()
+
     st.markdown("""
-    <div style="background: rgba(139, 124, 255, 0.08); border: 1px solid rgba(139, 124, 255, 0.4); border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="background: rgba(139, 124, 255, 0.08); border: 1px solid rgba(139, 124, 255, 0.4); border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div>
-            <span style="background: #8B7CFF; color: #090B10; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-right: 8px; text-transform: uppercase;">Founder Launch LTD</span>
-            <span style="font-weight: 600; color: #F1F3F8; font-size: 14px;">Early Adopter Lifetime Deal: $149 One-Time</span>
-            <div style="color: #929BAD; font-size: 12px; margin-top: 4px;">Only 100 licenses allocated • Unlimited Private Repositories • Lifetime GitHub PR CI/CD Gatekeeper • SOC2 Audit Exports</div>
+            <span style="background: #8B7CFF; color: #090B10; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-right: 8px; text-transform: uppercase;">Founder Launch Pass</span>
+            <span style="font-weight: 600; color: #F1F3F8; font-size: 14px;">Early Adopter Cohort: $149 One-Time Lifetime Access</span>
+            <div style="color: #929BAD; font-size: 12px; margin-top: 4px;">Unlimited Repositories • Lifetime CLI + AST Engine • CI/CD Merge Blocker • SOC 2 Audit Exports</div>
         </div>
         <div style="font-weight: 600; color: #36C995; font-size: 13px;">
-            ● 87/100 Licenses Claimed
+            ● Early Adopter Cohort Open
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    c_ltd1, c_ltd2 = st.columns([2.5, 1.2], gap="small")
+    with c_ltd2:
+        if checkout_urls.get("ltd"):
+            st.link_button("⚡ Claim Founder Pass ($149)", checkout_urls["ltd"], type="primary", use_container_width=True)
+        else:
+            st.link_button("⚡ Request Founder Pass ($149)", BillingManager.get_invoice_request_url("Founder Lifetime Pass", "One-Time $149"), type="primary", use_container_width=True)
 
     b_col1, b_col2, b_col3 = st.columns([1.5, 1.2, 1.5], gap="small", vertical_alignment="center")
     with b_col2:
@@ -1965,15 +2241,18 @@ elif active_tab == "Pricing":
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-        st.button(
-            "✓ Active Plan" if is_pro else f"Select Developer Pro ({pro_price}/mo)",
-            key="btn_activate_pro",
-            disabled=is_pro,
-            type="primary" if not is_pro else "secondary",
-            on_click=select_plan,
-            args=(PlanTier.DEVELOPER_PRO.value, f"Developer Pro ({pro_price}/mo)"),
-            use_container_width=True
-        )
+        if checkout_urls.get("pro") and not is_pro:
+            st.link_button(f"Checkout Developer Pro ({pro_price}/mo)", checkout_urls["pro"], type="primary", use_container_width=True)
+        else:
+            st.button(
+                "✓ Active Plan" if is_pro else f"Select Developer Pro ({pro_price}/mo)",
+                key="btn_activate_pro",
+                disabled=is_pro,
+                type="primary" if not is_pro else "secondary",
+                on_click=select_plan,
+                args=(PlanTier.DEVELOPER_PRO.value, f"Developer Pro ({pro_price}/mo)"),
+                use_container_width=True
+            )
 
     # 3. TEAM ENTERPRISE ($99/mo annual or $119/mo monthly)
     with p3:
@@ -2000,14 +2279,17 @@ elif active_tab == "Pricing":
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-        st.button(
-            "✓ Active Plan" if is_team else f"Select Team Enterprise ({team_price}/mo)",
-            key="btn_activate_team",
-            disabled=is_team,
-            on_click=select_plan,
-            args=(PlanTier.TEAM_ENTERPRISE.value, f"Team Enterprise ({team_price}/mo)"),
-            use_container_width=True
-        )
+        if checkout_urls.get("team") and not is_team:
+            st.link_button(f"Checkout Team Enterprise ({team_price}/mo)", checkout_urls["team"], type="primary", use_container_width=True)
+        else:
+            st.button(
+                "✓ Active Plan" if is_team else f"Select Team Enterprise ({team_price}/mo)",
+                key="btn_activate_team",
+                disabled=is_team,
+                on_click=select_plan,
+                args=(PlanTier.TEAM_ENTERPRISE.value, f"Team Enterprise ({team_price}/mo)"),
+                use_container_width=True
+            )
 
     # LICENSE ACTIVATION STRIP
     st.markdown("<div style='margin-top:22px;'></div>", unsafe_allow_html=True)

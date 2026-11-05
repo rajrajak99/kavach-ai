@@ -19,6 +19,8 @@ from core.surgical_analyzer import SurgicalAnalyzer
 from core.ai_reasoner import AIReasoner
 from core.self_healing import SelfHealingTestRunner
 from core.license_manager import LicenseManager, PlanTier
+from core.project_scanner import ProjectASTScanner
+from core.sca_scanner import SCAScanner
 
 IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
@@ -152,9 +154,28 @@ def scan_path(
             if not as_json:
                 print(f"[!] Error scanning {file_p}: {e}")
 
-    crit_count = sum(1 for _, f in total_findings if f.severity == 'CRITICAL')
+    cross_file_findings = []
+    sca_findings = []
+    if path.is_dir():
+        try:
+            proj_scanner = ProjectASTScanner()
+            proj_res = proj_scanner.scan_project_directory(str(path))
+            cross_file_findings = proj_res.get("cross_file_findings", [])
+        except Exception as e:
+            if not as_json:
+                print(f"[!] Warning: Cross-file AST analysis encountered an issue: {e}")
+
+        try:
+            sca_scanner = SCAScanner()
+            sca_findings = sca_scanner.scan_directory(str(path))
+        except Exception as e:
+            if not as_json:
+                print(f"[!] Warning: Dependency SCA analysis encountered an issue: {e}")
+
+    crit_count = sum(1 for _, f in total_findings if f.severity == 'CRITICAL') + len(cross_file_findings)
     sec_count = sum(1 for _, f in total_findings if f.severity == 'SECURITY')
     perf_count = sum(1 for _, f in total_findings if f.severity == 'PERFORMANCE')
+    reachable_cves = sum(1 for s in sca_findings if s.is_reachable)
 
     if as_json:
         output_data = {
@@ -165,11 +186,13 @@ def scan_path(
                 "status": auth_msg
             },
             "total_files": len(files_to_scan),
-            "total_findings": len(total_findings),
+            "total_findings": len(total_findings) + len(cross_file_findings),
             "summary": {
                 "critical": crit_count,
                 "security": sec_count,
-                "performance": perf_count
+                "performance": perf_count,
+                "cross_file": len(cross_file_findings),
+                "reachable_cves": reachable_cves
             },
             "findings": [
                 {
@@ -185,6 +208,35 @@ def scan_path(
                 }
                 for file_p, finding in total_findings
             ],
+            "cross_file_findings": [
+                {
+                    "severity": cf.severity,
+                    "category": cf.category,
+                    "cwe_id": cf.cwe_id,
+                    "source_file": cf.source_file,
+                    "source_line": cf.source_line,
+                    "sink_file": cf.sink_file,
+                    "sink_line": cf.sink_line,
+                    "sink_function": cf.sink_function,
+                    "sink_snippet": cf.sink_snippet,
+                    "remediation": cf.remediation_patch
+                }
+                for cf in cross_file_findings
+            ],
+            "sca_findings": [
+                {
+                    "package": s.package_name,
+                    "installed_version": s.installed_version,
+                    "fixed_version": s.fixed_version,
+                    "cve_id": s.cve_id,
+                    "severity": s.severity,
+                    "is_reachable": s.is_reachable,
+                    "status": s.reachability_status,
+                    "advisory": s.advisory_title,
+                    "callers": s.imported_files
+                }
+                for s in sca_findings
+            ],
             "healing": [
                 {
                     "file": h.target_file,
@@ -197,13 +249,43 @@ def scan_path(
             ] if heal else []
         }
         print(json.dumps(output_data, indent=2))
-        return 0 if (crit_count == 0 and sec_count == 0) else 1
+        return 0 if (crit_count == 0 and sec_count == 0 and reachable_cves == 0) else 1
+
+    if cross_file_findings:
+        print("\n-------------------------------------------------------")
+        print(f"  [!] INTER-PROCEDURAL CROSS-FILE TAINT TRACES ({len(cross_file_findings)})")
+        print("-------------------------------------------------------")
+        for idx, cf in enumerate(cross_file_findings, 1):
+            print(f"  Trace #{idx:02d} [{cf.severity}] {safe_str(cf.category)} ({cf.cwe_id})")
+            print(f"    Caller Origin:  {cf.source_file}:{cf.source_line}")
+            print(f"    Call Bridge:    {cf.call_file}:{cf.call_line}")
+            print(f"    Sink Execution: {cf.sink_file}:{cf.sink_line} ({cf.sink_function})")
+            print(f"    Sink Snippet:   {safe_str(cf.sink_snippet)}")
+            print(f"    Remediation:    {safe_str(cf.remediation_patch)}")
+            print()
+
+    if sca_findings:
+        print("\n-------------------------------------------------------")
+        print(f"  [!] SOFTWARE COMPOSITION ANALYSIS (SCA) & REACHABILITY ({len(sca_findings)})")
+        print("-------------------------------------------------------")
+        for s in sca_findings:
+            icon = "[!]" if s.is_reachable else "[i]"
+            print(f"  {icon} {s.package_name} ({s.installed_version}) -> {s.cve_id} [{s.severity}]")
+            print(f"      Status:     {safe_str(s.reachability_status)}")
+            print(f"      Safe Vers:  {s.fixed_version}")
+            print(f"      Advisory:   {safe_str(s.advisory_title)}")
+            if s.imported_files:
+                print(f"      Callers:    {', '.join(s.imported_files[:3])}")
+            print()
 
     print("-------------------------------------------------------")
-    print(f"SUMMARY: {len(total_findings)} Total Issues Detected across {len(files_to_scan)} files.")
-    print(f"  Critical Crashes:  {crit_count}")
-    print(f"  Security Hazards:  {sec_count}")
-    print(f"  Performance Leaks: {perf_count}")
+    total_all_issues = len(total_findings) + len(cross_file_findings)
+    print(f"SUMMARY: {total_all_issues} Total Issues Detected across {len(files_to_scan)} files.")
+    print(f"  Critical Crashes:      {crit_count}")
+    print(f"  Security Hazards:      {sec_count}")
+    print(f"  Performance Leaks:     {perf_count}")
+    if sca_findings:
+        print(f"  Reachable Supply CVEs: {reachable_cves}")
 
     if heal and healing_results:
         print("  Self-Healing Verification:")
@@ -218,8 +300,8 @@ def scan_path(
 
     print("=======================================================\n")
 
-    if crit_count > 0 or sec_count > 0:
-        print("Status: FAILED (Merge Blocked due to Critical/Security hazards)\n")
+    if crit_count > 0 or sec_count > 0 or reachable_cves > 0:
+        print("Status: FAILED (Merge Blocked due to Critical/Security hazards or Reachable CVEs)\n")
         return 1
     elif perf_count > 0:
         print("Status: PASSED WITH WARNINGS\n")
