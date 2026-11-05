@@ -86,6 +86,7 @@ def analyze_code_cached(code_str: str):
     _ANALYSIS_CACHE[code_str] = res
     return res
 
+@st.cache_data
 def create_demo_project_zip() -> bytes:
     import io, zipfile
     buf = io.BytesIO()
@@ -1574,6 +1575,12 @@ if active_tab == "Inspector":
     if inspector_mode == "Single File / Snippet":
         col_editor, col_result = st.columns([1.45, 1.0], gap="medium")
 
+        # Synchronize latest code from Ace editor component if present
+        ace_key = f"ace_editor_{st.session_state.get('editor_version', 0)}"
+        if ace_key in st.session_state and st.session_state[ace_key] is not None:
+            if st.session_state[ace_key] != st.session_state.get("user_code"):
+                st.session_state.user_code = st.session_state[ace_key]
+
         # RUN ANALYSIS (CACHED)
         current_code = st.session_state.get("user_code", "").strip()
         if current_code:
@@ -1585,22 +1592,23 @@ if active_tab == "Inspector":
             syntax_err = analysis.get('syntax_error')
             posture = compute_security_posture(analysis, current_code)
 
-            # Record scan into session audit history
-            code_hash = str(hash(current_code))
-            if not any(h.get('code_hash') == code_hash for h in st.session_state.scan_history):
-                st.session_state.scan_history.insert(0, {
-                    'Timestamp': datetime.datetime.now().strftime('%H:%M:%S'),
-                    'code_hash': code_hash,
-                    'Language': st.session_state.get('editor_lang', 'python').upper(),
-                    'Lines': len(current_code.splitlines()),
-                    'Critical': metrics['critical'],
-                    'Security': metrics['security'],
-                    'Perf': metrics['performance'],
-                    'Score': f"{posture['score']}/100 ({posture['grade']})",
-                    'Verdict': analysis_status
-                })
-                if len(st.session_state.scan_history) > 50:
-                    st.session_state.scan_history = st.session_state.scan_history[:50]
+            # Record scan into session audit history (only for complete syntax-valid scans)
+            if analysis_status != "SYNTAX_ERROR":
+                code_hash = str(hash(current_code))
+                if not any(h.get('code_hash') == code_hash for h in st.session_state.scan_history):
+                    st.session_state.scan_history.insert(0, {
+                        'Timestamp': datetime.datetime.now().strftime('%H:%M:%S'),
+                        'code_hash': code_hash,
+                        'Language': st.session_state.get('editor_lang', 'python').upper(),
+                        'Lines': len(current_code.splitlines()),
+                        'Critical': metrics['critical'],
+                        'Security': metrics['security'],
+                        'Perf': metrics['performance'],
+                        'Score': f"{posture['score']}/100 ({posture['grade']})",
+                        'Verdict': analysis_status
+                    })
+                    if len(st.session_state.scan_history) > 50:
+                        st.session_state.scan_history = st.session_state.scan_history[:50]
         else:
             analysis = {'findings': [], 'metrics': {'critical': 0, 'security': 0, 'performance': 0}, 'status': 'IDLE'}
             res = analysis
@@ -1640,7 +1648,9 @@ if active_tab == "Inspector":
                         st.session_state.editor_lang = selected_lang
                         st.session_state.editor_version += 1
                 with c_demo:
-                    with st.popover("⚡ Demos", use_container_width=True):
+                    with st.popover("⚡ Demos & Mode", use_container_width=True):
+                        st.toggle("⚡ Real-Time Scan on Keystroke", key="live_lint_mode", value=False, help="Continuous scan on every keystroke. Keep OFF for 120 FPS typing speed and zero lag.")
+                        st.markdown("<div style='margin:6px 0; border-top:1px solid #262D39;'></div>", unsafe_allow_html=True)
                         st.button("💉 SQL Injection (Py)", on_click=load_code_sample, args=(SQL_SAMPLE, "python"), key="demo_sqli", use_container_width=True)
                         st.button("🔑 Secret Leaks (Py)", on_click=load_code_sample, args=(SECRETS_SAMPLE, "python"), key="demo_secrets", use_container_width=True)
                         st.button("⚡ Command Injection (JS)", on_click=load_code_sample, args=(NODE_SAMPLE, "javascript"), key="demo_node", use_container_width=True)
@@ -1673,12 +1683,13 @@ if active_tab == "Inspector":
                     show_print_margin=False,
                     wrap=True,
                     annotations=annotations,
-                    auto_update=True,
+                    auto_update=st.session_state.get("live_lint_mode", False),
                     height=480,
                     key=f"ace_editor_{st.session_state.editor_version}"
                 )
-                if ace_code != st.session_state.user_code:
+                if ace_code is not None and ace_code != st.session_state.user_code:
                     st.session_state.user_code = ace_code
+                    st.rerun()
             else:
                 code_input = st.text_area(
                     "Code Input:",
@@ -1758,7 +1769,7 @@ if active_tab == "Inspector":
                         st.download_button(
                             "📥 JSON Report",
                             data=generate_json_report(analysis, current_code, posture),
-                            file_name=f"kavach_audit_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                            file_name=f"kavach_audit_{datetime.date.today().isoformat()}.json",
                             mime="application/json",
                             use_container_width=True,
                             key="btn_dl_json"
@@ -1767,7 +1778,7 @@ if active_tab == "Inspector":
                         st.download_button(
                             "📄 Executive Summary",
                             data=generate_markdown_report(analysis, current_code, posture),
-                            file_name=f"kavach_executive_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                            file_name=f"kavach_executive_{datetime.date.today().isoformat()}.md",
                             mime="text/markdown",
                             use_container_width=True,
                             key="btn_dl_md"
