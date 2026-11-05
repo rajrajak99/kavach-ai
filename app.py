@@ -19,6 +19,7 @@ import json
 import datetime
 import time
 import requests
+import pandas as pd
 
 try:
     from streamlit_ace import st_ace
@@ -1577,6 +1578,7 @@ if active_tab == "Inspector":
         current_code = st.session_state.get("user_code", "").strip()
         if current_code:
             analysis = analyze_code_cached(current_code)
+            res = analysis
             findings = analysis['findings']
             metrics = analysis['metrics']
             analysis_status = analysis.get('status', 'PASSED')
@@ -1600,6 +1602,8 @@ if active_tab == "Inspector":
                 if len(st.session_state.scan_history) > 50:
                     st.session_state.scan_history = st.session_state.scan_history[:50]
         else:
+            analysis = {'findings': [], 'metrics': {'critical': 0, 'security': 0, 'performance': 0}, 'status': 'IDLE'}
+            res = analysis
             findings = []
             metrics = {'critical': 0, 'security': 0, 'performance': 0}
             analysis_status = "IDLE"
@@ -1834,7 +1838,7 @@ if active_tab == "Inspector":
                     """, unsafe_allow_html=True)
                     st.download_button(
                         "📑 Download SOC 2 & ISO-27001 Certification (.md)",
-                        data=generate_soc2_compliance_report(st.session_state.user_code, res),
+                        data=generate_soc2_compliance_report(st.session_state.user_code, analysis),
                         file_name=f"Kavach_AI_SOC2_Clean_{datetime.date.today().isoformat()}.md",
                         mime="text/markdown",
                         key="btn_download_soc2_clean",
@@ -1864,7 +1868,7 @@ if active_tab == "Inspector":
 
                     st.download_button(
                         "📑 Download SOC 2 & ISO-27001 Pre-Audit Report (.md)",
-                        data=generate_soc2_compliance_report(st.session_state.user_code, res),
+                        data=generate_soc2_compliance_report(st.session_state.user_code, analysis),
                         file_name=f"Kavach_AI_SOC2_PreAudit_{datetime.date.today().isoformat()}.md",
                         mime="text/markdown",
                         key="btn_download_soc2_inspector",
@@ -1982,8 +1986,11 @@ elif active_tab == "Posture Dashboard":
                 'Health Score': h.get('Score'),
                 'Verdict': h.get('Verdict')
             })
-        df = pd.DataFrame(display_data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        try:
+            df = pd.DataFrame(display_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        except Exception:
+            st.dataframe(display_data, use_container_width=True)
     else:
         st.info("No scans recorded in this session yet. Run an inspection on the 'Inspector' tab to generate live audit records.")
 

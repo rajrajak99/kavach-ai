@@ -169,3 +169,32 @@ def test_billing_invoice_mailto_generation():
     url = BillingManager.get_invoice_request_url("Team Enterprise", "annual")
     assert url.startswith("mailto:rajabhaiyarajak2008@gmail.com?")
     assert "Team+Enterprise" in url or "Team%20Enterprise" in url
+
+# ----------------- 5. SOC 2 COMPLIANCE REPORT GENERATOR TESTS -----------------
+def test_soc2_compliance_report_generation(analyzer, parser):
+    from app import generate_soc2_compliance_report
+
+    # 1. Clean snippet test
+    clean_code = "def add(a, b):\n    return a + b\n"
+    diff_clean = [parser.parse_raw_snippet("math.py", clean_code)]
+    res_clean = analyzer.generate_pull_request_review(diff_clean)
+    report_clean = generate_soc2_compliance_report(clean_code, res_clean)
+    assert "# 🛡️ KAVACH AI — SOC 2 TYPE II" in report_clean
+    assert "COMPLIANT" in report_clean
+    assert "Audit Digest Hash" in report_clean
+
+    # 2. Vulnerable snippet test (SQLi)
+    vuln_code = (
+        "import sqlite3\n"
+        "def find_user(username):\n"
+        "    conn = sqlite3.connect('db.sqlite')\n"
+        "    c = conn.cursor()\n"
+        "    c.execute(f'SELECT * FROM users WHERE name = {username}')\n"
+        "    return c.fetchall()\n"
+    )
+    diff_vuln = [parser.parse_raw_snippet("db.py", vuln_code)]
+    res_vuln = analyzer.generate_pull_request_review(diff_vuln)
+    report_vuln = generate_soc2_compliance_report(vuln_code, res_vuln)
+    assert "# 🛡️ KAVACH AI — SOC 2 TYPE II" in report_vuln
+    assert "CWE-89" in report_vuln
+    assert "NON-COMPLIANT" in report_vuln
