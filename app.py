@@ -239,7 +239,7 @@ def generate_soc2_compliance_report(code_snippet: str, scan_res: dict, sca_findi
     
     lines = [
         "# 🛡️ KAVACH AI — SOC 2 TYPE II & ISO-27001 PRE-AUDIT VERIFICATION REPORT",
-        f"**Generated:** {timestamp} | **Engine:** Kavach AI AST Cross-File Engine v1.4.0",
+        f"**Generated:** {timestamp} | **Engine:** Kavach AI AST Cross-File Engine v1.4.1",
         "**Telemetry Guarantee:** 100% Offline Local Analysis • Zero External Telemetry • Zero Code Retention",
         "",
         "---",
@@ -310,7 +310,7 @@ def generate_soc2_compliance_report(code_snippet: str, scan_res: dict, sca_findi
     lines.extend([
         "---",
         "## 6. Auditor Sign-Off & Verification Seal",
-        "This pre-audit document certifies that static AST taint analysis and cryptographic pattern matching were executed via Kavach AI v1.4.0 in a zero-trust local sandbox environment.",
+        "This pre-audit document certifies that static AST taint analysis and cryptographic pattern matching were executed via Kavach AI v1.4.1 in a zero-trust local sandbox environment.",
         f"**Audit Digest Hash:** `{digest}`",
         "**Sign-off:** Automated Kavach AI DevSecOps Engine (Authorized Release)"
     ])
@@ -555,7 +555,7 @@ def generate_markdown_report(analysis_res: dict, code_str: str, posture: dict) -
     
     lines = [
         "# 🛡️ Kavach AI — Executive Security Posture Audit",
-        f"**Generated**: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')} | **Engine**: Kavach AI v1.4.0 (Deterministic Cross-File AST)",
+        f"**Generated**: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')} | **Engine**: Kavach AI v1.4.1 (Deterministic Cross-File AST)",
         "",
         "## Executive Summary",
         f"- **Security Health Score**: `{posture['score']} / 100` (Grade {posture['grade']})",
@@ -1340,7 +1340,7 @@ with st.sidebar:
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
         <span style="font-size:22px;">🛡️</span>
         <span style="font-size:16px; font-weight:700; color:#F1F3F8;">Kavach AI</span>
-        <span style="background:rgba(139,124,255,0.15); color:#8B7CFF; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid rgba(139,124,255,0.3);">v1.4.0</span>
+        <span style="background:rgba(139,124,255,0.15); color:#8B7CFF; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid rgba(139,124,255,0.3);">v1.4.1</span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1490,7 +1490,7 @@ with nav_col1:
     st.markdown(f"""
     <div class="brand-wrap">
         {logo_tag}
-        <span class="brand-title">Kavach AI <span class="brand-pill">v1.4.0</span></span>
+        <span class="brand-title">Kavach AI <span class="brand-pill">v1.4.1</span></span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2354,7 +2354,7 @@ elif active_tab == "Live Benchmark":
         <thead>
             <tr>
                 <th class="bench-th">Capability / Benchmark Metric</th>
-                <th class="bench-th bench-highlight">🛡️ Kavach AI v1.4.0</th>
+                <th class="bench-th bench-highlight">🛡️ Kavach AI v1.4.1</th>
                 <th class="bench-th">Semgrep OSS</th>
                 <th class="bench-th">Snyk Open Source</th>
                 <th class="bench-th">Bandit (Python)</th>
@@ -2697,7 +2697,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Run Kavach AI
-        uses: rajrajak99/kavach-ai@v1.4.0
+        uses: rajrajak99/kavach-ai@v1.4.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on: 'CRITICAL'

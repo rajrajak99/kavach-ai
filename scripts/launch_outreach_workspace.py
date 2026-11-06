@@ -78,7 +78,7 @@ Unlike legacy SAST scanners that spit out 50 noisy false positives on test scrip
 Takes 60 seconds to plug into GitHub Actions:
 ```yaml
 - name: Kavach AI Pre-Merge Gate
-  uses: rajrajak99/kavach-ai@v1.4.0
+  uses: rajrajak99/kavach-ai@v1.4.1
 ```
 
 Would love to give you an Early Adopter pass if you want automated pre-merge gates across your private repositories.
@@ -97,7 +97,7 @@ We generated the exact 1-line surgical patch:
 - code: str,
 + code: str = Query(..., min_length=2, max_length=50, pattern=r"^[A-Za-z0-9_-]+$"),
 
-We built a plug-and-play GitHub Action (uses: rajrajak99/kavach-ai@v1.4.0) that catches and auto-patches these in CI before merge.
+We built a plug-and-play GitHub Action (uses: rajrajak99/kavach-ai@v1.4.1) that catches and auto-patches these in CI before merge.
 
 Happy to set you up with an Early Adopter pass if you want to test it on private repos: https://kavach-ai.streamlit.app!
 
@@ -137,7 +137,7 @@ Unlike legacy SAST scanners that spit out 50 false positives on styling or test 
 Takes 60 seconds to plug into GitHub Actions:
 ```yaml
 - name: Kavach AI Pre-Merge Gate
-  uses: rajrajak99/kavach-ai@v1.4.0
+  uses: rajrajak99/kavach-ai@v1.4.1
 ```
 
 Would love to set you up with an Early Adopter pass if you want automated pre-merge gates across your private repositories.
@@ -159,7 +159,7 @@ We generated the exact surgical patch diff:
 + columns = ', '.join(escape_ident(column.name) for column in table.columns)
 + cursor.execute(f'INSERT INTO {escape_ident(temporary_name)} ({columns}) SELECT {columns} FROM {escape_ident(table.name)}')
 
-We built a plug-and-play GitHub Action (uses: rajrajak99/kavach-ai@v1.4.0) that catches and auto-patches these in CI before merge.
+We built a plug-and-play GitHub Action (uses: rajrajak99/kavach-ai@v1.4.1) that catches and auto-patches these in CI before merge.
 
 Happy to give you an Early Adopter pass if you want to test it on private repos: https://kavach-ai.streamlit.app!
 
@@ -196,7 +196,7 @@ Unlike legacy SAST scanners that spit out 50 false positives on test scripts, Ka
 Takes 60 seconds to plug into GitHub Actions:
 ```yaml
 - name: Kavach AI Pre-Merge Gate
-  uses: rajrajak99/kavach-ai@v1.4.0
+  uses: rajrajak99/kavach-ai@v1.4.1
 ```
 
 Would love to give you an Early Adopter pass if you want automated pre-merge gates across your private repositories.
@@ -216,7 +216,7 @@ We generated the exact surgical patch diff:
 +     raise ValueError(f"Invalid column identifier: {column.name}")
   spec = CreateColumn(column).compile(dialect=connection.dialect)
 
-We built a plug-and-play GitHub Action (uses: rajrajak99/kavach-ai@v1.4.0) that catches and auto-patches these in CI before merge.
+We built a plug-and-play GitHub Action (uses: rajrajak99/kavach-ai@v1.4.1) that catches and auto-patches these in CI before merge.
 
 Happy to set you up with an Early Adopter pass if you want to test it on private repos: https://kavach-ai.streamlit.app!
 """)
