@@ -8,6 +8,9 @@ import sys
 import json
 import time
 import base64
+import hmac
+import hashlib
+import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
@@ -20,6 +23,102 @@ try:
     HAS_CRYPTOGRAPHY = True
 except ImportError:
     HAS_CRYPTOGRAPHY = False
+
+DEFAULT_MASTER_SECRET = "kavach_master_hmac_secret_key_v1_4_0_deterministic_salt"
+
+def get_master_secret(master_secret: Optional[str] = None) -> str:
+    """Retrieves master HMAC secret with deterministic fallback."""
+    if master_secret:
+        return master_secret
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and "KAVACH_MASTER_SECRET" in st.secrets:
+            return str(st.secrets["KAVACH_MASTER_SECRET"]).strip()
+    except Exception:
+        pass
+    return os.getenv("KAVACH_MASTER_SECRET", DEFAULT_MASTER_SECRET).strip()
+
+def generate_signed_license(
+    email: str,
+    tier: str,
+    valid_days: int = 3650,
+    master_secret: Optional[str] = None
+) -> str:
+    """
+    Generates an HMAC-SHA256 signed stateless license key.
+    Format: KAVACH-<TIER>-<BASE64_EMAIL>-<EXPIRY_YYYYMMDD>-<HMAC_SIGNATURE_12CHARS>
+    e.g. KAVACH-PRO-dGVzdEBleGFtcGxlLmNvbQ-20361106-9A8B7C6D5E4F
+    """
+    clean_email = email.strip().lower()
+    clean_tier = tier.strip().upper()
+    if clean_tier in ("DEVELOPER_PRO", "PRO_USER"):
+        clean_tier = "PRO"
+    elif clean_tier in ("TEAM_ENTERPRISE", "ENTERPRISE"):
+        clean_tier = "TEAM"
+
+    # Encode email to URL-safe base64 without padding
+    b64_email = base64.urlsafe_b64encode(clean_email.encode("utf-8")).decode("ascii").rstrip("=")
+    
+    # Calculate expiry date YYYYMMDD
+    exp_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=valid_days)).strftime("%Y%m%d")
+    
+    # Build payload to sign
+    payload = f"KAVACH-{clean_tier}-{b64_email}-{exp_date}"
+    secret = get_master_secret(master_secret)
+    sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()[:12].upper()
+    
+    return f"{payload}-{sig}"
+
+def verify_signed_license(
+    license_key: str,
+    master_secret: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Statelessly verifies an HMAC-SHA256 signed license key.
+    Returns: {"valid": bool, "email": str, "tier": str, "expires": str, "error": Optional[str]}
+    """
+    if not license_key or not isinstance(license_key, str):
+        return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Empty license key"}
+    
+    clean_key = license_key.strip()
+    if not clean_key.startswith("KAVACH-"):
+        return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid prefix (must start with KAVACH-)"}
+    
+    parts = clean_key.split("-")
+    if len(parts) != 5:
+        return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid key structure"}
+    
+    prefix, tier, b64_email, exp_date, sig = parts
+    if prefix != "KAVACH":
+        return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid token header"}
+    
+    # Decode email
+    try:
+        pad = b64_email + "=" * (-len(b64_email) % 4)
+        email = base64.urlsafe_b64decode(pad.encode("ascii")).decode("utf-8")
+    except Exception:
+        return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid email encoding"}
+    
+    # Verify HMAC
+    payload = f"KAVACH-{tier}-{b64_email}-{exp_date}"
+    secret = get_master_secret(master_secret)
+    expected_sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()[:12].upper()
+    
+    if not hmac.compare_digest(sig.upper(), expected_sig):
+        return {"valid": False, "email": email, "tier": tier, "expires": exp_date, "error": "Cryptographic signature verification failed (tampered key)"}
+    
+    # Check expiration
+    today_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
+    if exp_date < today_str:
+        return {"valid": False, "email": email, "tier": tier, "expires": exp_date, "error": f"License expired on {exp_date}"}
+    
+    return {
+        "valid": True,
+        "email": email,
+        "tier": tier,
+        "expires": exp_date,
+        "error": None
+    }
 
 class PlanTier(str, Enum):
     FREE = "FREE"                       # Community: Unlimited Public Repos ($0)
@@ -137,8 +236,15 @@ class LicenseManager:
 
         clean_key = key.strip()
 
-        # 1. Cryptographic offline token
+        # 1. Cryptographic offline token (HMAC-SHA256 signed or Ed25519)
         if clean_key.startswith("KAVACH-"):
+            hmac_res = verify_signed_license(clean_key)
+            if hmac_res.get("valid"):
+                tier_str = hmac_res.get("tier", "").upper()
+                if tier_str in ("TEAM", "LTD", "TEAM_ENTERPRISE"):
+                    return PlanTier.TEAM_ENTERPRISE
+                return PlanTier.DEVELOPER_PRO
+
             res = cls.verify_ed25519_token(clean_key)
             if res:
                 return res[0]
@@ -205,6 +311,16 @@ class LicenseManager:
         """
         ctx = cls.inspect_github_context()
         raw_key = license_key or os.getenv("KAVACH_LICENSE_KEY", "")
+        if not raw_key:
+            try:
+                from pathlib import Path
+                creds_file = Path.home() / ".kavach" / "credentials.json"
+                if creds_file.exists():
+                    with open(creds_file, "r", encoding="utf-8") as f:
+                        creds_data = json.load(f)
+                        raw_key = creds_data.get("license_key", "")
+            except Exception:
+                pass
         key_tier = cls.get_tier_for_key(raw_key)
 
         # 1. If key was provided but is invalid/forged

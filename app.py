@@ -27,7 +27,8 @@ try:
 except ImportError:
     HAS_ACE = False
 
-from kavach_license import PlanTier, LicenseManager
+from kavach_license import PlanTier, LicenseManager, generate_signed_license, verify_signed_license
+from core.auth_store import get_account_store
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.diff_parser import DiffParser
 from core.billing import BillingManager
@@ -43,7 +44,7 @@ st.set_page_config(
     page_title="Kavach AI — Enterprise Security Platform",
     page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # ----------------- CACHED STATIC ASSETS & ENGINES -----------------
@@ -129,6 +130,12 @@ if "license_tier" not in st.session_state:
     st.session_state.license_tier = PlanTier.FREE.value
 if "license_key" not in st.session_state:
     st.session_state.license_key = ""
+if "is_authenticated" not in st.session_state:
+    st.session_state.is_authenticated = False
+if "user_email" not in st.session_state:
+    st.session_state.user_email = ""
+if "pending_activation" not in st.session_state:
+    st.session_state.pending_activation = None
 if "user_code" not in st.session_state:
     st.session_state.user_code = ""
 if "editor_version" not in st.session_state:
@@ -152,15 +159,48 @@ if "project_scan_result" not in st.session_state:
 if "project_sca_findings" not in st.session_state:
     st.session_state.project_sca_findings = None
 
+# ----------------- URL AUTO-LOGIN & SESSION RESTORATION -----------------
+try:
+    if hasattr(st, "query_params") and "session_token" in st.query_params:
+        _sess_token = str(st.query_params["session_token"]).strip()
+        if _sess_token:
+            _verified = verify_signed_license(_sess_token)
+            if _verified.get("valid"):
+                st.session_state.is_authenticated = True
+                st.session_state.user_email = _verified.get("email", "")
+                st.session_state.license_key = _sess_token
+                _t = _verified.get("tier", "PRO")
+                st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if _t in ("TEAM", "LTD") else PlanTier.DEVELOPER_PRO.value
+                st.session_state.is_pro_user = True
+            else:
+                _store = get_account_store()
+                _usr = _store.get_user_by_license(_sess_token)
+                if _usr:
+                    st.session_state.is_authenticated = True
+                    st.session_state.user_email = _usr["email"]
+                    st.session_state.license_key = _sess_token
+                    _ut = _usr.get("tier", "FREE")
+                    st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if _ut in ("TEAM", "LTD") else (PlanTier.DEVELOPER_PRO.value if _ut == "PRO" else PlanTier.FREE.value)
+                    st.session_state.is_pro_user = (_ut != "FREE")
+except Exception:
+    pass
+
 # ----------------- PAYMENT GATEWAY REDIRECT ACTIVATION -----------------
 try:
     if hasattr(st, "query_params"):
         _act_res = BillingManager.inspect_and_activate_redirect(dict(st.query_params))
         if _act_res and _act_res.get("activated"):
-            st.session_state.license_tier = _act_res["tier"]
-            st.session_state.license_key = _act_res["license_key"]
-            st.session_state.is_pro_user = (_act_res["tier"] != PlanTier.FREE.value)
-            st.session_state.toast_msg = f"🎉 {_act_res['message']}"
+            if _act_res.get("needs_email"):
+                st.session_state.pending_activation = _act_res
+            else:
+                st.session_state.license_tier = _act_res["tier"]
+                st.session_state.license_key = _act_res["license_key"]
+                st.session_state.user_email = _act_res.get("email", "")
+                st.session_state.is_authenticated = True
+                st.session_state.is_pro_user = (_act_res["tier"] != PlanTier.FREE.value)
+                st.session_state.toast_msg = f"🎉 {_act_res['message']}"
+                if hasattr(st, "query_params") and _act_res.get("license_key"):
+                    st.query_params["session_token"] = _act_res["license_key"]
 except Exception:
     pass
 # ----------------- SOC2 & ISO-27001 PRE-AUDIT REPORT GENERATOR -----------------
@@ -341,10 +381,35 @@ def activate_custom_key():
         st.session_state.license_tier = tier.value
         st.session_state.license_key = key
         st.session_state.is_pro_user = (tier != PlanTier.FREE)
+        if hasattr(st, "query_params"):
+            st.query_params["session_token"] = key
+        v = verify_signed_license(key)
+        if v.get("valid"):
+            st.session_state.is_authenticated = True
+            st.session_state.user_email = v.get("email", "")
+            try:
+                acc_store = get_account_store()
+                acc_store.register_or_upgrade_user(v.get("email", ""), tier=v.get("tier", "PRO"), license_key=key)
+            except Exception:
+                pass
         st.session_state.key_feedback = ("success", f"Verified: {tier.value} Activated!")
         st.session_state.toast_msg = f"Verified: {tier.value}"
     else:
-        st.session_state.key_feedback = ("error", "Invalid or expired key! Must be an authentic Ed25519 token or LemonSqueezy key.")
+        acc_store = get_account_store()
+        usr = acc_store.get_user_by_license(key)
+        if usr:
+            st.session_state.is_authenticated = True
+            st.session_state.user_email = usr["email"]
+            st.session_state.license_key = usr["license_key"]
+            ut = usr.get("tier", "FREE")
+            st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if ut in ("TEAM", "LTD") else (PlanTier.DEVELOPER_PRO.value if ut == "PRO" else PlanTier.FREE.value)
+            st.session_state.is_pro_user = (ut != "FREE")
+            if hasattr(st, "query_params"):
+                st.query_params["session_token"] = usr["license_key"]
+            st.session_state.key_feedback = ("success", f"Verified: {st.session_state.license_tier} Activated!")
+            st.session_state.toast_msg = f"Verified: {st.session_state.license_tier}"
+        else:
+            st.session_state.key_feedback = ("error", "Invalid or expired key! Must be an authentic signed license or LemonSqueezy key.")
 
 def load_code_sample(code: str, lang: str = "python"):
     st.session_state.user_code = code
@@ -1251,6 +1316,142 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ----------------- SIDEBAR ACCOUNT & LICENSE WIDGET -----------------
+with st.sidebar:
+    st.markdown("""
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <span style="font-size:22px;">🛡️</span>
+        <span style="font-size:16px; font-weight:700; color:#F1F3F8;">Kavach AI</span>
+        <span style="background:rgba(139,124,255,0.15); color:#8B7CFF; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid rgba(139,124,255,0.3);">v1.4.0</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.expander("👤 Account & License", expanded=(not st.session_state.get("is_authenticated", False))):
+        if st.session_state.get("is_authenticated"):
+            user_disp = st.session_state.get("user_email") or "Developer"
+            st.markdown(f"""
+            <div style="background:rgba(54, 201, 149, 0.08); border:1px solid rgba(54, 201, 149, 0.3); border-radius:6px; padding:10px; margin-bottom:10px;">
+                <div style="font-size:11px; color:#929BAD;">ACTIVE ACCOUNT</div>
+                <div style="font-size:13px; font-weight:600; color:#F1F3F8; word-break:break-all;">{html.escape(user_disp)}</div>
+                <div style="font-size:11.5px; color:#36C995; margin-top:4px; font-weight:600;">● {st.session_state.get('license_tier', 'Community Free')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            active_key = st.session_state.get("license_key", "")
+            if active_key:
+                st.text_input("Active License Key:", value=active_key, type="password", disabled=True, key="side_active_key_disp")
+                receipt_text = BillingManager.generate_receipt_text(
+                    user_disp,
+                    "TEAM" if "TEAM" in str(st.session_state.get("license_tier")) else "PRO",
+                    active_key
+                )
+                st.download_button(
+                    "📥 Download Receipt (.txt)",
+                    data=receipt_text,
+                    file_name=f"kavach_license_{datetime.datetime.now().strftime('%Y%m%d')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                    key="side_dl_receipt"
+                )
+
+            if st.button("Sign Out / Switch Account", key="side_signout_btn", use_container_width=True):
+                st.session_state.is_authenticated = False
+                st.session_state.user_email = ""
+                st.session_state.license_key = ""
+                st.session_state.license_tier = PlanTier.FREE.value
+                st.session_state.is_pro_user = False
+                if hasattr(st, "query_params") and "session_token" in st.query_params:
+                    del st.query_params["session_token"]
+                st.rerun()
+        else:
+            auth_t1, auth_t2, auth_t3 = st.tabs(["🔑 License", "🔐 Password", "📝 Register"])
+            with auth_t1:
+                side_lic = st.text_input("License Key:", placeholder="KAVACH-PRO-...", key="side_lic_in")
+                if st.button("Activate License", key="btn_side_lic_act", type="primary", use_container_width=True):
+                    if not side_lic.strip():
+                        st.error("Please enter your Kavach AI license key.")
+                    else:
+                        v = verify_signed_license(side_lic.strip())
+                        if v.get("valid"):
+                            st.session_state.is_authenticated = True
+                            st.session_state.user_email = v.get("email", "")
+                            st.session_state.license_key = side_lic.strip()
+                            t_tier = PlanTier.TEAM_ENTERPRISE.value if v.get("tier") in ("TEAM", "LTD") else PlanTier.DEVELOPER_PRO.value
+                            st.session_state.license_tier = t_tier
+                            st.session_state.is_pro_user = True
+                            if hasattr(st, "query_params"):
+                                st.query_params["session_token"] = side_lic.strip()
+                            st.success(f"Verified {v.get('tier')} Active!")
+                            st.rerun()
+                        else:
+                            acc_store = get_account_store()
+                            u = acc_store.get_user_by_license(side_lic.strip())
+                            if u:
+                                st.session_state.is_authenticated = True
+                                st.session_state.user_email = u["email"]
+                                st.session_state.license_key = u["license_key"]
+                                ut = u.get("tier", "FREE")
+                                st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if ut in ("TEAM", "LTD") else (PlanTier.DEVELOPER_PRO.value if ut == "PRO" else PlanTier.FREE.value)
+                                st.session_state.is_pro_user = (ut != "FREE")
+                                if hasattr(st, "query_params"):
+                                    st.query_params["session_token"] = u["license_key"]
+                                st.rerun()
+                            else:
+                                st.error(f"Invalid key: {v.get('error', 'Signature verification failed')}")
+            with auth_t2:
+                side_email = st.text_input("Account Email:", placeholder="you@company.com", key="side_email_in")
+                side_pwd = st.text_input("Password:", type="password", key="side_pwd_in")
+                if st.button("Sign In", key="btn_side_pwd_login", type="primary", use_container_width=True):
+                    if not side_email.strip() or not side_pwd.strip():
+                        st.error("Enter email and password.")
+                    else:
+                        acc_store = get_account_store()
+                        res = acc_store.authenticate_user(side_email.strip(), side_pwd.strip())
+                        if res.get("authenticated") and res.get("user"):
+                            u = res["user"]
+                            st.session_state.is_authenticated = True
+                            st.session_state.user_email = u["email"]
+                            st.session_state.license_key = u.get("license_key", "")
+                            ut = u.get("tier", "FREE")
+                            st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if ut in ("TEAM", "LTD") else (PlanTier.DEVELOPER_PRO.value if ut == "PRO" else PlanTier.FREE.value)
+                            st.session_state.is_pro_user = (ut != "FREE")
+                            if u.get("license_key") and hasattr(st, "query_params"):
+                                st.query_params["session_token"] = u["license_key"]
+                            st.rerun()
+                        else:
+                            st.error(res.get("error", "Invalid credentials."))
+            with auth_t3:
+                side_reg_email = st.text_input("Work Email:", placeholder="you@company.com", key="side_reg_email_in")
+                side_reg_pwd = st.text_input("Choose Password:", type="password", key="side_reg_pwd_in")
+                if st.button("Create Account", key="btn_side_reg_submit", use_container_width=True):
+                    if not side_reg_email.strip() or "@" not in side_reg_email:
+                        st.error("Please enter a valid work email.")
+                    elif len(side_reg_pwd.strip()) < 6:
+                        st.error("Password must be at least 6 characters.")
+                    else:
+                        acc_store = get_account_store()
+                        reg_res = acc_store.register_or_upgrade_user(side_reg_email.strip(), password=side_reg_pwd.strip(), tier="FREE")
+                        if reg_res:
+                            st.session_state.is_authenticated = True
+                            st.session_state.user_email = reg_res["email"]
+                            st.session_state.license_key = reg_res.get("license_key", "")
+                            st.session_state.license_tier = PlanTier.FREE.value
+                            st.session_state.is_pro_user = False
+                            if reg_res.get("license_key") and hasattr(st, "query_params"):
+                                st.query_params["session_token"] = reg_res["license_key"]
+                            st.rerun()
+                        else:
+                            st.error("Account registration failed.")
+
+    st.markdown("---")
+    st.markdown("""
+    <div style="font-size:11px; color:#647087; line-height:1.6;">
+        <b>Local CLI Integration:</b><br>
+        <code>kavach --login &lt;KEY&gt;</code><br>
+        Credentials saved to <code>~/.kavach/credentials.json</code>
+    </div>
+    """, unsafe_allow_html=True)
+
 # ----------------- COMPACT SINGLE-ROW TOP NAVBAR -----------------
 logo_b64 = get_logo_base64()
 if logo_b64:
@@ -1291,7 +1492,41 @@ if active_tab != "Pricing" and st.session_state.get("key_feedback"):
 with nav_col3:
     auth_subcol1, auth_subcol2 = st.columns([1.1, 1.0], gap="small", vertical_alignment="center")
     with auth_subcol1:
-        if st.session_state.github_user:
+        if st.session_state.get("is_authenticated") and st.session_state.get("user_email"):
+            em = st.session_state.user_email
+            disp_name = em.split('@')[0]
+            with st.popover(f"👤 {disp_name}", use_container_width=True):
+                st.markdown(f"""
+                <div style="font-weight:600; color:#F1F3F8; font-size:13px; margin-bottom:4px;">{html.escape(em)}</div>
+                <div style="font-size:11.5px; color:#36C995; margin-bottom:8px;">● {st.session_state.get('license_tier', 'Community Free')}</div>
+                """, unsafe_allow_html=True)
+                st.markdown(badge_html, unsafe_allow_html=True)
+                if st.session_state.get("license_key"):
+                    st.text_input("License Key:", value=st.session_state.license_key, type="password", disabled=True, key="top_key_disp")
+                    receipt_text = BillingManager.generate_receipt_text(
+                        em,
+                        "TEAM" if "TEAM" in str(st.session_state.get("license_tier")) else "PRO",
+                        st.session_state.license_key
+                    )
+                    st.download_button(
+                        "📥 Download Receipt (.txt)",
+                        data=receipt_text,
+                        file_name=f"kavach_license_{datetime.datetime.now().strftime('%Y%m%d')}.txt",
+                        mime="text/plain",
+                        use_container_width=True,
+                        key="top_dl_receipt"
+                    )
+                st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+                if st.button("Sign Out", key="top_signout_btn", use_container_width=True):
+                    st.session_state.is_authenticated = False
+                    st.session_state.user_email = ""
+                    st.session_state.license_key = ""
+                    st.session_state.license_tier = PlanTier.FREE.value
+                    st.session_state.is_pro_user = False
+                    if hasattr(st, "query_params") and "session_token" in st.query_params:
+                        del st.query_params["session_token"]
+                    st.rerun()
+        elif st.session_state.github_user:
             u = st.session_state.github_user
             with st.popover(f"👤 @{u['login']}", use_container_width=True):
                 st.markdown(f"""
@@ -1307,11 +1542,11 @@ with nav_col3:
                 st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
                 st.button("Sign Out", key="btn_signout", on_click=logout_github, use_container_width=True)
         else:
-            with st.popover("🐙 GitHub Sign In", use_container_width=True):
-                st.markdown("<div style='font-weight:600; font-size:12.5px; margin-bottom:3px; color:#F1F3F8;'>GitHub Identity</div>", unsafe_allow_html=True)
-                st.caption("Link username to bind offline cryptographic licenses.")
-                st.text_input("Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
-                st.text_input("Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
+            with st.popover("👤 Sign In", use_container_width=True):
+                st.markdown("<div style='font-weight:600; font-size:12.5px; margin-bottom:3px; color:#F1F3F8;'>Account & Identity</div>", unsafe_allow_html=True)
+                st.caption("Sign in with GitHub or your Kavach AI account.")
+                st.text_input("GitHub Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
+                st.text_input("GitHub Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
                 c_in1, c_in2 = st.columns(2)
                 with c_in1:
                     st.button("Connect", key="btn_do_login", on_click=login_github, use_container_width=True)
@@ -1325,6 +1560,49 @@ with nav_col3:
             {badge_html}
         </div>
         """, unsafe_allow_html=True)
+
+# ----------------- POST-CHECKOUT CLAIM BANNER -----------------
+if st.session_state.get("pending_activation"):
+    pending = st.session_state.pending_activation
+    st.markdown("""
+    <div style="background: rgba(139, 124, 255, 0.12); border: 1.5px solid #8B7CFF; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
+        <div style="font-weight: 700; color: #8B7CFF; font-size: 15px;">🎉 Payment Verified! Set Up Your Permanent Account</div>
+        <div style="color: #929BAD; font-size: 12.5px; margin-top: 2px;">
+            Set your password below to permanently link your signed license across sessions and browser restarts.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    c_claim1, c_claim2, c_claim3 = st.columns([2, 2, 1.2], gap="small", vertical_alignment="bottom")
+    with c_claim1:
+        claim_email = st.text_input("Account Email:", value=pending.get("email", ""), key="claim_email_input", placeholder="you@company.com")
+    with c_claim2:
+        claim_pwd = st.text_input("Choose Account Password:", type="password", key="claim_pwd_input", placeholder="Minimum 6 characters")
+    with c_claim3:
+        if st.button("Claim & Activate", type="primary", use_container_width=True, key="btn_claim_account"):
+            if not claim_email.strip() or "@" not in claim_email:
+                st.error("Please enter a valid work email.")
+            elif len(claim_pwd.strip()) < 6:
+                st.error("Password must be at least 6 characters.")
+            else:
+                tier_short = pending.get("tier_short", "PRO")
+                new_key = generate_signed_license(claim_email.strip(), tier=tier_short)
+                acc_store = get_account_store()
+                acc_store.register_or_upgrade_user(
+                    email=claim_email.strip(),
+                    password=claim_pwd.strip(),
+                    tier=tier_short,
+                    payment_id=pending.get("payment_id")
+                )
+                st.session_state.is_authenticated = True
+                st.session_state.user_email = claim_email.strip()
+                st.session_state.license_key = new_key
+                st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if tier_short in ("TEAM", "LTD") else PlanTier.DEVELOPER_PRO.value
+                st.session_state.is_pro_user = True
+                if hasattr(st, "query_params"):
+                    st.query_params["session_token"] = new_key
+                st.session_state.pending_activation = None
+                st.session_state.toast_msg = "Account successfully claimed and logged in!"
+                st.rerun()
 
 SQL_SAMPLE = '''import sqlite3
 
@@ -2342,6 +2620,33 @@ elif active_tab == "Pricing":
                 st.markdown(f'<div class="alert-success">✓ {html.escape(msg)}</div>', unsafe_allow_html=True)
             else:
                 st.markdown(f'<div class="alert-error">✕ {html.escape(msg)}</div>', unsafe_allow_html=True)
+
+        if st.session_state.get("license_key"):
+            st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
+            r_col1, r_col2 = st.columns([3, 1.2], vertical_alignment="center")
+            with r_col1:
+                st.markdown(f"""
+                <div style="font-size:13px; color:#36C995; font-weight:600;">
+                    ✓ Active License: <code>{st.session_state.license_key[:18]}...</code>
+                </div>
+                <div style="font-size:11.5px; color:#929BAD;">
+                    Download your license receipt and terminal activation instructions (.txt).
+                </div>
+                """, unsafe_allow_html=True)
+            with r_col2:
+                receipt_text = BillingManager.generate_receipt_text(
+                    st.session_state.get("user_email") or "customer@kavach.ai",
+                    "TEAM" if "TEAM" in str(st.session_state.license_tier) else "PRO",
+                    st.session_state.license_key
+                )
+                st.download_button(
+                    "📥 Download License Receipt",
+                    data=receipt_text,
+                    file_name=f"kavach_license_{datetime.datetime.now().strftime('%Y%m%d')}.txt",
+                    mime="text/plain",
+                    use_container_width=True,
+                    key="pricing_dl_receipt"
+                )
 
 # ================= TAB 5: GITHUB SETUP =================
 elif active_tab == "GitHub":

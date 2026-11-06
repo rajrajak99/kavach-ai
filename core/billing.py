@@ -4,8 +4,19 @@ Supports Dodo Payments, LemonSqueezy, Stripe, and direct founder invoice dispatc
 """
 
 import os
+import sys
+import datetime
 import urllib.parse
+from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
+
+try:
+    from kavach_license import generate_signed_license, PlanTier
+except ImportError:
+    _root = str(Path(__file__).resolve().parent.parent)
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+    from kavach_license import generate_signed_license, PlanTier
 
 class BillingManager:
     """
@@ -64,10 +75,41 @@ class BillingManager:
         return f"mailto:{cls.DEFAULT_INVOICE_EMAIL}?{urllib.parse.urlencode(params)}"
 
     @classmethod
+    def generate_receipt_text(cls, email: str, tier: str, license_key: str, payment_id: Optional[str] = None) -> str:
+        """Generates standard receipt and activation document for customer download."""
+        date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        return (
+            "================================================================================\n"
+            "🛡️ KAVACH AI — OFFICIAL CUSTOMER LICENSE KEY & RECEIPT\n"
+            "================================================================================\n\n"
+            f"Customer Email:  {email}\n"
+            f"Active Plan:     {tier.upper()}\n"
+            f"License Key:     {license_key}\n"
+            f"Order ID:        {payment_id or 'OFFLINE-ACTIVATION'}\n"
+            f"Issued At:       {date_str}\n"
+            f"Validity:        10 Years (Permanent / Stateless)\n\n"
+            "--------------------------------------------------------------------------------\n"
+            "HOW TO USE YOUR LICENSE KEY:\n"
+            "--------------------------------------------------------------------------------\n"
+            "1. STREAMLIT WEB APP:\n"
+            "   Open the sidebar -> 'Account & License Login' -> Paste your License Key.\n"
+            "   Your browser will stay permanently logged in.\n\n"
+            "2. CLI & PRE-COMMIT HOOKS (TERMINAL):\n"
+            f"   Run once: kavach --login {license_key}\n"
+            "   Credentials will be saved to ~/.kavach/credentials.json for all future scans.\n\n"
+            "3. GITHUB ACTIONS CI/CD:\n"
+            "   Add a repository secret KAVACH_LICENSE_KEY with your license key above.\n"
+            "   Your CI security gate will automatically run with your plan.\n\n"
+            "================================================================================\n"
+            "Support & Inquiries: rajabhaiyarajak2008@gmail.com | https://kavach-ai.streamlit.app\n"
+            "================================================================================\n"
+        )
+
+    @classmethod
     def inspect_and_activate_redirect(cls, query_params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Inspects URL query parameters upon return from payment gateway (Dodo Payments / LemonSqueezy)
-        e.g. ?payment_id=...&status=success&tier=DEVELOPER_PRO&key=...
+        e.g. ?payment_id=...&status=success&tier=DEVELOPER_PRO&key=...&email=...
         Returns activation metadata if a valid payment callback is detected.
         """
         if not query_params:
@@ -84,9 +126,10 @@ class BillingManager:
         payment_id = get_single("payment_id") or get_single("order_id") or get_single("checkout_id")
         tier_str = get_single("tier").upper() or get_single("plan").upper()
         license_key = get_single("license_key") or get_single("key")
+        customer_email = get_single("email") or get_single("customer_email") or ""
 
         # Check for success indicators from MoR gateways
-        is_success = status in ("success", "paid", "active", "completed") or bool(payment_id and license_key)
+        is_success = status in ("success", "paid", "active", "completed") or bool(payment_id and (license_key or customer_email))
 
         if is_success:
             # Map tier string to recognized plan
@@ -100,15 +143,36 @@ class BillingManager:
             else:
                 target_tier = "DEVELOPER_PRO"
 
+            tier_short = "PRO" if target_tier == "DEVELOPER_PRO" else "TEAM"
+
+            # Generate authentic signed HMAC key
+            email_to_use = customer_email or f"{payment_id}@customer.kavach.ai"
             if not license_key:
-                # Generate a temporary active session key bound to payment_id
-                license_key = f"KV-{target_tier[:4]}-{payment_id[:12].upper()}"
+                license_key = generate_signed_license(email_to_use, tier=tier_short)
+                try:
+                    from core.auth_store import AccountStore
+                    store = AccountStore()
+                    store.register_or_upgrade_user(email_to_use, tier=tier_short, payment_id=payment_id)
+                except Exception:
+                    pass
+
+            needs_email = not bool(customer_email)
+            receipt_text = cls.generate_receipt_text(
+                customer_email or "customer@kavach.ai",
+                tier_short,
+                license_key,
+                payment_id
+            )
 
             return {
                 "activated": True,
+                "needs_email": needs_email,
                 "tier": target_tier,
+                "tier_short": tier_short,
+                "email": customer_email,
                 "license_key": license_key,
                 "payment_id": payment_id,
+                "receipt": receipt_text,
                 "message": f"Payment verified ({payment_id}). Plan unlocked: {target_tier}!"
             }
 

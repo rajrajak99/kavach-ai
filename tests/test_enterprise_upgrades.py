@@ -163,7 +163,7 @@ def test_billing_redirect_activation():
     assert res is not None
     assert res["activated"] is True
     assert res["tier"] == "DEVELOPER_PRO"
-    assert "KV-DEVE-DODO_TEST_OR" in res["license_key"]
+    assert res["license_key"].startswith("KAVACH-PRO-")
 
 def test_billing_invoice_mailto_generation():
     url = BillingManager.get_invoice_request_url("Team Enterprise", "annual")

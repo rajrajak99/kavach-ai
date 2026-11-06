@@ -18,9 +18,48 @@ from core.diff_parser import DiffParser
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.ai_reasoner import AIReasoner
 from core.self_healing import SelfHealingTestRunner
-from core.license_manager import LicenseManager, PlanTier
+from core.license_manager import LicenseManager, PlanTier, verify_signed_license
 from core.project_scanner import ProjectASTScanner
 from core.sca_scanner import SCAScanner
+
+CREDS_FILE = Path.home() / ".kavach" / "credentials.json"
+
+def save_credentials(license_key: str, email: str, tier: str, expires: str) -> bool:
+    """Persists authenticated credentials locally for zero-friction future scans."""
+    try:
+        CREDS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(CREDS_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "license_key": license_key,
+                "email": email,
+                "tier": tier,
+                "expires": expires
+            }, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Warning: Failed to save credentials to {CREDS_FILE}: {e}")
+        return False
+
+def load_persisted_license() -> Optional[str]:
+    """Loads saved license key from local credentials file if present."""
+    try:
+        if CREDS_FILE.exists():
+            with open(CREDS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("license_key")
+    except Exception:
+        pass
+    return None
+
+def clear_credentials() -> bool:
+    """Deletes local credentials file upon user logout."""
+    try:
+        if CREDS_FILE.exists():
+            CREDS_FILE.unlink()
+            return True
+    except Exception:
+        pass
+    return False
 
 IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
@@ -319,8 +358,43 @@ def main():
     p.add_argument("--heal", "--self-heal", dest="heal", action="store_true", help="Enable autonomous patch application with test verification & atomic rollback")
     p.add_argument("--test-cmd", dest="test_cmd", default="pytest", help="Test runner command for self-healing verification (default: 'pytest')")
     p.add_argument("--license-key", dest="license_key", default=os.getenv("KAVACH_LICENSE_KEY"), help="Kavach AI License Key (Pro / Team)")
+    p.add_argument("--login", "--activate", dest="login_key", help="Log in and persist your Kavach AI License Key locally")
+    p.add_argument("--logout", dest="logout", action="store_true", help="Log out and remove persisted Kavach AI credentials")
     p.add_argument("--json", dest="as_json", action="store_true", help="Output results in JSON format for IDE/CI integrations")
     args = p.parse_args()
+
+    if args.logout:
+        if clear_credentials():
+            print("\n[+] Successfully logged out and removed local credentials from ~/.kavach/credentials.json\n")
+        else:
+            print("\n[!] No active credentials found to remove.\n")
+        sys.exit(0)
+
+    if args.login_key:
+        clean_key = args.login_key.strip()
+        v_res = verify_signed_license(clean_key)
+        tier_obj = LicenseManager.get_tier_for_key(clean_key)
+        if v_res.get("valid") or tier_obj:
+            tier_name = v_res.get("tier") or (tier_obj.value if tier_obj else "PRO")
+            email = v_res.get("email", "developer@kavach.ai")
+            expires = v_res.get("expires", "Permanent (10y)")
+            save_credentials(clean_key, email=email, tier=tier_name, expires=expires)
+            print("\n=======================================================")
+            print("  [+] Kavach AI - Authentication Successful")
+            print("=======================================================")
+            print(f"  Plan:     {tier_name} Active")
+            print(f"  Account:  {email}")
+            print(f"  Expires:  {expires}")
+            print(f"  Persisted: {CREDS_FILE}")
+            print("\nAll future CLI scans and git pre-commit hooks will automatically use this license.\n")
+            sys.exit(0)
+        else:
+            print("\n[!] Activation Failed: Invalid or expired license key.")
+            print(f"    Reason: {v_res.get('error', 'Signature verification failed')}")
+            print("    Visit https://kavach-ai.streamlit.app to get a valid license.\n")
+            sys.exit(1)
+
+    effective_license_key = args.license_key or load_persisted_license()
 
     exit_code = scan_path(
         args.path,
@@ -329,7 +403,7 @@ def main():
         heal=args.heal,
         test_cmd=args.test_cmd,
         as_json=args.as_json,
-        license_key=args.license_key
+        license_key=effective_license_key
     )
     sys.exit(exit_code)
 
