@@ -1,14 +1,20 @@
 """
 Kavach AI — Enterprise Application Security Posture & 1-Click Surgical Remediation
-Graphite Cybersecurity Design System:
-- Canvas: #090B10
-- Primary Surfaces: #141820
-- Elevated Surfaces: #1A202B
-- Hairline Borders: #262D39
-- Primary Accent: #8B7CFF
-- Main Text: #F1F3F8
-- Secondary Text: #929BAD
-- Success: #36C995 | Warning: #E5A84B | Critical: #EF6674
+Ultra-Premium Enterprise SaaS Color System:
+- Main Background: #08090B (deep premium black)
+- Sidebar Background: #0D0F12 (dark slate black)
+- Card Background: #111419 (elegant charcoal)
+- Elevated Panels: #161A20 (subtle dark graphite)
+- Borders: #252A32 (hairline graphite borders)
+- Primary Text: #F5F5F2 (soft premium white)
+- Secondary Text: #9299A5 (muted silver-grey)
+- Muted Text: #626B78 (understated grey)
+- Primary Accent: #C6A76A (luxury champagne gold)
+- Accent Hover: #D8BB82 (soft gold)
+- Success: #55B68A (muted emerald)
+- Warning: #D5A45B (muted amber)
+- Error / Critical: #D87575 (muted red)
+- Code Editor: #101318 with #626B78 line numbers
 """
 
 import sys
@@ -470,14 +476,14 @@ def compute_security_posture(analysis_res: dict, code_str: str) -> dict:
     if not code_str.strip():
         return {
             'score': 100, 'grade': 'A', 'grade_label': 'Awaiting Scan • Engine Idle',
-            'color': '#647087', 'badge_class': 'posture-idle',
+            'color': '#626B78', 'badge_class': 'posture-idle',
             'cvss_max': 0.0, 'blast_radius': 'None'
         }
     
     if status == 'SYNTAX_ERROR':
         return {
             'score': 0, 'grade': 'F', 'grade_label': 'Syntax Error — Unparseable AST',
-            'color': '#E5A84B', 'badge_class': 'posture-f',
+            'color': '#D5A45B', 'badge_class': 'posture-f',
             'cvss_max': 0.0, 'blast_radius': 'Compilation Failure'
         }
     
@@ -491,22 +497,22 @@ def compute_security_posture(analysis_res: dict, code_str: str) -> dict:
     if score >= 90:
         grade = 'A'
         grade_label = 'Production Ready • Clean Changeset'
-        color = '#36C995'
+        color = '#55B68A'
         badge_class = 'posture-a'
     elif score >= 75:
         grade = 'B'
         grade_label = 'Low Risk • Advisory Review Advised'
-        color = '#929BAD'
+        color = '#9299A5'
         badge_class = 'posture-b'
     elif score >= 50:
         grade = 'C'
         grade_label = 'Moderate Risk • Merge Caution'
-        color = '#E5A84B'
+        color = '#D5A45B'
         badge_class = 'posture-c'
     else:
         grade = 'F'
         grade_label = 'Critical Exploit • Merge Blocked'
-        color = '#EF6674'
+        color = '#D87575'
         badge_class = 'posture-f'
         
     cvss_max = 9.8 if crit > 0 else (7.5 if sec > 0 else (4.3 if perf > 0 else 0.0))
@@ -597,46 +603,49 @@ if st.session_state.get("toast_msg"):
     st.toast(st.session_state.toast_msg)
     st.session_state.toast_msg = None
 
-# ----------------- GRAPHITE CYBERSECURITY DESIGN SYSTEM -----------------
+# ----------------- ULTRA-PREMIUM ENTERPRISE SAAS DESIGN SYSTEM -----------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     /* 1. Global Reset & Theme Variables */
     :root {
-        --bg-main: #090B10;
-        --bg-surface: #141820;
-        --bg-elevated: #1A202B;
-        --border-subtle: #262D39;
-        --border-hover: #374254;
-        --accent: #8B7CFF;
-        --accent-hover: #7968F8;
-        --accent-muted: rgba(139, 124, 255, 0.12);
-        --text-main: #F1F3F8;
-        --text-secondary: #929BAD;
-        --text-muted: #647087;
+        --bg-main: #08090B;
+        --bg-sidebar: #0D0F12;
+        --bg-card: #111419;
+        --bg-elevated: #161A20;
+        --border-subtle: #252A32;
+        --border-hover: #626B78;
+        --accent: #C6A76A;
+        --accent-hover: #D8BB82;
+        --accent-muted: rgba(198, 167, 106, 0.12);
+        --text-primary: #F5F5F2;
+        --text-secondary: #9299A5;
+        --text-muted: #626B78;
         
-        /* Semantic colors strictly for security states */
-        --crit-color: #EF6674;
-        --crit-bg: rgba(239, 102, 116, 0.08);
-        --crit-border: rgba(239, 102, 116, 0.25);
+        /* Strict Semantic Security States */
+        --success: #55B68A;
+        --success-bg: rgba(85, 182, 138, 0.10);
+        --success-border: rgba(85, 182, 138, 0.25);
         
-        --warn-color: #E5A84B;
-        --warn-bg: rgba(229, 168, 75, 0.08);
-        --warn-border: rgba(229, 168, 75, 0.25);
+        --warning: #D5A45B;
+        --warning-bg: rgba(213, 164, 91, 0.10);
+        --warning-border: rgba(213, 164, 91, 0.25);
         
-        --success-color: #36C995;
-        --success-bg: rgba(54, 201, 149, 0.08);
-        --success-border: rgba(54, 201, 149, 0.25);
+        --error: #D87575;
+        --error-bg: rgba(216, 117, 117, 0.10);
+        --error-border: rgba(216, 117, 117, 0.25);
+        
+        --editor-bg: #101318;
     }
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        color: #F1F3F8 !important;
-        background-color: #090B10 !important;
+        color: #F5F5F2 !important;
+        background-color: #08090B !important;
     }
     .stApp {
-        background-color: #090B10 !important;
+        background-color: #08090B !important;
     }
 
     /* 2. Absolute Removal of Streamlit Boilerplate */
@@ -662,14 +671,27 @@ st.markdown("""
 
     .block-container {
         padding-top: 1.25rem !important;
-        padding-bottom: 2rem !important;
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
-        max-width: 1260px !important;
+        padding-bottom: 2.5rem !important;
+        padding-left: 1.75rem !important;
+        padding-right: 1.75rem !important;
+        max-width: 1280px !important;
         margin: 0 auto !important;
     }
 
-    /* 3. Top Navbar */
+    /* 3. Sidebar Container */
+    section[data-testid="stSidebar"] {
+        background-color: #0D0F12 !important;
+        border-right: 1px solid #252A32 !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        background-color: #0D0F12 !important;
+    }
+    [data-testid="stSidebarContent"] {
+        background-color: #0D0F12 !important;
+        padding-top: 1.5rem !important;
+    }
+
+    /* 4. Top Navbar */
     .brand-wrap {
         display: flex;
         align-items: center;
@@ -680,12 +702,12 @@ st.markdown("""
         height: 24px;
         border-radius: 6px;
         object-fit: cover;
-        border: 1px solid #262D39;
+        border: 1px solid #252A32;
     }
     .brand-title {
         font-size: 14.5px;
         font-weight: 600;
-        color: #F1F3F8;
+        color: #F5F5F2;
         letter-spacing: -0.015em;
         display: flex;
         align-items: center;
@@ -694,9 +716,9 @@ st.markdown("""
     .brand-pill {
         font-size: 11px;
         font-weight: 500;
-        color: #929BAD;
-        background: #141820;
-        border: 1px solid #262D39;
+        color: #9299A5;
+        background: #111419;
+        border: 1px solid #252A32;
         padding: 1px 7px;
         border-radius: 4px;
         font-family: 'JetBrains Mono', monospace;
@@ -712,103 +734,104 @@ st.markdown("""
         align-items: center;
         gap: 6px;
         white-space: nowrap;
-        background: #141820;
-        border: 1px solid #262D39;
-        color: #929BAD;
+        background: #111419;
+        border: 1px solid #252A32;
+        color: #9299A5;
     }
     .plan-pill-pro {
-        color: #F1F3F8;
-        border-color: #8B7CFF;
-        background: #1A202B;
+        color: #F5F5F2;
+        border-color: #C6A76A;
+        background: #161A20;
     }
     .plan-pill-team {
-        color: #F1F3F8;
-        border-color: #8B7CFF;
-        background: rgba(139, 124, 255, 0.15);
+        color: #C6A76A;
+        border-color: #C6A76A;
+        background: rgba(198, 167, 106, 0.12);
     }
     .status-dot-green {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #36C995;
+        background: #55B68A;
         display: inline-block;
     }
 
-    /* 4. Segmented Control Navbar */
+    /* 5. Segmented Control Navbar */
     div[data-testid="stSegmentedControl"] {
-        background: #141820 !important;
-        border: 1px solid #262D39 !important;
+        background: #111419 !important;
+        border: 1px solid #252A32 !important;
         border-radius: 8px !important;
         padding: 2px !important;
     }
     div[data-testid="stSegmentedControl"] button {
         background: transparent !important;
-        color: #929BAD !important;
+        color: #9299A5 !important;
         font-size: 13px !important;
         font-weight: 500 !important;
         border-radius: 6px !important;
         border: none !important;
         padding: 4px 14px !important;
-        height: 30px !important;
-        min-height: 30px !important;
+        height: 32px !important;
+        min-height: 32px !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stSegmentedControl"] button:hover {
-        color: #F1F3F8 !important;
-        background: #1A202B !important;
+        color: #F5F5F2 !important;
+        background: #161A20 !important;
     }
     div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
-        background: #1A202B !important;
-        color: #F1F3F8 !important;
+        background: #161A20 !important;
+        color: #C6A76A !important;
         font-weight: 600 !important;
-        border: 1px solid #262D39 !important;
+        border: 1px solid rgba(198, 167, 106, 0.35) !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* 5. Buttons & Controls */
+    /* 6. Buttons & Controls */
     div[data-testid="stButton"] button {
         white-space: nowrap !important;
         text-overflow: clip !important;
         overflow: visible !important;
         font-family: 'Inter', sans-serif !important;
+        border-radius: 8px !important;
     }
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: #8B7CFF !important;
-        color: #FFFFFF !important;
+        background: #C6A76A !important;
+        color: #08090B !important;
         font-weight: 600 !important;
         font-size: 13px !important;
         height: 36px !important;
         min-height: 36px !important;
-        padding: 0 16px !important;
-        border-radius: 6px !important;
+        padding: 0 18px !important;
         border: none !important;
-        box-shadow: 0 1px 3px rgba(139, 124, 255, 0.25) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
-        background: #7968F8 !important;
-        box-shadow: 0 3px 10px rgba(139, 124, 255, 0.35) !important;
+        background: #D8BB82 !important;
+        color: #08090B !important;
+        box-shadow: 0 3px 10px rgba(198, 167, 106, 0.25) !important;
         transform: translateY(-1px);
     }
     div[data-testid="stButton"] > button[kind="secondary"] {
-        background: #141820 !important;
-        color: #F1F3F8 !important;
-        border: 1px solid #262D39 !important;
+        background: transparent !important;
+        color: #F5F5F2 !important;
+        border: 1px solid #252A32 !important;
         font-size: 12.5px !important;
         font-weight: 500 !important;
         height: 36px !important;
         min-height: 36px !important;
-        border-radius: 6px !important;
-        padding: 0 12px !important;
+        border-radius: 8px !important;
+        padding: 0 14px !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stButton"] > button[kind="secondary"]:hover {
-        background: #1A202B !important;
-        border-color: #374254 !important;
-        color: #FFFFFF !important;
+        background: #161A20 !important;
+        border-color: #626B78 !important;
+        color: #F5F5F2 !important;
     }
 
-    /* Anti-Dimming: Prevent Streamlit from fading the app during reruns */
+    /* Anti-Dimming */
     [data-stale="true"],
     .stApp [data-stale="true"],
     div[data-testid="stAppViewBlockContainer"] [data-stale="true"],
@@ -821,39 +844,40 @@ st.markdown("""
 
     /* Active / Disabled Plan Button */
     div[data-testid="stButton"] > button:disabled {
-        background: rgba(54, 201, 149, 0.08) !important;
-        color: #36C995 !important;
-        border: 1px solid rgba(54, 201, 149, 0.25) !important;
+        background: rgba(85, 182, 138, 0.10) !important;
+        color: #55B68A !important;
+        border: 1px solid rgba(85, 182, 138, 0.25) !important;
         opacity: 1 !important;
         font-weight: 600 !important;
         cursor: default !important;
         box-shadow: none !important;
     }
 
-    /* GitHub Popover Button */
+    /* Top Popover Button */
     div[data-testid="stPopover"] > button {
-        background: #141820 !important;
-        color: #F1F3F8 !important;
-        border: 1px solid #262D39 !important;
+        background: #111419 !important;
+        color: #F5F5F2 !important;
+        border: 1px solid #252A32 !important;
         font-size: 12px !important;
         height: 36px !important;
         min-height: 36px !important;
-        border-radius: 6px !important;
+        border-radius: 8px !important;
         padding: 0 12px !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stPopover"] > button:hover {
-        background: #1A202B !important;
-        border-color: #374254 !important;
-        color: #FFFFFF !important;
+        background: #161A20 !important;
+        border-color: #626B78 !important;
+        color: #F5F5F2 !important;
     }
     div[data-testid="stPopoverBody"] {
-        background: #141820 !important;
-        border: 1px solid #262D39 !important;
-        border-radius: 8px !important;
+        background: #161A20 !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
     }
 
-    /* 6. Hero & Positioning Banner */
+    /* 7. Hero & Positioning Banner */
     .hero-container {
         text-align: center;
         padding: 18px 0 16px 0;
@@ -863,12 +887,12 @@ st.markdown("""
         font-size: 24px;
         font-weight: 600;
         letter-spacing: -0.025em;
-        color: #F1F3F8;
+        color: #F5F5F2;
         margin-bottom: 6px;
     }
     .hero-lead {
         font-size: 13.5px;
-        color: #929BAD;
+        color: #9299A5;
         max-width: 660px;
         margin: 0 auto 12px auto;
         line-height: 1.5;
@@ -878,9 +902,9 @@ st.markdown("""
         align-items: center;
         gap: 12px;
         font-size: 11.5px;
-        color: #647087;
-        background: #141820;
-        border: 1px solid #262D39;
+        color: #626B78;
+        background: #111419;
+        border: 1px solid #252A32;
         padding: 4px 14px;
         border-radius: 9999px;
     }
@@ -888,35 +912,35 @@ st.markdown("""
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #36C995;
+        background: #55B68A;
         display: inline-block;
     }
     .trust-sep {
-        color: #262D39;
+        color: #252A32;
     }
     .trust-link {
-        color: #8B7CFF;
+        color: #C6A76A;
         text-decoration: none;
         font-weight: 500;
         transition: color 0.15s;
     }
     .trust-link:hover {
-        color: #A296FF;
+        color: #D8BB82;
         text-decoration: underline;
     }
 
-    /* 7. Code Editor & Diagnostics Toolbars */
+    /* 8. Code Editor & Toolbars */
     .ide-tab-label {
         display: inline-flex;
         align-items: center;
         gap: 7px;
         font-size: 12px;
         font-family: 'JetBrains Mono', monospace;
-        color: #F1F3F8;
-        background: #141820;
-        border: 1px solid #262D39;
+        color: #F5F5F2;
+        background: #161A20;
+        border: 1px solid #252A32;
         padding: 4px 12px;
-        border-radius: 6px;
+        border-radius: 8px;
         height: 36px;
         box-sizing: border-box;
         white-space: nowrap !important;
@@ -925,51 +949,93 @@ st.markdown("""
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #36C995;
+        background: #55B68A;
     }
     .ide-meta {
-        color: #647087;
+        color: #626B78;
         font-size: 11px;
     }
 
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        background: #141820 !important;
-        border: 1px solid #262D39 !important;
-        border-radius: 6px !important;
-        color: #F1F3F8 !important;
+        background: #161A20 !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 8px !important;
+        color: #F5F5F2 !important;
         font-size: 12.5px !important;
     }
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stPasswordInput"] input {
+        background: #161A20 !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 8px !important;
+        color: #F5F5F2 !important;
+        font-size: 13px !important;
+    }
+    div[data-testid="stTextInput"] input:focus,
+    div[data-testid="stPasswordInput"] input:focus,
+    div[data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within {
+        border-color: #C6A76A !important;
+        box-shadow: 0 0 0 1px rgba(198, 167, 106, 0.3) !important;
+    }
 
+    /* Fallback Textarea Editor */
     div[data-testid="stTextArea"] textarea {
-        background: #090B10 !important;
-        color: #F1F3F8 !important;
+        background: #101318 !important;
+        color: #F5F5F2 !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 12.5px !important;
         line-height: 1.6 !important;
-        border: 1px solid #262D39 !important;
-        border-radius: 8px !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 10px !important;
         padding: 12px 14px !important;
     }
     div[data-testid="stTextArea"] textarea:focus {
-        border-color: #8B7CFF !important;
-        box-shadow: 0 0 0 1px rgba(139, 124, 255, 0.3) !important;
+        border-color: #C6A76A !important;
+        box-shadow: 0 0 0 1px rgba(198, 167, 106, 0.3) !important;
     }
 
-    /* 8. Diagnostic Container (480px Match) */
+    /* ACE Editor Styling Injection */
+    .ace_editor {
+        background-color: #101318 !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 10px !important;
+    }
+    .ace_gutter {
+        background-color: #0D0F12 !important;
+        color: #626B78 !important;
+        border-right: 1px solid #252A32 !important;
+    }
+    .ace_gutter-active-line {
+        background-color: rgba(255, 255, 255, 0.04) !important;
+    }
+    .ace_cursor {
+        border-left: 2px solid #C6A76A !important;
+    }
+    .ace_content {
+        color: #F5F5F2 !important;
+    }
+    .ace_marker-layer .ace_active-line {
+        background: rgba(255, 255, 255, 0.02) !important;
+    }
+    .ace_marker-layer .ace_selection {
+        background: rgba(198, 167, 106, 0.20) !important;
+    }
+
+    /* 9. Container & Panels */
     div[data-testid="stVerticalBlock"]:has(> div[data-testid="stContainer"]) {
         gap: 0 !important;
     }
     div[data-testid="stContainer"] {
-        border: 1px solid #262D39 !important;
-        border-radius: 8px !important;
-        background: #141820 !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 10px !important;
+        background: #111419 !important;
     }
 
     /* CrowdStrike / Datadog Terminal Empty State */
     .terminal-empty-box {
-        background: #141820;
-        border: 1px solid #262D39;
-        border-radius: 8px;
+        background: #111419;
+        border: 1px solid #252A32;
+        border-radius: 10px;
         padding: 16px 18px;
         font-family: 'JetBrains Mono', monospace;
     }
@@ -978,7 +1044,7 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         padding-bottom: 12px;
-        border-bottom: 1px solid #262D39;
+        border-bottom: 1px solid #252A32;
         margin-bottom: 12px;
     }
     .term-brand {
@@ -988,9 +1054,9 @@ st.markdown("""
     }
     .term-badge {
         font-size: 10px;
-        color: #929BAD;
-        background: #1A202B;
-        border: 1px solid #262D39;
+        color: #9299A5;
+        background: #161A20;
+        border: 1px solid #252A32;
         padding: 1px 6px;
         border-radius: 4px;
         text-transform: uppercase;
@@ -998,7 +1064,7 @@ st.markdown("""
     }
     .term-status-pill {
         font-size: 11px;
-        color: #36C995;
+        color: #55B68A;
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -1006,13 +1072,13 @@ st.markdown("""
     .term-headline {
         font-size: 14px;
         font-weight: 600;
-        color: #F1F3F8;
+        color: #F5F5F2;
         margin-bottom: 4px;
         font-family: 'Inter', sans-serif;
     }
     .term-subhead {
         font-size: 11.5px;
-        color: #647087;
+        color: #626B78;
         margin-bottom: 14px;
         font-family: 'Inter', sans-serif;
     }
@@ -1020,9 +1086,9 @@ st.markdown("""
         display: flex;
         flex-direction: column;
         gap: 6px;
-        background: #090B10;
-        border: 1px solid #262D39;
-        border-radius: 6px;
+        background: #08090B;
+        border: 1px solid #252A32;
+        border-radius: 8px;
         padding: 10px 12px;
         margin-bottom: 12px;
     }
@@ -1033,19 +1099,19 @@ st.markdown("""
         font-size: 11px;
     }
     .spec-label {
-        color: #647087;
+        color: #626B78;
     }
     .spec-val {
-        color: #F1F3F8;
+        color: #F5F5F2;
     }
     .term-footer-tip {
         font-size: 11px;
-        color: #647087;
+        color: #626B78;
         line-height: 1.4;
         font-family: 'Inter', sans-serif;
     }
 
-    /* 9. Diagnostic Banners */
+    /* 10. Diagnostic Banners */
     .diag-banner {
         border-radius: 8px;
         padding: 12px 14px;
@@ -1056,31 +1122,31 @@ st.markdown("""
         font-size: 12px;
     }
     .diag-clean {
-        background: rgba(54, 201, 149, 0.08);
-        border: 1px solid rgba(54, 201, 149, 0.25);
-        color: #36C995;
+        background: rgba(85, 182, 138, 0.10);
+        border: 1px solid rgba(85, 182, 138, 0.25);
+        color: #55B68A;
     }
     .diag-syntax {
-        background: rgba(229, 168, 75, 0.08);
-        border: 1px solid rgba(229, 168, 75, 0.25);
-        color: #E5A84B;
+        background: rgba(213, 164, 91, 0.10);
+        border: 1px solid rgba(213, 164, 91, 0.25);
+        color: #D5A45B;
     }
     .diag-blocked {
-        background: rgba(239, 102, 116, 0.08);
-        border: 1px solid rgba(239, 102, 116, 0.25);
-        color: #EF6674;
+        background: rgba(216, 117, 117, 0.10);
+        border: 1px solid rgba(216, 117, 117, 0.25);
+        color: #D87575;
     }
     .diag-warning {
-        background: rgba(229, 168, 75, 0.08);
-        border: 1px solid rgba(229, 168, 75, 0.25);
-        color: #E5A84B;
+        background: rgba(213, 164, 91, 0.10);
+        border: 1px solid rgba(213, 164, 91, 0.25);
+        color: #D5A45B;
     }
 
-    /* 10. Security Posture Scorecard */
+    /* 11. Security Posture Scorecard */
     .posture-card {
-        background: #1A202B;
-        border: 1px solid #262D39;
-        border-radius: 8px;
+        background: #111419;
+        border: 1px solid #252A32;
+        border-radius: 10px;
         padding: 12px 14px;
         margin-bottom: 10px;
     }
@@ -1096,49 +1162,49 @@ st.markdown("""
         font-family: 'JetBrains Mono', monospace;
     }
     .posture-a {
-        background: rgba(54, 201, 149, 0.12);
-        border: 1px solid rgba(54, 201, 149, 0.3);
-        color: #36C995;
+        background: rgba(85, 182, 138, 0.12);
+        border: 1px solid rgba(85, 182, 138, 0.30);
+        color: #55B68A;
     }
     .posture-b {
-        background: rgba(146, 155, 173, 0.12);
-        border: 1px solid rgba(146, 155, 173, 0.3);
-        color: #929BAD;
+        background: rgba(146, 153, 165, 0.12);
+        border: 1px solid rgba(146, 153, 165, 0.30);
+        color: #9299A5;
     }
     .posture-c {
-        background: rgba(229, 168, 75, 0.12);
-        border: 1px solid rgba(229, 168, 75, 0.3);
-        color: #E5A84B;
+        background: rgba(213, 164, 91, 0.12);
+        border: 1px solid rgba(213, 164, 91, 0.30);
+        color: #D5A45B;
     }
     .posture-f {
-        background: rgba(239, 102, 116, 0.12);
-        border: 1px solid rgba(239, 102, 116, 0.3);
-        color: #EF6674;
+        background: rgba(216, 117, 117, 0.12);
+        border: 1px solid rgba(216, 117, 117, 0.30);
+        color: #D87575;
     }
     .posture-idle {
-        background: #141820;
-        border: 1px solid #262D39;
-        color: #647087;
+        background: #161A20;
+        border: 1px solid #252A32;
+        color: #626B78;
     }
     .posture-bar-track {
         display: flex;
         height: 4px;
-        background: #090B10;
+        background: #08090B;
         border-radius: 2px;
         overflow: hidden;
         margin-top: 10px;
         gap: 2px;
     }
-    .posture-bar-crit { background: #EF6674; height: 100%; transition: width 0.3s; }
-    .posture-bar-sec { background: #E5A84B; height: 100%; transition: width 0.3s; }
-    .posture-bar-perf { background: #8B7CFF; height: 100%; transition: width 0.3s; }
-    .posture-bar-clean { background: #36C995; height: 100%; transition: width 0.3s; }
+    .posture-bar-crit { background: #D87575; height: 100%; transition: width 0.3s; }
+    .posture-bar-sec { background: #D5A45B; height: 100%; transition: width 0.3s; }
+    .posture-bar-perf { background: #C6A76A; height: 100%; transition: width 0.3s; }
+    .posture-bar-clean { background: #55B68A; height: 100%; transition: width 0.3s; }
 
-    /* 11. Unified Diff Visualizer */
+    /* 12. Unified Diff Visualizer */
     .diff-unified-box {
-        background: #090B10;
-        border: 1px solid #262D39;
-        border-radius: 6px;
+        background: #101318;
+        border: 1px solid #252A32;
+        border-radius: 8px;
         font-family: 'JetBrains Mono', monospace;
         font-size: 11.5px;
         line-height: 1.6;
@@ -1146,17 +1212,17 @@ st.markdown("""
         margin: 8px 0;
     }
     .diff-del-line {
-        background: rgba(239, 102, 116, 0.08);
-        color: #FCA5A5;
+        background: rgba(216, 117, 117, 0.08);
+        color: #D87575;
         padding: 2px 10px;
-        border-left: 3px solid #EF6674;
+        border-left: 3px solid #D87575;
         white-space: pre-wrap;
     }
     .diff-add-line {
-        background: rgba(54, 201, 149, 0.08);
-        color: #6EE7B7;
+        background: rgba(85, 182, 138, 0.08);
+        color: #55B68A;
         padding: 2px 10px;
-        border-left: 3px solid #36C995;
+        border-left: 3px solid #55B68A;
         white-space: pre-wrap;
     }
     .diff-gutter-sym {
@@ -1167,19 +1233,19 @@ st.markdown("""
         user-select: none;
     }
 
-    /* 12. Taint Flow Breadcrumb */
+    /* 13. Taint Flow Breadcrumb */
     .taint-flow-box {
         display: inline-flex;
         align-items: center;
         gap: 6px;
         font-size: 11px;
         font-family: 'JetBrains Mono', monospace;
-        background: #090B10;
-        border: 1px solid #262D39;
+        background: #161A20;
+        border: 1px solid #252A32;
         border-radius: 6px;
         padding: 4px 10px;
         margin-bottom: 8px;
-        color: #647087;
+        color: #9299A5;
     }
     .taint-step {
         padding: 1px 6px;
@@ -1187,17 +1253,17 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* 13. Posture Dashboard KPI Cards */
+    /* 14. Posture Dashboard KPI Cards */
     .kpi-card {
-        background: #141820;
-        border: 1px solid #262D39;
-        border-radius: 8px;
-        padding: 14px 16px;
+        background: #111419;
+        border: 1px solid #252A32;
+        border-radius: 10px;
+        padding: 16px 18px;
     }
     .kpi-title {
         font-size: 11px;
         font-weight: 500;
-        color: #647087;
+        color: #626B78;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: 6px;
@@ -1205,20 +1271,20 @@ st.markdown("""
     .kpi-val {
         font-size: 20px;
         font-weight: 700;
-        color: #F1F3F8;
+        color: #F5F5F2;
         font-family: 'JetBrains Mono', monospace;
         margin-bottom: 4px;
     }
     .kpi-sub {
         font-size: 11px;
-        color: #929BAD;
+        color: #9299A5;
     }
 
-    /* 14. Benchmark Matrix Table */
+    /* 15. Benchmark Matrix Table */
     .bench-card {
-        background: #141820;
-        border: 1px solid #262D39;
-        border-radius: 8px;
+        background: #111419;
+        border: 1px solid #252A32;
+        border-radius: 10px;
         overflow: hidden;
     }
     .bench-table {
@@ -1227,33 +1293,33 @@ st.markdown("""
         font-size: 12.5px;
     }
     .bench-th {
-        background: #1A202B;
-        color: #929BAD;
+        background: #161A20;
+        color: #9299A5;
         font-weight: 600;
         padding: 12px 14px;
         text-align: left;
-        border-bottom: 1px solid #262D39;
+        border-bottom: 1px solid #252A32;
         font-size: 11.5px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
     .bench-td {
         padding: 12px 14px;
-        border-bottom: 1px solid #1A202B;
-        color: #929BAD;
+        border-bottom: 1px solid #161A20;
+        color: #9299A5;
     }
     .bench-highlight {
-        background: #1A202B !important;
-        border-left: 1px solid #262D39 !important;
-        border-right: 1px solid #262D39 !important;
-        color: #F1F3F8 !important;
+        background: #161A20 !important;
+        border-left: 1px solid #252A32 !important;
+        border-right: 1px solid #252A32 !important;
+        color: #F5F5F2 !important;
     }
 
-    /* 15. Pricing Cards */
+    /* 16. Pricing Cards */
     .pricing-card {
-        background: #141820;
-        border: 1px solid #262D39;
-        border-radius: 8px;
+        background: #111419;
+        border: 1px solid #252A32;
+        border-radius: 10px;
         padding: 24px 20px;
         height: 100%;
         display: flex;
@@ -1262,71 +1328,95 @@ st.markdown("""
         box-sizing: border-box;
     }
     .pricing-card-featured {
-        border-color: #8B7CFF !important;
-        background: #1A202B !important;
+        border-color: #C6A76A !important;
+        background: #161A20 !important;
     }
     .pricing-card-active {
-        border-color: rgba(54, 201, 149, 0.5) !important;
+        border-color: rgba(85, 182, 138, 0.50) !important;
     }
     .popular-badge {
         position: absolute;
         top: -10px;
         right: 16px;
-        background: #141820;
-        color: #8B7CFF;
+        background: #161A20;
+        color: #C6A76A;
         font-size: 10px;
         font-weight: 600;
         padding: 2px 8px;
         border-radius: 4px;
-        border: 1px solid #8B7CFF;
+        border: 1px solid #C6A76A;
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
     .card-tier-title {
         font-size: 14px;
         font-weight: 600;
-        color: #F1F3F8;
+        color: #F5F5F2;
         margin-bottom: 8px;
     }
     .card-tier-amt {
         font-size: 28px;
         font-weight: 700;
-        color: #F1F3F8;
+        color: #F5F5F2;
         font-family: 'JetBrains Mono', monospace;
         letter-spacing: -0.02em;
     }
     .card-tier-sub {
         font-size: 11.5px;
-        color: #647087;
+        color: #626B78;
         margin-bottom: 18px;
         min-height: 32px;
         line-height: 1.4;
     }
     .card-features-list {
         font-size: 12px;
-        color: #929BAD;
+        color: #9299A5;
         line-height: 2.0;
         flex-grow: 1;
         margin-bottom: 16px;
     }
 
+    /* 17. Streamlit Tabs & Expander */
+    div[data-testid="stTabs"] button {
+        color: #9299A5 !important;
+        font-size: 12.5px !important;
+        font-weight: 500 !important;
+        border: none !important;
+        padding: 8px 14px !important;
+        background: transparent !important;
+    }
+    div[data-testid="stTabs"] button[aria-selected="true"] {
+        color: #C6A76A !important;
+        border-bottom: 2px solid #C6A76A !important;
+        font-weight: 600 !important;
+    }
+    details[data-testid="stExpander"] {
+        background: #111419 !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 8px !important;
+    }
+    details[data-testid="stExpander"] summary {
+        color: #F5F5F2 !important;
+        font-size: 13px !important;
+    }
+
     /* Alert Banners */
     .alert-success {
-        background: rgba(54, 201, 149, 0.08);
-        border: 1px solid rgba(54, 201, 149, 0.25);
-        color: #36C995;
+        background: rgba(85, 182, 138, 0.10);
+        border: 1px solid rgba(85, 182, 138, 0.25);
+        color: #55B68A;
         padding: 8px 12px;
-        border-radius: 6px;
+        border-radius: 8px;
         font-size: 12px;
         margin-top: 10px;
         font-weight: 500;
     }
     .alert-error {
-        background: rgba(239, 102, 116, 0.08);
-        border: 1px solid rgba(239, 102, 116, 0.25);
-        color: #EF6674;
+        background: rgba(216, 117, 117, 0.10);
+        border: 1px solid rgba(216, 117, 117, 0.25);
+        color: #D87575;
         padding: 8px 12px;
-        border-radius: 6px;
+        border-radius: 8px;
         font-size: 12px;
         margin-top: 10px;
         font-weight: 500;
@@ -1339,8 +1429,8 @@ with st.sidebar:
     st.markdown("""
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
         <span style="font-size:22px;">🛡️</span>
-        <span style="font-size:16px; font-weight:700; color:#F1F3F8;">Kavach AI</span>
-        <span style="background:rgba(139,124,255,0.15); color:#8B7CFF; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid rgba(139,124,255,0.3);">v1.4.1</span>
+        <span style="font-size:16px; font-weight:700; color:#F5F5F2;">Kavach AI</span>
+        <span style="background:rgba(198,167,106,0.15); color:#C6A76A; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid rgba(198,167,106,0.3);">v1.4.1</span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1348,10 +1438,10 @@ with st.sidebar:
         if st.session_state.get("is_authenticated"):
             user_disp = st.session_state.get("user_email") or "Developer"
             st.markdown(f"""
-            <div style="background:rgba(54, 201, 149, 0.08); border:1px solid rgba(54, 201, 149, 0.3); border-radius:6px; padding:10px; margin-bottom:10px;">
-                <div style="font-size:11px; color:#929BAD;">ACTIVE ACCOUNT</div>
-                <div style="font-size:13px; font-weight:600; color:#F1F3F8; word-break:break-all;">{html.escape(user_disp)}</div>
-                <div style="font-size:11.5px; color:#36C995; margin-top:4px; font-weight:600;">● {st.session_state.get('license_tier', 'Community Free')}</div>
+            <div style="background:rgba(85, 182, 138, 0.08); border:1px solid rgba(85, 182, 138, 0.3); border-radius:6px; padding:10px; margin-bottom:10px;">
+                <div style="font-size:11px; color:#9299A5;">ACTIVE ACCOUNT</div>
+                <div style="font-size:13px; font-weight:600; color:#F5F5F2; word-break:break-all;">{html.escape(user_disp)}</div>
+                <div style="font-size:11.5px; color:#55B68A; margin-top:4px; font-weight:600;">● {st.session_state.get('license_tier', 'Community Free')}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1463,7 +1553,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("""
-    <div style="font-size:11px; color:#647087; line-height:1.6;">
+    <div style="font-size:11px; color:#626B78; line-height:1.6;">
         <b>Local CLI Integration:</b><br>
         <code>kavach --login &lt;KEY&gt;</code><br>
         Credentials saved to <code>~/.kavach/credentials.json</code>
@@ -1515,8 +1605,8 @@ with nav_col3:
             disp_name = em.split('@')[0]
             with st.popover(f"👤 {disp_name}", use_container_width=True):
                 st.markdown(f"""
-                <div style="font-weight:600; color:#F1F3F8; font-size:13px; margin-bottom:4px;">{html.escape(em)}</div>
-                <div style="font-size:11.5px; color:#36C995; margin-bottom:8px;">● {st.session_state.get('license_tier', 'Community Free')}</div>
+                <div style="font-weight:600; color:#F5F5F2; font-size:13px; margin-bottom:4px;">{html.escape(em)}</div>
+                <div style="font-size:11.5px; color:#55B68A; margin-bottom:8px;">● {st.session_state.get('license_tier', 'Community Free')}</div>
                 """, unsafe_allow_html=True)
                 st.markdown(badge_html, unsafe_allow_html=True)
                 if st.session_state.get("license_key"):
@@ -1549,10 +1639,10 @@ with nav_col3:
             with st.popover(f"👤 @{u['login']}", use_container_width=True):
                 st.markdown(f"""
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                    <img src="{u['avatar_url']}" style="width:34px; height:34px; border-radius:50%; border:1px solid #262D39;" />
+                    <img src="{u['avatar_url']}" style="width:34px; height:34px; border-radius:50%; border:1px solid #252A32;" />
                     <div>
-                        <div style="font-weight:600; color:#F1F3F8; font-size:13px;">{html.escape(u['name'])}</div>
-                        <div style="font-size:11px; color:#647087;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
+                        <div style="font-weight:600; color:#F5F5F2; font-size:13px;">{html.escape(u['name'])}</div>
+                        <div style="font-size:11px; color:#626B78;">@{html.escape(u['login'])} • {u['public_repos']} Repos</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1561,7 +1651,7 @@ with nav_col3:
                 st.button("Sign Out", key="btn_signout", on_click=logout_github, use_container_width=True)
         else:
             with st.popover("👤 Sign In", use_container_width=True):
-                st.markdown("<div style='font-weight:600; font-size:12.5px; margin-bottom:3px; color:#F1F3F8;'>Account & Identity</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-weight:600; font-size:12.5px; margin-bottom:3px; color:#F5F5F2;'>Account & Identity</div>", unsafe_allow_html=True)
                 st.caption("Sign in with GitHub or your Kavach AI account.")
                 st.text_input("GitHub Username:", key="input_gh_user", placeholder="e.g. rajrajak99")
                 st.text_input("GitHub Token (Optional):", key="input_gh_pat", type="password", placeholder="ghp_...")
@@ -1583,9 +1673,9 @@ with nav_col3:
 if st.session_state.get("pending_activation"):
     pending = st.session_state.pending_activation
     st.markdown("""
-    <div style="background: rgba(139, 124, 255, 0.12); border: 1.5px solid #8B7CFF; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
-        <div style="font-weight: 700; color: #8B7CFF; font-size: 15px;">🎉 Payment Verified! Set Up Your Permanent Account</div>
-        <div style="color: #929BAD; font-size: 12.5px; margin-top: 2px;">
+    <div style="background: rgba(198, 167, 106, 0.12); border: 1.5px solid #C6A76A; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
+        <div style="font-weight: 700; color: #C6A76A; font-size: 15px;">🎉 Payment Verified! Set Up Your Permanent Account</div>
+        <div style="color: #9299A5; font-size: 12.5px; margin-top: 2px;">
             Set your password below to permanently link your signed license across sessions and browser restarts.
         </div>
     </div>
@@ -1673,9 +1763,9 @@ void authenticate(const char* input_key) {
 
 def render_project_archive_inspector():
     st.markdown("""
-    <div style="background:#141820; border:1px solid #262D39; border-radius:8px; padding:16px 20px; margin-bottom:18px;">
-        <div style="font-weight:600; font-size:15px; color:#F1F3F8; margin-bottom:4px;">📦 Multi-File Project & Supply-Chain (SCA) Analyzer</div>
-        <div style="font-size:12.5px; color:#929BAD;">
+    <div style="background:#111419; border:1px solid #252A32; border-radius:8px; padding:16px 20px; margin-bottom:18px;">
+        <div style="font-weight:600; font-size:15px; color:#F5F5F2; margin-bottom:4px;">📦 Multi-File Project & Supply-Chain (SCA) Analyzer</div>
+        <div style="font-size:12.5px; color:#9299A5;">
             Performs inter-procedural AST taint tracing across route handlers and database sinks, correlates manifest CVEs with AST imports to eliminate false alarms, and generates SOC 2 compliance reports.
         </div>
     </div>
@@ -1690,7 +1780,7 @@ def render_project_archive_inspector():
             help="Upload a zip file containing Python, JavaScript, and requirements.txt / package.json"
         )
     with up_col2:
-        st.markdown("<div style='font-size:12px; color:#929BAD; margin-bottom:6px;'>Or test instant benchmark project:</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:12px; color:#9299A5; margin-bottom:6px;'>Or test instant benchmark project:</div>", unsafe_allow_html=True)
         btn_run_demo = st.button("⚡ Run Multi-File Demo Project", key="btn_run_demo_proj", type="primary", use_container_width=True)
 
     if uploaded_zip or btn_run_demo:
@@ -1725,7 +1815,7 @@ def render_project_archive_inspector():
             </div>
             """, unsafe_allow_html=True)
         with k2:
-            crit_color = "#EF6674" if cf_findings else "#36C995"
+            crit_color = "#D87575" if cf_findings else "#55B68A"
             st.markdown(f"""
             <div class="kpi-card">
                 <div class="kpi-label">Cross-File Taint Traces</div>
@@ -1734,7 +1824,7 @@ def render_project_archive_inspector():
             </div>
             """, unsafe_allow_html=True)
         with k3:
-            sca_color = "#EF6674" if reachable_count > 0 else "#36C995"
+            sca_color = "#D87575" if reachable_count > 0 else "#55B68A"
             st.markdown(f"""
             <div class="kpi-card">
                 <div class="kpi-label">Reachable CVEs</div>
@@ -1745,7 +1835,7 @@ def render_project_archive_inspector():
         with k4:
             is_passed = (len(cf_findings) == 0 and reachable_count == 0 and metrics.get('critical', 0) == 0)
             verdict = "PASSED" if is_passed else "BLOCKED"
-            v_color = "#36C995" if is_passed else "#EF6674"
+            v_color = "#55B68A" if is_passed else "#D87575"
             st.markdown(f"""
             <div class="kpi-card">
                 <div class="kpi-label">CI Gate Verdict</div>
@@ -1757,50 +1847,50 @@ def render_project_archive_inspector():
         st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
 
         # Cross-File Taint Flows
-        st.markdown("<div style='font-size:14px; font-weight:600; color:#F1F3F8; margin-bottom:10px;'>🚨 Inter-Procedural Cross-File Taint Traces</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:14px; font-weight:600; color:#F5F5F2; margin-bottom:10px;'>🚨 Inter-Procedural Cross-File Taint Traces</div>", unsafe_allow_html=True)
         if cf_findings:
             for idx, cf in enumerate(cf_findings, 1):
                 st.markdown(f"""
-                <div style="background:#141820; border:1px solid #262D39; border-left:3px solid #EF6674; border-radius:6px; padding:14px 18px; margin-bottom:12px;">
+                <div style="background:#111419; border:1px solid #252A32; border-left:3px solid #D87575; border-radius:6px; padding:14px 18px; margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <span style="background:rgba(239,102,116,0.15); color:#EF6674; font-weight:700; font-size:11px; padding:3px 8px; border-radius:4px;">
+                        <span style="background:rgba(216,117,117,0.15); color:#D87575; font-weight:700; font-size:11px; padding:3px 8px; border-radius:4px;">
                             CRITICAL • {cf.cwe_id}
                         </span>
-                        <span style="font-family:monospace; font-size:12px; color:#929BAD;">Trace #{idx:02d}</span>
+                        <span style="font-family:monospace; font-size:12px; color:#9299A5;">Trace #{idx:02d}</span>
                     </div>
-                    <div style="font-size:13px; font-weight:600; color:#F1F3F8; margin-bottom:6px;">{cf.category}</div>
-                    <div style="font-size:12px; color:#929BAD; margin-bottom:10px;">{cf.explanation}</div>
-                    <div style="display:flex; gap:12px; font-size:11.5px; font-family:monospace; background:#090B10; padding:10px; border-radius:4px; border:1px solid #262D39;">
+                    <div style="font-size:13px; font-weight:600; color:#F5F5F2; margin-bottom:6px;">{cf.category}</div>
+                    <div style="font-size:12px; color:#9299A5; margin-bottom:10px;">{cf.explanation}</div>
+                    <div style="display:flex; gap:12px; font-size:11.5px; font-family:monospace; background:#08090B; padding:10px; border-radius:4px; border:1px solid #252A32;">
                         <div style="flex:1;">
-                            <span style="color:#8B7CFF;">Caller Origin:</span> <code>{cf.source_file}:{cf.source_line}</code><br>
-                            <span style="color:#F1F3F8;">{cf.source_snippet}</span>
+                            <span style="color:#C6A76A;">Caller Origin:</span> <code>{cf.source_file}:{cf.source_line}</code><br>
+                            <span style="color:#F5F5F2;">{cf.source_snippet}</span>
                         </div>
-                        <div style="color:#647087; align-self:center;">➔</div>
+                        <div style="color:#626B78; align-self:center;">➔</div>
                         <div style="flex:1;">
-                            <span style="color:#EF6674;">Sink Execution:</span> <code>{cf.sink_file}:{cf.sink_line} ({cf.sink_function})</code><br>
-                            <span style="color:#F1F3F8;">{cf.sink_snippet}</span>
+                            <span style="color:#D87575;">Sink Execution:</span> <code>{cf.sink_file}:{cf.sink_line} ({cf.sink_function})</code><br>
+                            <span style="color:#F5F5F2;">{cf.sink_snippet}</span>
                         </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.markdown("<div style='font-size:12.5px; color:#36C995; background:rgba(54,201,149,0.08); border:1px solid rgba(54,201,149,0.3); padding:10px 14px; border-radius:6px; margin-bottom:14px;'>✓ No cross-file taint leaks detected across modules.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:12.5px; color:#55B68A; background:rgba(85,182,138,0.08); border:1px solid rgba(85,182,138,0.3); padding:10px 14px; border-radius:6px; margin-bottom:14px;'>✓ No cross-file taint leaks detected across modules.</div>", unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
 
         # SCA Matrix
-        st.markdown("<div style='font-size:14px; font-weight:600; color:#F1F3F8; margin-bottom:10px;'>📦 Software Composition Analysis (SCA) & AST Reachability</div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-size:14px; font-weight:600; color:#F5F5F2; margin-bottom:10px;'>📦 Software Composition Analysis (SCA) & AST Reachability</div>", unsafe_allow_html=True)
         if sca_f:
             for s in sca_f:
-                b_color = "#EF6674" if s.is_reachable else "#36C995"
+                b_color = "#D87575" if s.is_reachable else "#55B68A"
                 callers_str = ", ".join(f"`{f}`" for f in s.imported_files[:3]) if s.imported_files else "None (Unimported Library)"
                 st.markdown(f"""
-                <div style="background:#141820; border:1px solid #262D39; border-radius:6px; padding:12px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="background:#111419; border:1px solid #252A32; border-radius:6px; padding:12px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <span style="font-weight:600; font-size:13.5px; color:#F1F3F8;">{s.package_name}</span>
-                        <span style="font-size:12px; color:#647087; margin-left:6px;">Installed: <code>{s.installed_version}</code> • Safe: <code>{s.fixed_version}</code></span>
-                        <div style="font-size:12px; color:#929BAD; margin-top:3px;"><b>{s.cve_id}</b>: {s.advisory_title}</div>
-                        <div style="font-size:11.5px; color:#647087; margin-top:2px;">Callers in codebase: {callers_str}</div>
+                        <span style="font-weight:600; font-size:13.5px; color:#F5F5F2;">{s.package_name}</span>
+                        <span style="font-size:12px; color:#626B78; margin-left:6px;">Installed: <code>{s.installed_version}</code> • Safe: <code>{s.fixed_version}</code></span>
+                        <div style="font-size:12px; color:#9299A5; margin-top:3px;"><b>{s.cve_id}</b>: {s.advisory_title}</div>
+                        <div style="font-size:11.5px; color:#626B78; margin-top:2px;">Callers in codebase: {callers_str}</div>
                     </div>
                     <div>
                         <span style="background:rgba(255,255,255,0.05); border:1px solid {b_color}; color:{b_color}; font-weight:600; font-size:11px; padding:4px 10px; border-radius:12px;">
@@ -1810,7 +1900,7 @@ def render_project_archive_inspector():
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.markdown("<div style='font-size:12.5px; color:#36C995; background:rgba(54,201,149,0.08); border:1px solid rgba(54,201,149,0.3); padding:10px 14px; border-radius:6px; margin-bottom:14px;'>✓ All declared dependencies pass known CVE advisory checks.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:12.5px; color:#55B68A; background:rgba(85,182,138,0.08); border:1px solid rgba(85,182,138,0.3); padding:10px 14px; border-radius:6px; margin-bottom:14px;'>✓ All declared dependencies pass known CVE advisory checks.</div>", unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
 
@@ -1826,7 +1916,7 @@ def render_project_archive_inspector():
         )
         c_rep1, c_rep2 = st.columns([2.0, 1.2], vertical_alignment="center")
         with c_rep1:
-            st.markdown("<div style='font-size:12.5px; color:#929BAD;'>Export enterprise-grade SOC 2 Type II and ISO-27001 audit report covering cross-file taint flows and supply chain reachability.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:12.5px; color:#9299A5;'>Export enterprise-grade SOC 2 Type II and ISO-27001 audit report covering cross-file taint flows and supply chain reachability.</div>", unsafe_allow_html=True)
         with c_rep2:
             st.download_button(
                 "📥 Download SOC 2 Pre-Audit (.md)",
@@ -1922,7 +2012,7 @@ if active_tab == "Inspector":
                 st.markdown("""
                 <div class="ide-tab-label">
                     <span class="ide-dot"></span>
-                    <span style="font-weight:600; color:#F1F3F8;">snippet.py</span>
+                    <span style="font-weight:600; color:#F5F5F2;">snippet.py</span>
                     <span class="ide-meta">• UTF-8</span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1946,7 +2036,7 @@ if active_tab == "Inspector":
                 with c_demo:
                     with st.popover("⚡ Demos & Mode", use_container_width=True):
                         st.toggle("⚡ Real-Time Scan on Keystroke", key="live_lint_mode", value=False, help="Continuous scan on every keystroke. Keep OFF for 120 FPS typing speed and zero lag.")
-                        st.markdown("<div style='margin:6px 0; border-top:1px solid #262D39;'></div>", unsafe_allow_html=True)
+                        st.markdown("<div style='margin:6px 0; border-top:1px solid #252A32;'></div>", unsafe_allow_html=True)
                         st.button("💉 SQL Injection (Py)", on_click=load_code_sample, args=(SQL_SAMPLE, "python"), key="demo_sqli", use_container_width=True)
                         st.button("🔑 Secret Leaks (Py)", on_click=load_code_sample, args=(SECRETS_SAMPLE, "python"), key="demo_secrets", use_container_width=True)
                         st.button("⚡ Command Injection (JS)", on_click=load_code_sample, args=(NODE_SAMPLE, "javascript"), key="demo_node", use_container_width=True)
@@ -2011,20 +2101,20 @@ if active_tab == "Inspector":
 
                 st.markdown(f"""
                 <div class="ide-tab-label">
-                    <span style="font-weight:600; color:#F1F3F8;">Diagnostics</span>
+                    <span style="font-weight:600; color:#F5F5F2;">Diagnostics</span>
                     <span class="ide-meta">• {status_text}</span>
                 </div>
                 """, unsafe_allow_html=True)
             with r_head2:
                 if analysis_status == "SYNTAX_ERROR":
-                    st.markdown("<div style='text-align:right; font-size:11.5px; color:#E5A84B; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Invalid Syntax</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:right; font-size:11.5px; color:#D5A45B; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Invalid Syntax</div>", unsafe_allow_html=True)
                 elif findings:
-                    crit_badge = f'<span style="color:#EF6674; font-weight:600;">{metrics["critical"]} Crit</span>'
-                    sec_badge = f'<span style="color:#E5A84B; font-weight:600;">{metrics["security"]} Sec</span>'
-                    perf_badge = f'<span style="color:#8B7CFF; font-weight:600;">{metrics["performance"]} Perf</span>'
+                    crit_badge = f'<span style="color:#D87575; font-weight:600;">{metrics["critical"]} Crit</span>'
+                    sec_badge = f'<span style="color:#D5A45B; font-weight:600;">{metrics["security"]} Sec</span>'
+                    perf_badge = f'<span style="color:#C6A76A; font-weight:600;">{metrics["performance"]} Perf</span>'
                     st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
                 else:
-                    st.markdown("<div style='text-align:right; font-size:11.5px; color:#647087; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Operational</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:right; font-size:11.5px; color:#626B78; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Operational</div>", unsafe_allow_html=True)
 
             # 480px Matched Height Container
             with st.container(height=480):
@@ -2041,12 +2131,12 @@ if active_tab == "Inspector":
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <span class="posture-grade-badge {posture['badge_class']}">{posture['grade']}</span>
                                 <div>
-                                    <div style="font-weight:600; font-size:13.5px; color:#F1F3F8;">Security Health: {posture['score']}/100</div>
-                                    <div style="font-size:11px; color:#647087;">{posture['grade_label']}</div>
+                                    <div style="font-weight:600; font-size:13.5px; color:#F5F5F2;">Security Health: {posture['score']}/100</div>
+                                    <div style="font-size:11px; color:#626B78;">{posture['grade_label']}</div>
                                 </div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:10.5px; color:#647087;">CVSS v3.1 Impact</div>
+                                <div style="font-size:10.5px; color:#626B78;">CVSS v3.1 Impact</div>
                                 <div style="font-size:12.5px; font-weight:600; color:{posture['color']}; font-family:'JetBrains Mono';">MAX {posture['cvss_max']}</div>
                             </div>
                         </div>
@@ -2085,7 +2175,7 @@ if active_tab == "Inspector":
                     <div class="terminal-empty-box">
                         <div class="terminal-header">
                             <div class="term-brand">
-                                <span style="font-weight:700; color:#F1F3F8; letter-spacing:0.04em; font-size:12px;">KAVACH SECURITY ENGINE</span>
+                                <span style="font-weight:700; color:#F5F5F2; letter-spacing:0.04em; font-size:12px;">KAVACH SECURITY ENGINE</span>
                                 <span class="term-badge">Enterprise Defense</span>
                             </div>
                             <div class="term-status-pill"><span class="status-dot-green"></span> Operational</div>
@@ -2188,21 +2278,21 @@ if active_tab == "Inspector":
                         exp_safe = html.escape(f.explanation)
                         cwe_safe = html.escape(f.cwe_id or "CWE-General")
                         is_crit = (f.severity.upper() == "CRITICAL")
-                        sev_color = "#EF6674" if is_crit else ("#E5A84B" if f.severity.upper() == "WARNING" else "#8B7CFF")
+                        sev_color = "#D87575" if is_crit else ("#D5A45B" if f.severity.upper() == "WARNING" else "#C6A76A")
 
                         with st.expander(f"L{f.line_number} [{f.severity}] {cat_safe} • {cwe_safe}", expanded=(i <= 2)):
                             # Taint Flow Breadcrumb
                             st.markdown(f"""
                             <div class="taint-flow-box">
-                                <span class="taint-step" style="background:rgba(239,102,116,0.12); color:#EF6674;">Source: L{f.line_number}</span>
+                                <span class="taint-step" style="background:rgba(216,117,117,0.12); color:#D87575;">Source: L{f.line_number}</span>
                                 <span>➔</span>
-                                <span class="taint-step" style="background:rgba(229,168,75,0.12); color:#E5A84B;">Taint Tracking</span>
+                                <span class="taint-step" style="background:rgba(213,164,91,0.12); color:#D5A45B;">Taint Tracking</span>
                                 <span>➔</span>
-                                <span class="taint-step" style="background:rgba(139,124,255,0.12); color:#8B7CFF;">Sink: {cat_safe}</span>
+                                <span class="taint-step" style="background:rgba(198,167,106,0.12); color:#C6A76A;">Sink: {cat_safe}</span>
                             </div>
                             """, unsafe_allow_html=True)
 
-                            st.markdown(f"<div style='font-size:12px; color:#929BAD; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='font-size:12px; color:#9299A5; margin-bottom:8px;'>{exp_safe}</div>", unsafe_allow_html=True)
 
                             # GitHub-Grade Unified Diff Visualizer
                             prob_lines = f.problem_code.splitlines()
@@ -2307,33 +2397,33 @@ elif active_tab == "Posture Dashboard":
     cwe_col1, cwe_col2, cwe_col3, cwe_col4 = st.columns(4, gap="small")
     with cwe_col1:
         st.markdown("""
-        <div class="kpi-card" style="border-left: 3px solid #EF6674;">
+        <div class="kpi-card" style="border-left: 3px solid #D87575;">
             <div class="kpi-title">CWE-89 SQLi</div>
-            <div style="font-size:15px; font-weight:600; color:#F1F3F8;">Taint-Flow Sink</div>
+            <div style="font-size:15px; font-weight:600; color:#F5F5F2;">Taint-Flow Sink</div>
             <div class="kpi-sub">Auto-Parameterized</div>
         </div>
         """, unsafe_allow_html=True)
     with cwe_col2:
         st.markdown("""
-        <div class="kpi-card" style="border-left: 3px solid #EF6674;">
+        <div class="kpi-card" style="border-left: 3px solid #D87575;">
             <div class="kpi-title">CWE-798 Secrets</div>
-            <div style="font-size:15px; font-weight:600; color:#F1F3F8;">Constant-Folded</div>
+            <div style="font-size:15px; font-weight:600; color:#F5F5F2;">Constant-Folded</div>
             <div class="kpi-sub">Env Var Masking</div>
         </div>
         """, unsafe_allow_html=True)
     with cwe_col3:
         st.markdown("""
-        <div class="kpi-card" style="border-left: 3px solid #E5A84B;">
+        <div class="kpi-card" style="border-left: 3px solid #D5A45B;">
             <div class="kpi-title">CWE-78 Command RCE</div>
-            <div style="font-size:15px; font-weight:600; color:#F1F3F8;">Shell Injections</div>
+            <div style="font-size:15px; font-weight:600; color:#F5F5F2;">Shell Injections</div>
             <div class="kpi-sub">Blocked at AST</div>
         </div>
         """, unsafe_allow_html=True)
     with cwe_col4:
         st.markdown("""
-        <div class="kpi-card" style="border-left: 3px solid #8B7CFF;">
+        <div class="kpi-card" style="border-left: 3px solid #C6A76A;">
             <div class="kpi-title">CWE-775 / 369</div>
-            <div style="font-size:15px; font-weight:600; color:#F1F3F8;">Resource & ZeroDiv</div>
+            <div style="font-size:15px; font-weight:600; color:#F5F5F2;">Resource & ZeroDiv</div>
             <div class="kpi-sub">Pre-scanned Closes</div>
         </div>
         """, unsafe_allow_html=True)
@@ -2363,35 +2453,35 @@ elif active_tab == "Live Benchmark":
         <tbody>
             <tr>
                 <td class="bench-td"><b>Median Scan Latency (5k LOC)</b></td>
-                <td class="bench-td bench-highlight" style="color:#36C995;"><b>14 ms (Sub-second)</b></td>
+                <td class="bench-td bench-highlight" style="color:#55B68A;"><b>14 ms (Sub-second)</b></td>
                 <td class="bench-td">1,820 ms</td>
                 <td class="bench-td">4,200 ms (Cloud API)</td>
                 <td class="bench-td">380 ms</td>
             </tr>
             <tr>
                 <td class="bench-td"><b>False Positive Rate</b></td>
-                <td class="bench-td bench-highlight" style="color:#36C995;"><b>0.0% (Zero Noise)</b></td>
+                <td class="bench-td bench-highlight" style="color:#55B68A;"><b>0.0% (Zero Noise)</b></td>
                 <td class="bench-td">18.4%</td>
                 <td class="bench-td">22.7%</td>
                 <td class="bench-td">31.2%</td>
             </tr>
             <tr>
                 <td class="bench-td"><b>1-Click Self-Healing Patches</b></td>
-                <td class="bench-td bench-highlight" style="color:#F1F3F8;"><b>Yes (AST-Generated)</b></td>
+                <td class="bench-td bench-highlight" style="color:#F5F5F2;"><b>Yes (AST-Generated)</b></td>
                 <td class="bench-td">No (Rule Hints only)</td>
                 <td class="bench-td">No (Doc Links only)</td>
                 <td class="bench-td">No</td>
             </tr>
             <tr>
                 <td class="bench-td"><b>Data Privacy & Retention</b></td>
-                <td class="bench-td bench-highlight" style="color:#36C995;"><b>100% Offline (Zero Retention)</b></td>
+                <td class="bench-td bench-highlight" style="color:#55B68A;"><b>100% Offline (Zero Retention)</b></td>
                 <td class="bench-td">CLI / Cloud Sync</td>
                 <td class="bench-td">Cloud Required</td>
                 <td class="bench-td">Local CLI</td>
             </tr>
             <tr>
                 <td class="bench-td"><b>Intra-Procedural Taint Tracking</b></td>
-                <td class="bench-td bench-highlight" style="color:#36C995;"><b>Native Free & Pro</b></td>
+                <td class="bench-td bench-highlight" style="color:#55B68A;"><b>Native Free & Pro</b></td>
                 <td class="bench-td">Paid Pro Only ($480/yr)</td>
                 <td class="bench-td">Paid Enterprise ($1k+/yr)</td>
                 <td class="bench-td">No</td>
@@ -2445,7 +2535,7 @@ elif active_tab == "Live Benchmark":
         <div class="diag-banner diag-clean" style="margin-top:14px; font-size:13px;">
             <span style="font-size:18px;">⚡</span>
             <div>
-                <div style="font-weight:600; font-size:13px; color:#36C995;">Live Engine Benchmark Passed in {br['elapsed_ms']} ms!</div>
+                <div style="font-weight:600; font-size:13px; color:#55B68A;">Live Engine Benchmark Passed in {br['elapsed_ms']} ms!</div>
                 <div style="font-size:12px; opacity:0.9;">Successfully evaluated {br['test_suites']} polyglot test suites (Python, Node.js, C++). Caught {br['total_findings']} critical vulnerabilities with <b>0 false positives</b>.</div>
             </div>
         </div>
@@ -2469,13 +2559,13 @@ elif active_tab == "Pricing":
     checkout_urls = BillingManager.get_checkout_urls()
 
     st.markdown("""
-    <div style="background: rgba(139, 124, 255, 0.08); border: 1px solid rgba(139, 124, 255, 0.4); border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="background: rgba(198, 167, 106, 0.08); border: 1px solid rgba(198, 167, 106, 0.4); border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div>
-            <span style="background: #8B7CFF; color: #090B10; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-right: 8px; text-transform: uppercase;">Founder Launch Pass</span>
-            <span style="font-weight: 600; color: #F1F3F8; font-size: 14px;">Early Adopter Cohort: $149 One-Time Lifetime Access</span>
-            <div style="color: #929BAD; font-size: 12px; margin-top: 4px;">Unlimited Repositories • Lifetime CLI + AST Engine • CI/CD Merge Blocker • SOC 2 Audit Exports</div>
+            <span style="background: #C6A76A; color: #08090B; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-right: 8px; text-transform: uppercase;">Founder Launch Pass</span>
+            <span style="font-weight: 600; color: #F5F5F2; font-size: 14px;">Early Adopter Cohort: $149 One-Time Lifetime Access</span>
+            <div style="color: #9299A5; font-size: 12px; margin-top: 4px;">Unlimited Repositories • Lifetime CLI + AST Engine • CI/CD Merge Blocker • SOC 2 Audit Exports</div>
         </div>
-        <div style="font-weight: 600; color: #36C995; font-size: 13px;">
+        <div style="font-weight: 600; color: #55B68A; font-size: 13px;">
             ● Early Adopter Cohort Open
         </div>
     </div>
@@ -2543,7 +2633,7 @@ elif active_tab == "Pricing":
         <div class="pricing-card pricing-card-featured {pro_active}">
             <div class="popular-badge">Most Popular</div>
             <div class="card-tier-title">Developer Pro</div>
-            <div class="card-tier-amt">{pro_price}<span style="font-size:14px; color:#647087; font-weight:500;">/mo</span></div>
+            <div class="card-tier-amt">{pro_price}<span style="font-size:14px; color:#626B78; font-weight:500;">/mo</span></div>
             <div class="card-tier-sub">{pro_sub}</div>
             <div class="card-features-list">
                 ✓ <b>Unlimited personal private repos</b><br>
@@ -2581,7 +2671,7 @@ elif active_tab == "Pricing":
         st.markdown(f"""
         <div class="pricing-card {team_active}">
             <div class="card-tier-title">Team Enterprise</div>
-            <div class="card-tier-amt">{team_price}<span style="font-size:14px; color:#647087; font-weight:500;">/mo</span></div>
+            <div class="card-tier-amt">{team_price}<span style="font-size:14px; color:#626B78; font-weight:500;">/mo</span></div>
             <div class="card-tier-sub">{team_sub}</div>
             <div class="card-features-list">
                 ✓ <b>GitHub Organizations support</b><br>
@@ -2612,8 +2702,8 @@ elif active_tab == "Pricing":
         with lk_col1:
             st.markdown("""
             <div>
-                <div style="font-size:13.5px; font-weight:600; color:#F1F3F8;">🔑 Activate Customer License Key</div>
-                <div style="font-size:11.5px; color:#647087;">Supports LemonSqueezy license UUIDs or offline signed Ed25519 tokens.</div>
+                <div style="font-size:13.5px; font-weight:600; color:#F5F5F2;">🔑 Activate Customer License Key</div>
+                <div style="font-size:11.5px; color:#626B78;">Supports LemonSqueezy license UUIDs or offline signed Ed25519 tokens.</div>
             </div>
             """, unsafe_allow_html=True)
         with lk_col2:
@@ -2644,10 +2734,10 @@ elif active_tab == "Pricing":
             r_col1, r_col2 = st.columns([3, 1.2], vertical_alignment="center")
             with r_col1:
                 st.markdown(f"""
-                <div style="font-size:13px; color:#36C995; font-weight:600;">
+                <div style="font-size:13px; color:#55B68A; font-weight:600;">
                     ✓ Active License: <code>{st.session_state.license_key[:18]}...</code>
                 </div>
-                <div style="font-size:11.5px; color:#929BAD;">
+                <div style="font-size:11.5px; color:#9299A5;">
                     Download your license receipt and terminal activation instructions (.txt).
                 </div>
                 """, unsafe_allow_html=True)
@@ -2670,8 +2760,8 @@ elif active_tab == "Pricing":
 elif active_tab == "GitHub":
     st.markdown("""
     <div style="margin-bottom:14px;">
-        <div style="font-size:18px; font-weight:600; color:#F1F3F8; letter-spacing:-0.02em;">1-Minute GitHub Actions Security Gate</div>
-        <div style="font-size:13px; color:#647087;">Block vulnerable pull requests before they reach your production branch.</div>
+        <div style="font-size:18px; font-weight:600; color:#F5F5F2; letter-spacing:-0.02em;">1-Minute GitHub Actions Security Gate</div>
+        <div style="font-size:13px; color:#626B78;">Block vulnerable pull requests before they reach your production branch.</div>
     </div>
     """, unsafe_allow_html=True)
 
