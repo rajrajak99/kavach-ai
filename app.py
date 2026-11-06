@@ -34,6 +34,7 @@ if "kavach_license" in sys.modules:
         del sys.modules["kavach_license"]
 
 import streamlit as st
+import streamlit.components.v1 as components
 import html
 import base64
 import json
@@ -604,6 +605,54 @@ if st.session_state.get("toast_msg"):
     st.session_state.toast_msg = None
 
 # ----------------- ULTRA-PREMIUM ENTERPRISE SAAS DESIGN SYSTEM -----------------
+components.html('''
+<script>
+(function() {
+    function enforceDarkEditor() {
+        try {
+            const iframes = window.parent.document.querySelectorAll('iframe');
+            iframes.forEach(function(iframe) {
+                try {
+                    const idoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (!idoc) return;
+                    if (idoc.body) {
+                        idoc.body.style.backgroundColor = '#101318';
+                        idoc.body.style.color = '#E6E8EC';
+                    }
+                    var styleEl = idoc.getElementById('kavach-dark-editor-override');
+                    if (!styleEl) {
+                        styleEl = idoc.createElement('style');
+                        styleEl.id = 'kavach-dark-editor-override';
+                        idoc.head.appendChild(styleEl);
+                    }
+                    styleEl.textContent = [
+                        '.ace_editor, .ace_editor * { font-family: "JetBrains Mono", monospace !important; }',
+                        '.ace_editor { background-color: #101318 !important; color: #E6E8EC !important; }',
+                        '.ace_gutter { background-color: #15191F !important; color: #737D8C !important; border-right: 1px solid #252A32 !important; }',
+                        '.ace_gutter-cell { color: #737D8C !important; }',
+                        '.ace_gutter-active-line { background-color: rgba(255, 255, 255, 0.04) !important; color: #E6E8EC !important; }',
+                        '.ace_scroller, .ace_content { background-color: #101318 !important; }',
+                        '.ace_cursor { border-left: 2px solid #C6A76A !important; }',
+                        '.ace_marker-layer .ace_active-line { background: rgba(255, 255, 255, 0.02) !important; }',
+                        '.ace_marker-layer .ace_selection { background: #292F39 !important; }',
+                        '.ace_text-layer { color: #E6E8EC !important; }',
+                        '.ace_comment, .ace_comment.ace_line, .ace_comment.ace_block { color: #788596 !important; font-style: italic !important; }',
+                        '.ace_keyword, .ace_keyword.ace_operator, .ace_storage { color: #C6A76A !important; font-weight: 600 !important; }',
+                        '.ace_string, .ace_string.ace_regexp { color: #8DBB9A !important; }',
+                        '.ace_function, .ace_support.ace_function { color: #91AFCB !important; }',
+                        '.ace_variable, .ace_identifier { color: #E6E8EC !important; }',
+                        '.ace_constant.ace_numeric { color: #D5A45B !important; }'
+                    ].join('\n');
+                } catch(e) {}
+            });
+        } catch(e) {}
+    }
+    enforceDarkEditor();
+    setInterval(enforceDarkEditor, 250);
+})();
+</script>
+''', height=0, width=0)
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -919,7 +968,7 @@ st.markdown("""
         color: #252A32;
     }
     .trust-link {
-        color: #C6A76A;
+        color: #9299A5;
         text-decoration: none;
         font-weight: 500;
         transition: color 0.15s;
@@ -978,14 +1027,36 @@ st.markdown("""
         box-shadow: 0 0 0 1px rgba(198, 167, 106, 0.3) !important;
     }
 
-    /* Fallback Textarea Editor */
-    div[data-testid="stTextArea"] textarea {
+    /* Custom Component & Ace Editor Iframe Enclosure */
+    div[data-testid="stCustomComponentV1"],
+    div[data-testid="stCustomComponentV1"] iframe,
+    iframe[title*="ace"],
+    iframe {
+        background-color: #101318 !important;
         background: #101318 !important;
-        color: #F5F5F2 !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        font-size: 12.5px !important;
-        line-height: 1.6 !important;
         border: 1px solid #252A32 !important;
+        border-radius: 10px !important;
+        color-scheme: dark !important;
+    }
+
+    /* Fallback Textarea Editor - Eliminates White Backgrounds on BaseWeb Containers */
+    div[data-testid="stTextArea"],
+    div[data-testid="stTextArea"] > div,
+    div[data-testid="stTextArea"] div[data-baseweb="textarea"],
+    div[data-testid="stTextArea"] div[data-baseweb="base-input"] {
+        background-color: #101318 !important;
+        background: #101318 !important;
+        border: 1px solid #252A32 !important;
+        border-radius: 10px !important;
+    }
+    div[data-testid="stTextArea"] textarea {
+        background-color: #101318 !important;
+        background: #101318 !important;
+        color: #E6E8EC !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 13px !important;
+        line-height: 1.6 !important;
+        border: none !important;
         border-radius: 10px !important;
         padding: 12px 14px !important;
     }
@@ -994,31 +1065,62 @@ st.markdown("""
         box-shadow: 0 0 0 1px rgba(198, 167, 106, 0.3) !important;
     }
 
-    /* ACE Editor Styling Injection */
+    /* ACE Editor Specific Tokens & Syntax Highlighting */
+    .ace_editor, .ace_editor * {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
     .ace_editor {
         background-color: #101318 !important;
+        color: #E6E8EC !important;
         border: 1px solid #252A32 !important;
         border-radius: 10px !important;
     }
     .ace_gutter {
-        background-color: #0D0F12 !important;
-        color: #626B78 !important;
+        background-color: #15191F !important;
+        color: #737D8C !important;
         border-right: 1px solid #252A32 !important;
+    }
+    .ace_gutter-cell {
+        color: #737D8C !important;
     }
     .ace_gutter-active-line {
         background-color: rgba(255, 255, 255, 0.04) !important;
+        color: #E6E8EC !important;
+    }
+    .ace_scroller, .ace_content {
+        background-color: #101318 !important;
     }
     .ace_cursor {
         border-left: 2px solid #C6A76A !important;
-    }
-    .ace_content {
-        color: #F5F5F2 !important;
     }
     .ace_marker-layer .ace_active-line {
         background: rgba(255, 255, 255, 0.02) !important;
     }
     .ace_marker-layer .ace_selection {
-        background: rgba(198, 167, 106, 0.20) !important;
+        background: #292F39 !important;
+    }
+    .ace_text-layer {
+        color: #E6E8EC !important;
+    }
+    .ace_comment, .ace_comment.ace_line, .ace_comment.ace_block {
+        color: #788596 !important;
+        font-style: italic !important;
+    }
+    .ace_keyword, .ace_keyword.ace_operator, .ace_storage, .ace_storage.ace_type {
+        color: #C6A76A !important;
+        font-weight: 600 !important;
+    }
+    .ace_string, .ace_string.ace_regexp {
+        color: #8DBB9A !important;
+    }
+    .ace_function, .ace_support.ace_function, .ace_entity.ace_name.ace_function {
+        color: #91AFCB !important;
+    }
+    .ace_variable, .ace_identifier {
+        color: #E6E8EC !important;
+    }
+    .ace_constant.ace_numeric {
+        color: #D5A45B !important;
     }
 
     /* 9. Container & Panels */
@@ -1197,7 +1299,7 @@ st.markdown("""
     }
     .posture-bar-crit { background: #D87575; height: 100%; transition: width 0.3s; }
     .posture-bar-sec { background: #D5A45B; height: 100%; transition: width 0.3s; }
-    .posture-bar-perf { background: #C6A76A; height: 100%; transition: width 0.3s; }
+    .posture-bar-perf { background: #91AFCB; height: 100%; transition: width 0.3s; }
     .posture-bar-clean { background: #55B68A; height: 100%; transition: width 0.3s; }
 
     /* 12. Unified Diff Visualizer */
@@ -1862,7 +1964,7 @@ def render_project_archive_inspector():
                     <div style="font-size:12px; color:#9299A5; margin-bottom:10px;">{cf.explanation}</div>
                     <div style="display:flex; gap:12px; font-size:11.5px; font-family:monospace; background:#08090B; padding:10px; border-radius:4px; border:1px solid #252A32;">
                         <div style="flex:1;">
-                            <span style="color:#C6A76A;">Caller Origin:</span> <code>{cf.source_file}:{cf.source_line}</code><br>
+                            <span style="color:#9299A5;">Caller Origin:</span> <code>{cf.source_file}:{cf.source_line}</code><br>
                             <span style="color:#F5F5F2;">{cf.source_snippet}</span>
                         </div>
                         <div style="color:#626B78; align-self:center;">➔</div>
@@ -2061,7 +2163,7 @@ if active_tab == "Inspector":
                     value=st.session_state.user_code,
                     placeholder="// Paste your Python, JavaScript, or C++ code here to inspect for vulnerabilities...",
                     language=ace_lang,
-                    theme="dracula",
+                    theme="twilight",
                     keybinding="vscode",
                     font_size=13,
                     tab_size=4,
@@ -2111,7 +2213,7 @@ if active_tab == "Inspector":
                 elif findings:
                     crit_badge = f'<span style="color:#D87575; font-weight:600;">{metrics["critical"]} Crit</span>'
                     sec_badge = f'<span style="color:#D5A45B; font-weight:600;">{metrics["security"]} Sec</span>'
-                    perf_badge = f'<span style="color:#C6A76A; font-weight:600;">{metrics["performance"]} Perf</span>'
+                    perf_badge = f'<span style="color:#9299A5; font-weight:600;">{metrics["performance"]} Perf</span>'
                     st.markdown(f"<div style='text-align:right; font-size:11.5px; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>{crit_badge} • {sec_badge} • {perf_badge}</div>", unsafe_allow_html=True)
                 else:
                     st.markdown("<div style='text-align:right; font-size:11.5px; color:#626B78; font-family:\"JetBrains Mono\"; padding-top:6px; white-space:nowrap;'>Operational</div>", unsafe_allow_html=True)
