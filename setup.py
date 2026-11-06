@@ -12,7 +12,7 @@ setup(
     author="Raja Rajak (@rajrajak99)",
     url="https://github.com/rajrajak99/kavach-ai",
     license="PolyForm-Noncommercial-1.0.0",
-    packages=find_packages(include=["core*"]),
+    packages=find_packages(include=["core*", "samples*"]),
     py_modules=["cli", "ci_bot", "kavach_license"],
     python_requires=">=3.9",
     install_requires=[
