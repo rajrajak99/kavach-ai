@@ -104,3 +104,57 @@ AWS_KEY = "{aws_p}{aws_b}"
     res = analyzer.generate_pull_request_review([diff])
     secret_findings = [f for f in res['findings'] if f.cwe_id == "CWE-798"]
     assert len(secret_findings) >= 2
+
+def test_string_concatenation_sqli_is_flagged(parser, analyzer):
+    code = """
+table = "users"
+cursor.execute("SELECT * FROM " + table)
+"""
+    diff = parser.parse_raw_snippet("concat.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) >= 1
+    # Verify auto-patching never emits '+' concatenation inside suggestion
+    for f in sqli_findings:
+        assert "+" not in f.fixed_code
+
+def test_ddl_alter_table_concatenation_is_flagged(parser, analyzer):
+    code = """
+table = "accounts"
+cursor.execute("ALTER TABLE " + table + " ADD COLUMN extra VARCHAR(255)")
+"""
+    diff = parser.parse_raw_snippet("ddl.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) >= 1
+    for f in sqli_findings:
+        assert "+" not in f.fixed_code
+
+def test_orm_text_never_emits_plus_concatenation(parser, analyzer):
+    code = """
+from sqlalchemy import text
+table = "orders"
+db.execute(text("SELECT * FROM " + table))
+"""
+    diff = parser.parse_raw_snippet("orm_concat.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) >= 1
+    for f in sqli_findings:
+        assert "+" not in f.fixed_code
+        assert "bindparams" in f.fixed_code or "SECURE DDL" in f.fixed_code
+
+def test_sqlalchemy_orm_where_filter_not_flagged(parser, analyzer):
+    code = """
+from sqlalchemy import select
+from models import Coupon
+
+code = "SUMMER20"
+stmt = select(Coupon).where(Coupon.code == code)
+result = session.execute(stmt)
+"""
+    diff = parser.parse_raw_snippet("safe_orm.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) == 0, f"Expected 0 SQLi findings for safe ORM where filter, got: {sqli_findings}"
+

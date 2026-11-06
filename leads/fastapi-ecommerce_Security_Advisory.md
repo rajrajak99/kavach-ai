@@ -4,7 +4,7 @@
 - **Founder / Owner**: Yonas Mekonnen ([@Sanoy24](https://github.com/Sanoy24))
 - **Author Email**: `myonas886@gmail.com`
 - **Stars**: ⭐ 22
-- **Security Weakness**: `Cross-File Inter-Procedural Taint Injection` [CWE-89]
+- **Security Weakness**: `Improper Input Validation / Unbounded Query Parameter` [CWE-20]
 - **Target File Links**:
   - Route: [`app/api/v1/routes/cart.py:L121-134`](https://github.com/Sanoy24/fastapi-ecommerce/blob/main/app/api/v1/routes/cart.py#L121-L134)
   - Service Sink: [`app/services/cart_service.py:L207-210`](https://github.com/Sanoy24/fastapi-ecommerce/blob/main/app/services/cart_service.py#L207-L210)
@@ -14,7 +14,7 @@
 
 ## 1. Verified AST / SCA Technical Evidence
 
-In `app/api/v1/routes/cart.py`, the `apply_coupon` route accepts `code: str` without regex validation or length bounds. This untrusted query parameter flows directly into `cart_service.apply_coupon(cart, code)`, where it executes against the database in `Coupon.code == code`.
+In `app/api/v1/routes/cart.py`, the `apply_coupon` route accepts `code: str` without regex validation or length bounds. This untrusted query parameter flows directly into `cart_service.apply_coupon(cart, code)`, where it executes against the database in `Coupon.code == code`. While SQLAlchemy ORM safely parameterizes `.where()`, accepting unbounded input strings without format validation on public API routes introduces input validation risks (CWE-20).
 
 ```python
 # Vulnerable Code (app/api/v1/routes/cart.py:L121-134):
@@ -77,9 +77,9 @@ Hi Yonas,
 
 Ran our 10ms local AST taint engine (Kavach AI) against fastapi-ecommerce and wanted to share a verified security audit finding in your production cart flow:
 
-• Vulnerability: Cross-File Taint Injection & Unvalidated Coupon Input [CWE-89 / OWASP A03]
+• Vulnerability: Improper Input Validation & Unbounded Query Parameter [CWE-20 / OWASP A03]
 • Location: app/api/v1/routes/cart.py:L121 & app/services/cart_service.py:L208
-• Impact: Raw, unbounded coupon query string reaches database query without regex constraints or sanitization.
+• Impact: Raw, unbounded coupon query string reaches database query without regex constraints or length bounds.
 
 1-Click Surgical Patch:
 --- a/app/api/v1/routes/cart.py
@@ -111,7 +111,7 @@ rajabhaiyarajak2008@gmail.com
 ```text
 Hey Yonas — came across fastapi-ecommerce and ran our 10ms local AST engine (Kavach AI). 
 
-Noticed untrusted coupon strings propagate directly into database filters without regex bounding in `app/api/v1/routes/cart.py:L121`. 
+Noticed untrusted coupon strings propagate directly into database filters without regex bounding or length constraints in `app/api/v1/routes/cart.py:L121`. 
 
 We generated the exact 1-line surgical patch:
 - code: str,
@@ -126,15 +126,15 @@ Happy to set you up with an Early Adopter pass if you want to test it on private
 
 ## 5. Ready-to-Submit GitHub Pull Request (PR) Description
 
-**PR Title**: `fix(security): sanitize coupon input with strict regex validation (CWE-89)`
+**PR Title**: `fix(security): sanitize coupon input with strict regex validation (CWE-20)`
 
 ```markdown
 ### 🛡️ Security Advisory Summary
 This pull request introduces strict input format validation on the `POST /coupon` endpoint in `app/api/v1/routes/cart.py` and normalizes coupon lookups in `app/services/cart_service.py`.
 
 ### 🔍 Vulnerability Details
-- **Weakness**: `CWE-89` (Improper Input Neutralization in Data Queries)
-- **Impact**: Unbounded strings could be sent through the public coupon endpoint, leading to unhandled database filter behavior.
+- **Weakness**: `CWE-20` (Improper Input Validation / Unbounded Query Parameter)
+- **Impact**: Unbounded strings could be sent through the public coupon endpoint without length or pattern restrictions.
 - **Remediation**:
   1. Constrain `code: str` to 2–50 alphanumeric characters (`^[A-Za-z0-9_-]+$`) using FastAPI `Query` validation.
   2. Normalize code with `.strip().upper()` in `CartService.apply_coupon()`.

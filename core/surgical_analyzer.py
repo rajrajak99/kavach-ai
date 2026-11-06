@@ -103,10 +103,10 @@ class SurgicalAnalyzer:
     ]
 
     PY_SQLI_PATTERNS = [
-        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*f[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b.*?\{.*?\}', "Raw SQL Injection via f-string formatting", "CWE-89"),
-        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b.*?\s*%\s*\(.*?\)', "SQL Injection via string modulo interpolation", "CWE-89"),
-        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b.*?[\"\']\s*\+\s*[a-zA-Z_]', "SQL Injection via string concatenation", "CWE-89"),
-        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b.*?\.format\s*\(', "SQL Injection via string format() interpolation", "CWE-89")
+        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*f[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b.*?\{.*?\}', "Raw SQL Injection via f-string formatting", "CWE-89"),
+        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b.*?\s*%\s*\(.*?\)', "SQL Injection via string modulo interpolation", "CWE-89"),
+        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b.*?[\"\']\s*\+\s*[a-zA-Z_]', "SQL Injection via string concatenation", "CWE-89"),
+        (r'(?i)\b(?:(?:cursor|session|conn|connection|db|engine)\.)?execute\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b.*?\.format\s*\(', "SQL Injection via string format() interpolation", "CWE-89")
     ]
 
     PY_COMMAND_INJECTION_PATTERNS = [
@@ -130,8 +130,8 @@ class SurgicalAnalyzer:
     ]
 
     JS_SQLI_PATTERNS = [
-        (r'(?i)\b(?:query|execute)\s*\(\s*`.*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b.*?\$\{.*?\}', "SQL Injection via JavaScript Template Literal", "CWE-89"),
-        (r'(?i)\b(?:query|execute)\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\b.*?[\"\']\s*\+\s*[a-zA-Z0-9_$]+', "SQL Injection via JavaScript String Concatenation", "CWE-89")
+        (r'(?i)\b(?:query|execute)\s*\(\s*`.*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b.*?\$\{.*?\}', "SQL Injection via JavaScript Template Literal", "CWE-89"),
+        (r'(?i)\b(?:query|execute)\s*\(\s*[\"\'].*?\b(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b.*?[\"\']\s*\+\s*[a-zA-Z0-9_$]+', "SQL Injection via JavaScript String Concatenation", "CWE-89")
     ]
 
     JS_COMMAND_INJECTION_PATTERNS = [
@@ -228,9 +228,14 @@ class SurgicalAnalyzer:
 
         # 4. BinOp: string concatenation (+) or modulo formatting (%) with non-constant
         if isinstance(arg_node, ast.BinOp):
-            left_const = isinstance(arg_node.left, ast.Constant) and isinstance(arg_node.left.value, str)
-            right_const = isinstance(arg_node.right, ast.Constant) and isinstance(arg_node.right.value, str)
-            if not (left_const and right_const):
+            def _is_all_str_constants(bnode: ast.AST) -> bool:
+                if isinstance(bnode, ast.Constant) and isinstance(bnode.value, str):
+                    return True
+                if isinstance(bnode, ast.BinOp) and isinstance(bnode.op, (ast.Add, ast.Mod)):
+                    return _is_all_str_constants(bnode.left) and _is_all_str_constants(bnode.right)
+                return False
+
+            if not _is_all_str_constants(arg_node):
                 return True
 
         # 5. Method call to .format() on a string
@@ -335,7 +340,7 @@ class SurgicalAnalyzer:
                         for sub in ast.walk(node.value)
                     )
                     combined_sql = " ".join(str_constants)
-                    if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', combined_sql) and has_dynamic_sub:
+                    if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|CREATE)\b', combined_sql) and has_dynamic_sub:
                         tainted_sql_vars[target_name] = (node.lineno, node.value, target_name)
 
             # 2. Function Calls: Env Fallbacks & Tainted SQL Sinks
@@ -413,28 +418,43 @@ class SurgicalAnalyzer:
                                 language="python"
                             ))
                         elif self._is_dynamic_sql(arg0, tainted_sql_vars):
-                            arg_constants = [
-                                sub.value for sub in ast.walk(arg0)
-                                if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
-                            ]
-                            combined_sql = " ".join(arg_constants).strip()
-                            is_health_check = bool(re.search(r'(?i)^\s*SELECT\s+1\s*(?:;|\bAS\b|\bFROM\b)?\s*$', combined_sql))
-                            if not is_health_check and re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE)\b', combined_sql):
-                                line_str = lines_by_num.get(node.lineno, "cursor.execute(...)")
-                                indent = len(line_str) - len(line_str.lstrip())
-                                indent_str = " " * indent
-                                fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE param = ?", (param_value,))'
-                                ast_findings.append(PatchFinding(
-                                    severity="CRITICAL",
-                                    category="SQL Injection via Dynamic String Formatting",
-                                    line_number=node.lineno,
-                                    problem_code=line_str.strip(),
-                                    fixed_code=fixed.strip(),
-                                    explanation="SQL query constructed with dynamic concatenation/interpolation inside execute(). Use parameterized queries with tuples instead.",
-                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
-                                    cwe_id="CWE-89",
-                                    language="python"
-                                ))
+                            # If arg0 is text(...) or select(...), delegate to ORM handlers (Feature 8)
+                            is_text_call = False
+                            if isinstance(arg0, ast.Call):
+                                f_n = None
+                                if isinstance(arg0.func, ast.Name):
+                                    f_n = arg0.func.id
+                                elif isinstance(arg0.func, ast.Attribute):
+                                    f_n = arg0.func.attr
+                                if f_n in ("text", "select"):
+                                    is_text_call = True
+
+                            if not is_text_call:
+                                arg_constants = [
+                                    sub.value for sub in ast.walk(arg0)
+                                    if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+                                ]
+                                combined_sql = " ".join(arg_constants).strip()
+                                is_health_check = bool(re.search(r'(?i)^\s*SELECT\s+1\s*(?:;|\bAS\b|\bFROM\b)?\s*$', combined_sql))
+                                if not is_health_check and re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|CREATE)\b', combined_sql):
+                                    line_str = lines_by_num.get(node.lineno, "cursor.execute(...)")
+                                    indent = len(line_str) - len(line_str.lstrip())
+                                    indent_str = " " * indent
+                                    if re.search(r'(?i)\b(ALTER|DROP|CREATE)\b', combined_sql):
+                                        fixed = f'{indent_str}# SECURE DDL: Validate identifier syntax before DDL execution\n{indent_str}# escape_ident = lambda name: f\'"{{name.replace(chr(34), chr(34)*2)}}"\'\n{indent_str}cursor.execute(f"ALTER TABLE {{safe_ident}} ...")'
+                                    else:
+                                        fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE param = ?", (param_value,))'
+                                    ast_findings.append(PatchFinding(
+                                        severity="CRITICAL",
+                                        category="SQL Injection via Dynamic String Formatting",
+                                        line_number=node.lineno,
+                                        problem_code=line_str.strip(),
+                                        fixed_code=fixed.strip(),
+                                        explanation="SQL query constructed with dynamic concatenation/interpolation inside execute(). Use parameterized queries with tuples instead.",
+                                        github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                        cwe_id="CWE-89",
+                                        language="python"
+                                    ))
 
                 # Feature 4: Insecure PyYAML Deserialization (CWE-502)
                 is_yaml_load = False
@@ -586,7 +606,10 @@ class SurgicalAnalyzer:
                             line_str = lines_by_num.get(node.lineno, "text(...)")
                             indent = len(line_str) - len(line_str.lstrip())
                             indent_str = " " * indent
-                            fixed = f'{indent_str}# Safe Parameterized ORM Query\n{indent_str}text("SELECT * FROM table WHERE id = :id").bindparams(id=safe_value)'
+                            if re.search(r'(?i)\b(ALTER|DROP|CREATE)\b', combined):
+                                fixed = f'{indent_str}# SECURE DDL: Validate identifier syntax before executing DDL\n{indent_str}# if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", str(identifier)): raise ValueError("Invalid identifier")\n{indent_str}text("ALTER TABLE ...")'
+                            else:
+                                fixed = f'{indent_str}# Safe Parameterized ORM Query\n{indent_str}text("SELECT * FROM table WHERE id = :id").bindparams(id=safe_value)'
                             ast_findings.append(PatchFinding(
                                 severity="CRITICAL",
                                 category="Raw SQL Injection in ORM text()/raw()",
@@ -899,7 +922,10 @@ class SurgicalAnalyzer:
                                 if f_m:
                                     q_pre = f_m.group(1).rstrip("'\" ").strip().rstrip("=").strip()
                                     var_n = f_m.group(2).strip()
-                                    fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
+                                    if re.search(r'(?i)\b(ALTER|DROP|CREATE)\b', q_pre):
+                                        fixed = f'{indent_str}# SECURE DDL: Validate identifier syntax before execution\n{indent_str}# if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", {var_n}): raise ValueError("Invalid identifier")'
+                                    else:
+                                        fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
                                 else:
                                     fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = ?", (user_input,))'
                                 findings.append(PatchFinding(
