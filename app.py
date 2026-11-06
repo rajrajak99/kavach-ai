@@ -11,10 +11,25 @@ Graphite Cybersecurity Design System:
 - Success: #36C995 | Warning: #E5A84B | Critical: #EF6674
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Force repo root to index 0 of sys.path to guarantee local modules take precedence
+_REPO_ROOT = str(Path(__file__).resolve().parent)
+if _REPO_ROOT not in sys.path or sys.path[0] != _REPO_ROOT:
+    if _REPO_ROOT in sys.path:
+        sys.path.remove(_REPO_ROOT)
+    sys.path.insert(0, _REPO_ROOT)
+
+# If an older kavach_license module was pre-cached in sys.modules, purge it
+if "kavach_license" in sys.modules:
+    if not hasattr(sys.modules["kavach_license"], "generate_signed_license"):
+        del sys.modules["kavach_license"]
+
 import streamlit as st
 import html
 import base64
-import os
 import json
 import datetime
 import time
@@ -27,7 +42,10 @@ try:
 except ImportError:
     HAS_ACE = False
 
-from kavach_license import PlanTier, LicenseManager, generate_signed_license, verify_signed_license
+try:
+    from kavach_license import PlanTier, LicenseManager, generate_signed_license, verify_signed_license
+except (ImportError, AttributeError):
+    from core.license_manager import PlanTier, LicenseManager, generate_signed_license, verify_signed_license
 from core.auth_store import get_account_store
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.diff_parser import DiffParser

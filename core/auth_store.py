@@ -18,12 +18,15 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
 
 try:
-    from kavach_license import generate_signed_license, verify_signed_license, PlanTier
-except ImportError:
-    _root = str(Path(__file__).resolve().parent.parent)
-    if _root not in sys.path:
-        sys.path.insert(0, _root)
-    from kavach_license import generate_signed_license, verify_signed_license, PlanTier
+    from core.license_manager import generate_signed_license, verify_signed_license, PlanTier
+except (ImportError, AttributeError):
+    try:
+        from kavach_license import generate_signed_license, verify_signed_license, PlanTier
+    except ImportError:
+        _root = str(Path(__file__).resolve().parent.parent)
+        if _root not in sys.path:
+            sys.path.insert(0, _root)
+        from kavach_license import generate_signed_license, verify_signed_license, PlanTier
 
 class AccountStore:
     """
