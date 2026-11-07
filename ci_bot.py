@@ -27,7 +27,9 @@ from core.license_manager import LicenseManager, PlanTier
 
 IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
-    '.pytest_cache', 'dist', 'build', '.idea', '.vscode'
+    '.pytest_cache', 'dist', 'build', '.idea', '.vscode', 'samples',
+    'tests', 'test', 'scratch', 'leads', 'docs', 'assets', 'benchmarks',
+    'scripts'
 }
 SUPPORTED_EXTS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.c'}
 
@@ -45,19 +47,19 @@ def get_git_diff() -> Optional[str]:
         if base_ref:
             cmd = ["git", "diff", f"origin/{base_ref}...HEAD", "--"]
             p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            if p.returncode == 0 and p.stdout.strip():
+            if p.returncode == 0:
                 return p.stdout
 
         # Fallback 1: git diff against HEAD~1
         cmd = ["git", "diff", "HEAD~1"]
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        if p.returncode == 0 and p.stdout.strip():
+        if p.returncode == 0:
             return p.stdout
 
         # Fallback 2: git diff unstaged/staged
         cmd = ["git", "diff", "HEAD"]
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        if p.returncode == 0 and p.stdout.strip():
+        if p.returncode == 0:
             return p.stdout
     except Exception:
         pass
@@ -75,6 +77,8 @@ def scan_repository_files(target_dir: Path) -> List[ParsedFileDiff]:
         for root, dirs, files in os.walk(target_dir):
             dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
             for f in files:
+                if f.startswith(("demo_", "benchmark_", "test_")) or "mock" in f.lower():
+                    continue
                 p = Path(root) / f
                 if p.suffix.lower() in SUPPORTED_EXTS and not DiffParser.is_noise_file(f):
                     candidates.append(p)
@@ -261,7 +265,7 @@ def main():
     git_diff_raw = get_git_diff()
     file_diffs = []
 
-    if git_diff_raw:
+    if git_diff_raw is not None:
         print("[+] Detected Git changeset via Git CLI. Parsing diff hunks...")
         file_diffs = diff_parser.parse_git_diff(git_diff_raw)
         total_files = len(file_diffs)
