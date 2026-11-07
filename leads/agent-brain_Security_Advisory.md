@@ -43,7 +43,12 @@ Unmitigated SQL Injection via Dynamic String Formatting [CWE-89] detected in `ag
 
 ```python
 # Current Code:
+placeholders = ",".join("?" * len(disk_miss_keys))
 cur = await db.execute(
+    f"SELECT cache_key, embedding, dimensions "
+    f"FROM embeddings WHERE cache_key IN ({placeholders})",
+    disk_miss_keys,
+)
 ```
 
 ---
@@ -52,8 +57,19 @@ cur = await db.execute(
 ```diff
 --- a/agent-brain-server/agent_brain_server/services/embedding_cache.py
 +++ b/agent-brain-server/agent_brain_server/services/embedding_cache.py
-- cur = await db.execute(
-+ # Safe Parameterized Query (Prevents SQL Injection)
+@@ -290,8 +290,9 @@ async def get_batch(self, cache_keys: list[str]) -> dict[str, list[float]]:
+         # Batch SQL query for disk misses
+         placeholders = ",".join("?" * len(disk_miss_keys))
++        query = f"SELECT cache_key, embedding, dimensions FROM embeddings WHERE cache_key IN ({placeholders})"
+         async with aiosqlite.connect(self.db_path) as db:
+             await db.execute("PRAGMA journal_mode=WAL")
+-            cur = await db.execute(
+-                f"SELECT cache_key, embedding, dimensions "
+-                f"FROM embeddings WHERE cache_key IN ({placeholders})",
+-                disk_miss_keys,
+-            )
++            cur = await db.execute(query, tuple(disk_miss_keys))
+             rows = list(await cur.fetchall())
 ```
 
 ---

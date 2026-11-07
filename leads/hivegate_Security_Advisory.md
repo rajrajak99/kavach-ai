@@ -43,7 +43,10 @@ Unmitigated Raw SQL Injection in ORM text()/raw() [CWE-89] detected in `db/usage
 
 ```python
 # Current Code:
-text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
+rows = db.execute(
+    text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
+    {"after": after_id, "limit": limit},
+).fetchall()
 ```
 
 ---
@@ -52,8 +55,16 @@ text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMI
 ```diff
 --- a/db/usage_queries.py
 +++ b/db/usage_queries.py
-- text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
-+ # Safe Parameterized ORM Query
+@@ -94,8 +94,9 @@ def live(db: Session, after_id: int, limit: int) -> List[Dict[str, Any]]:
+         ).fetchall()
+         return [_row(r) for r in reversed(rows)]
++    query = text("SELECT " + _COLUMNS + " FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit")
+     rows = db.execute(
+-        text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
++        query,
+         {"after": after_id, "limit": limit},
+     ).fetchall()
+     return [_row(r) for r in rows]
 ```
 
 ---

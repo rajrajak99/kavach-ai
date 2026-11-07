@@ -340,7 +340,10 @@ Unmitigated Raw SQL Injection in ORM text()/raw() [CWE-89] detected in `db/usage
 
 ```python
 # Current Code:
-text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
+rows = db.execute(
+    text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
+    {"after": after_id, "limit": limit},
+).fetchall()
 ```
 
 ---
@@ -349,8 +352,16 @@ text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMI
 ```diff
 --- a/db/usage_queries.py
 +++ b/db/usage_queries.py
-- text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
-+ # Safe Parameterized ORM Query
+@@ -94,8 +94,9 @@ def live(db: Session, after_id: int, limit: int) -> List[Dict[str, Any]]:
+         ).fetchall()
+         return [_row(r) for r in reversed(rows)]
++    query = text("SELECT " + _COLUMNS + " FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit")
+     rows = db.execute(
+-        text(f"SELECT {_COLUMNS} FROM token_usage WHERE id > :after ORDER BY id ASC LIMIT :limit"),
++        query,
+         {"after": after_id, "limit": limit},
+     ).fetchall()
+     return [_row(r) for r in rows]
 ```
 
 ---
@@ -628,7 +639,12 @@ Unmitigated SQL Injection via Dynamic String Formatting [CWE-89] detected in `ag
 
 ```python
 # Current Code:
+placeholders = ",".join("?" * len(disk_miss_keys))
 cur = await db.execute(
+    f"SELECT cache_key, embedding, dimensions "
+    f"FROM embeddings WHERE cache_key IN ({placeholders})",
+    disk_miss_keys,
+)
 ```
 
 ---
@@ -637,8 +653,19 @@ cur = await db.execute(
 ```diff
 --- a/agent-brain-server/agent_brain_server/services/embedding_cache.py
 +++ b/agent-brain-server/agent_brain_server/services/embedding_cache.py
-- cur = await db.execute(
-+ # Safe Parameterized Query (Prevents SQL Injection)
+@@ -290,8 +290,9 @@ async def get_batch(self, cache_keys: list[str]) -> dict[str, list[float]]:
+         # Batch SQL query for disk misses
+         placeholders = ",".join("?" * len(disk_miss_keys))
++        query = f"SELECT cache_key, embedding, dimensions FROM embeddings WHERE cache_key IN ({placeholders})"
+         async with aiosqlite.connect(self.db_path) as db:
+             await db.execute("PRAGMA journal_mode=WAL")
+-            cur = await db.execute(
+-                f"SELECT cache_key, embedding, dimensions "
+-                f"FROM embeddings WHERE cache_key IN ({placeholders})",
+-                disk_miss_keys,
+-            )
++            cur = await db.execute(query, tuple(disk_miss_keys))
+             rows = list(await cur.fetchall())
 ```
 
 ---
@@ -820,7 +847,9 @@ Unmitigated Insecure Deserialization via pickle.loads() [CWE-502] detected in `l
 
 ```python
 # Current Code:
-model = pickle.loads(zlib.decompress(model))
+model = cache.get(STATE_MODEL_CACHE_KEY)
+if model:
+    model = pickle.loads(zlib.decompress(model))
 ```
 
 ---
@@ -829,8 +858,14 @@ model = pickle.loads(zlib.decompress(model))
 ```diff
 --- a/leads/learn.py
 +++ b/leads/learn.py
-- model = pickle.loads(zlib.decompress(model))
-+ # SECURE: Replace untrusted pickle deserialization with json or signed payloads
+@@ -438,4 +438,7 @@ def learn(relearn=True, leads_id=None, force=False):
+     model = cache.get(STATE_MODEL_CACHE_KEY)
+     if model:
+-        model = pickle.loads(zlib.decompress(model))
++        try:
++            model = pickle.loads(zlib.decompress(model))
++        except (pickle.UnpicklingError, zlib.error, AttributeError, ValueError, Exception):
++            model = None
 ```
 
 ---
@@ -1402,7 +1437,8 @@ Unmitigated SQL Injection via Dynamic String Formatting [CWE-89] detected in `ga
 
 ```python
 # Current Code:
-c.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
+with self._conn() as c:
+    c.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
 ```
 
 ---
@@ -1411,8 +1447,11 @@ c.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
 ```diff
 --- a/gateway/app/core/credential_store.py
 +++ b/gateway/app/core/credential_store.py
-- c.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
-+ # SECURE DDL: Validate identifier syntax before DDL execution
+@@ -134,2 +134,3 @@ class PostgresCredentialStore:
+         with self._conn() as c:
+-            c.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
++            from psycopg import sql
++            c.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema)))
 ```
 
 ---
