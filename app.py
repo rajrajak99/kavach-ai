@@ -11,8 +11,8 @@ Billion-Dollar Enterprise SaaS Design System (Linear / Stripe / Vercel):
 - Muted Text: #64748B (understated slate)
 - Primary Border: #252D38 (hairline graphite border)
 - Subtle Border: #1C2530 (inner divider)
-- Premium Accent: #C6A46A (champagne gold)
-- Accent Hover: #D8B982 (soft gold hover)
+- Premium Accent: #C6A76A (champagne gold)
+- Accent Hover: #D8BB82 (soft gold hover)
 - Accent Soft Background: #211D16 (subtle gold badge/nav tint)
 - Success: #22C55E (emerald green)
 - Warning: #F59E0B (amber)
@@ -618,7 +618,7 @@ components.html('''
                     const idoc = iframe.contentDocument || iframe.contentWindow.document;
                     if (!idoc) return;
                     if (idoc.body) {
-                        idoc.body.style.backgroundColor = '#0B0E13';
+                        idoc.body.style.backgroundColor = '#111419';
                         idoc.body.style.color = '#F1F5F9';
                     }
                     var styleEl = idoc.getElementById('kavach-dark-editor-override');
@@ -629,17 +629,17 @@ components.html('''
                     }
                     styleEl.textContent = [
                         '.ace_editor, .ace_editor * { font-family: "JetBrains Mono", monospace !important; }',
-                        '.ace_editor { background-color: #0B0E13 !important; color: #F1F5F9 !important; }',
-                        '.ace_gutter { background-color: #0D1015 !important; color: #64748B !important; border-right: 1px solid #252D38 !important; }',
+                        '.ace_editor { background-color: #111419 !important; color: #F1F5F9 !important; border: 1px solid #252D38 !important; border-radius: 8px !important; }',
+                        '.ace_gutter { background-color: #1A1D23 !important; color: #64748B !important; border-right: 1px solid #252D38 !important; }',
                         '.ace_gutter-cell { color: #64748B !important; }',
                         '.ace_gutter-active-line { background-color: rgba(255, 255, 255, 0.04) !important; color: #F1F5F9 !important; }',
-                        '.ace_scroller, .ace_content { background-color: #0B0E13 !important; }',
-                        '.ace_cursor { border-left: 2px solid #C6A46A !important; }',
+                        '.ace_scroller, .ace_content { background-color: #111419 !important; }',
+                        '.ace_cursor { border-left: 2px solid #C6A76A !important; }',
                         '.ace_marker-layer .ace_active-line { background: rgba(255, 255, 255, 0.02) !important; }',
-                        '.ace_marker-layer .ace_selection { background: #171D27 !important; }',
+                        '.ace_marker-layer .ace_selection { background: #252D38 !important; }',
                         '.ace_text-layer { color: #F1F5F9 !important; }',
                         '.ace_comment, .ace_comment.ace_line, .ace_comment.ace_block { color: #64748B !important; font-style: italic !important; }',
-                        '.ace_keyword, .ace_keyword.ace_operator, .ace_storage { color: #C6A46A !important; font-weight: 600 !important; }',
+                        '.ace_keyword, .ace_keyword.ace_operator, .ace_storage { color: #C6A76A !important; font-weight: 600 !important; }',
                         '.ace_string, .ace_string.ace_regexp { color: #22C55E !important; }',
                         '.ace_function, .ace_support.ace_function { color: #94A3B8 !important; }',
                         '.ace_variable, .ace_identifier { color: #F1F5F9 !important; }',
@@ -665,11 +665,12 @@ st.markdown("""
         --bg-sidebar: #0D1015;
         --bg-card: #121720;
         --bg-elevated: #171D27;
-        --bg-input: #0B0E13;
+        --bg-editor: #111419;
+        --gutter-editor: #1A1D23;
         --border: #252D38;
         --border-subtle: #1C2530;
-        --accent: #C6A46A;
-        --accent-hover: #D8B982;
+        --accent: #C6A76A;
+        --accent-hover: #D8BB82;
         --accent-soft: #211D16;
         --text-primary: #F1F5F9;
         --text-secondary: #94A3B8;
@@ -677,24 +678,15 @@ st.markdown("""
         
         /* Semantic States */
         --success: #22C55E;
-        --success-bg: rgba(34, 197, 94, 0.10);
-        --success-border: rgba(34, 197, 94, 0.25);
-        
         --warning: #F59E0B;
-        --warning-bg: rgba(245, 158, 11, 0.10);
-        --warning-border: rgba(245, 158, 11, 0.25);
-        
         --error: #EF4444;
-        --error-bg: rgba(239, 68, 68, 0.10);
-        --error-border: rgba(239, 68, 68, 0.25);
-        
-        --editor-bg: #0B0E13;
     }
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         color: #F1F5F9 !important;
         background-color: #090B0F !important;
+        -webkit-font-smoothing: antialiased;
     }
     .stApp {
         background-color: #090B0F !important;
@@ -721,16 +713,36 @@ st.markdown("""
         visibility: hidden !important;
     }
 
+    /* 3. Main Content Spacing & Responsive Canvas */
     .block-container {
-        padding-top: 1.25rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 2.5rem !important;
-        padding-left: 1.75rem !important;
-        padding-right: 1.75rem !important;
-        max-width: 1280px !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 1320px !important;
         margin: 0 auto !important;
     }
 
-    /* 3. Sidebar Container */
+    /* 4. Elimination of Nested Double Borders and Generic Box Wrapping */
+    div[data-testid="stContainer"] {
+        border: none !important;
+        background: transparent !important;
+    }
+    div[data-testid="stVerticalBlock"]:has(> div[data-testid="stContainer"]) {
+        gap: 0 !important;
+    }
+    /* Scrollable Container (e.g. Diagnostics Panel) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #252D38 !important;
+        border-radius: 8px !important;
+        background: #111419 !important;
+        padding: 10px 12px !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] > div {
+        background: transparent !important;
+    }
+
+    /* 5. Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #0D1015 !important;
         border-right: 1px solid #252D38 !important;
@@ -740,14 +752,15 @@ st.markdown("""
     }
     [data-testid="stSidebarContent"] {
         background-color: #0D1015 !important;
-        padding-top: 1.5rem !important;
+        padding-top: 1.25rem !important;
     }
 
-    /* 4. Top Navbar */
+    /* 6. Top Navbar Alignment & Spacing */
     .brand-wrap {
         display: flex;
         align-items: center;
         gap: 10px;
+        height: 34px;
     }
     .brand-logo-img {
         width: 24px;
@@ -792,13 +805,13 @@ st.markdown("""
     }
     .plan-pill-pro {
         color: #F1F5F9;
-        border-color: #C6A46A;
+        border-color: #252D38;
         background: #171D27;
     }
     .plan-pill-team {
-        color: #C6A46A;
-        border-color: #C6A46A;
-        background: #211D16;
+        color: #F1F5F9;
+        border-color: #252D38;
+        background: #171D27;
     }
     .status-dot-green {
         width: 6px;
@@ -808,23 +821,27 @@ st.markdown("""
         display: inline-block;
     }
 
-    /* 5. Segmented Control Navbar */
+    /* 7. Segmented Control Navbar */
     div[data-testid="stSegmentedControl"] {
         background: #121720 !important;
         border: 1px solid #252D38 !important;
         border-radius: 8px !important;
         padding: 2px !important;
+        height: 34px !important;
+        display: flex !important;
+        align-items: center !important;
     }
     div[data-testid="stSegmentedControl"] button {
         background: transparent !important;
         color: #94A3B8 !important;
-        font-size: 13px !important;
+        font-size: 12.5px !important;
         font-weight: 500 !important;
         border-radius: 6px !important;
         border: none !important;
-        padding: 4px 14px !important;
-        height: 32px !important;
-        min-height: 32px !important;
+        padding: 0 12px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        line-height: 28px !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stSegmentedControl"] button:hover {
@@ -833,48 +850,43 @@ st.markdown("""
     }
     div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
         background: #211D16 !important;
-        color: #C6A46A !important;
+        color: #C6A76A !important;
         font-weight: 600 !important;
-        border: 1px solid rgba(198, 164, 106, 0.40) !important;
+        border: 1px solid rgba(198, 167, 106, 0.40) !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* 6. Buttons & Controls */
+    /* 8. Buttons & Controls Hierarchy */
     div[data-testid="stButton"] button {
         white-space: nowrap !important;
-        text-overflow: clip !important;
-        overflow: visible !important;
         font-family: 'Inter', sans-serif !important;
         border-radius: 8px !important;
+        height: 34px !important;
+        min-height: 34px !important;
     }
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: #C6A46A !important;
+        background: #C6A76A !important;
         color: #090B0F !important;
         font-weight: 600 !important;
-        font-size: 13px !important;
-        height: 36px !important;
-        min-height: 36px !important;
-        padding: 0 18px !important;
+        font-size: 12.5px !important;
+        padding: 0 16px !important;
         border: none !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
-        background: #D8B982 !important;
+        background: #D8BB82 !important;
         color: #090B0F !important;
-        box-shadow: 0 3px 10px rgba(198, 164, 106, 0.25) !important;
-        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(198, 167, 106, 0.25) !important;
+        transform: translateY(-0.5px);
     }
     div[data-testid="stButton"] > button[kind="secondary"] {
         background: transparent !important;
         color: #F1F5F9 !important;
         border: 1px solid #252D38 !important;
-        font-size: 12.5px !important;
+        font-size: 12px !important;
         font-weight: 500 !important;
-        height: 36px !important;
-        min-height: 36px !important;
-        border-radius: 8px !important;
-        padding: 0 14px !important;
+        padding: 0 12px !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stButton"] > button[kind="secondary"]:hover {
@@ -882,19 +894,6 @@ st.markdown("""
         border-color: #64748B !important;
         color: #F1F5F9 !important;
     }
-
-    /* Anti-Dimming */
-    [data-stale="true"],
-    .stApp [data-stale="true"],
-    div[data-testid="stAppViewBlockContainer"] [data-stale="true"],
-    div[data-testid="stVerticalBlock"] [data-stale="true"],
-    div[data-testid="stAppViewContainer"] [data-stale="true"] {
-        opacity: 1 !important;
-        filter: none !important;
-        transition: none !important;
-    }
-
-    /* Active / Disabled Plan Button */
     div[data-testid="stButton"] > button:disabled {
         background: rgba(34, 197, 94, 0.10) !important;
         color: #22C55E !important;
@@ -905,14 +904,14 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Top Popover Button */
+    /* Popovers */
     div[data-testid="stPopover"] > button {
         background: #121720 !important;
         color: #F1F5F9 !important;
         border: 1px solid #252D38 !important;
         font-size: 12px !important;
-        height: 36px !important;
-        min-height: 36px !important;
+        height: 34px !important;
+        min-height: 34px !important;
         border-radius: 8px !important;
         padding: 0 12px !important;
         transition: all 0.15s ease !important;
@@ -925,28 +924,28 @@ st.markdown("""
     div[data-testid="stPopoverBody"] {
         background: #171D27 !important;
         border: 1px solid #252D38 !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important;
     }
 
-    /* 7. Hero & Positioning Banner */
+    /* 9. Hero & Positioning Banner */
     .hero-container {
         text-align: center;
-        padding: 18px 0 16px 0;
-        margin-bottom: 8px;
+        padding: 16px 0 14px 0;
+        margin-bottom: 4px;
     }
     .hero-heading {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 600;
         letter-spacing: -0.025em;
         color: #F1F5F9;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
     .hero-lead {
-        font-size: 13.5px;
+        font-size: 13px;
         color: #94A3B8;
-        max-width: 660px;
-        margin: 0 auto 12px auto;
+        max-width: 640px;
+        margin: 0 auto 10px auto;
         line-height: 1.5;
     }
     .trust-strip {
@@ -957,7 +956,7 @@ st.markdown("""
         color: #64748B;
         background: #121720;
         border: 1px solid #252D38;
-        padding: 4px 14px;
+        padding: 3px 12px;
         border-radius: 9999px;
     }
     .trust-dot {
@@ -977,11 +976,11 @@ st.markdown("""
         transition: color 0.15s;
     }
     .trust-link:hover {
-        color: #C6A46A;
+        color: #F1F5F9;
         text-decoration: underline;
     }
 
-    /* 8. Code Editor & Toolbars */
+    /* 10. Toolbar & Header Labels */
     .ide-tab-label {
         display: inline-flex;
         align-items: center;
@@ -991,9 +990,10 @@ st.markdown("""
         color: #F1F5F9;
         background: #171D27;
         border: 1px solid #252D38;
-        padding: 4px 12px;
+        padding: 0 12px;
         border-radius: 8px;
-        height: 36px;
+        height: 34px;
+        line-height: 34px;
         box-sizing: border-box;
         white-space: nowrap !important;
     }
@@ -1013,73 +1013,78 @@ st.markdown("""
         border: 1px solid #252D38 !important;
         border-radius: 8px !important;
         color: #F1F5F9 !important;
-        font-size: 12.5px !important;
+        font-size: 12px !important;
+        height: 34px !important;
+        min-height: 34px !important;
     }
     div[data-testid="stTextInput"] input,
     div[data-testid="stPasswordInput"] input {
-        background: #0B0E13 !important;
+        background: #111419 !important;
         border: 1px solid #252D38 !important;
         border-radius: 8px !important;
         color: #F1F5F9 !important;
-        font-size: 13px !important;
+        font-size: 12.5px !important;
     }
     div[data-testid="stTextInput"] input:focus,
     div[data-testid="stPasswordInput"] input:focus,
     div[data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within {
-        border-color: #C6A46A !important;
-        box-shadow: 0 0 0 1px rgba(198, 164, 106, 0.3) !important;
+        border-color: #C6A76A !important;
+        box-shadow: 0 0 0 1px rgba(198, 167, 106, 0.3) !important;
     }
 
-    /* Custom Component & Ace Editor Iframe Enclosure */
-    div[data-testid="stCustomComponentV1"],
+    /* 11. Code Editor Container (No Double Borders) */
+    div[data-testid="stCustomComponentV1"] {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
     div[data-testid="stCustomComponentV1"] iframe,
-    iframe[title*="ace"],
-    iframe {
-        background-color: #0B0E13 !important;
-        background: #0B0E13 !important;
+    iframe[title*="ace"] {
+        background-color: #111419 !important;
         border: 1px solid #252D38 !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         color-scheme: dark !important;
     }
 
-    /* Fallback Textarea Editor - Eliminates White Backgrounds on BaseWeb Containers */
+    /* Fallback Textarea Editor (Clean Single Border) */
     div[data-testid="stTextArea"],
     div[data-testid="stTextArea"] > div,
-    div[data-testid="stTextArea"] div[data-baseweb="textarea"],
     div[data-testid="stTextArea"] div[data-baseweb="base-input"] {
-        background-color: #0B0E13 !important;
-        background: #0B0E13 !important;
+        background: transparent !important;
+        border: none !important;
+    }
+    div[data-testid="stTextArea"] div[data-baseweb="textarea"] {
+        background-color: #111419 !important;
         border: 1px solid #252D38 !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
     }
     div[data-testid="stTextArea"] textarea {
-        background-color: #0B0E13 !important;
-        background: #0B0E13 !important;
+        background-color: #111419 !important;
         color: #F1F5F9 !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 13px !important;
         line-height: 1.6 !important;
         border: none !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         padding: 12px 14px !important;
     }
     div[data-testid="stTextArea"] textarea:focus {
-        border-color: #C6A46A !important;
-        box-shadow: 0 0 0 1px rgba(198, 164, 106, 0.3) !important;
+        border-color: #C6A76A !important;
+        box-shadow: 0 0 0 1px rgba(198, 167, 106, 0.3) !important;
     }
 
-    /* ACE Editor Specific Tokens & Syntax Highlighting */
+    /* ACE Editor Tokens & Hierarchy */
     .ace_editor, .ace_editor * {
         font-family: 'JetBrains Mono', monospace !important;
     }
     .ace_editor {
-        background-color: #0B0E13 !important;
+        background-color: #111419 !important;
         color: #F1F5F9 !important;
         border: 1px solid #252D38 !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
     }
     .ace_gutter {
-        background-color: #0D1015 !important;
+        background-color: #1A1D23 !important;
         color: #64748B !important;
         border-right: 1px solid #252D38 !important;
     }
@@ -1091,16 +1096,16 @@ st.markdown("""
         color: #F1F5F9 !important;
     }
     .ace_scroller, .ace_content {
-        background-color: #0B0E13 !important;
+        background-color: #111419 !important;
     }
     .ace_cursor {
-        border-left: 2px solid #C6A46A !important;
+        border-left: 2px solid #C6A76A !important;
     }
     .ace_marker-layer .ace_active-line {
         background: rgba(255, 255, 255, 0.02) !important;
     }
     .ace_marker-layer .ace_selection {
-        background: #171D27 !important;
+        background: #252D38 !important;
     }
     .ace_text-layer {
         color: #F1F5F9 !important;
@@ -1110,7 +1115,7 @@ st.markdown("""
         font-style: italic !important;
     }
     .ace_keyword, .ace_keyword.ace_operator, .ace_storage, .ace_storage.ace_type {
-        color: #C6A46A !important;
+        color: #C6A76A !important;
         font-weight: 600 !important;
     }
     .ace_string, .ace_string.ace_regexp {
@@ -1126,21 +1131,11 @@ st.markdown("""
         color: #F59E0B !important;
     }
 
-    /* 9. Container & Panels */
-    div[data-testid="stVerticalBlock"]:has(> div[data-testid="stContainer"]) {
-        gap: 0 !important;
-    }
-    div[data-testid="stContainer"] {
-        border: 1px solid #252D38 !important;
-        border-radius: 10px !important;
-        background: #121720 !important;
-    }
-
-    /* CrowdStrike / Datadog Terminal Empty State */
+    /* 12. Diagnostics Panel & Empty State */
     .terminal-empty-box {
-        background: #121720;
+        background: #171D27;
         border: 1px solid #252D38;
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 16px 18px;
         font-family: 'JetBrains Mono', monospace;
     }
@@ -1160,7 +1155,7 @@ st.markdown("""
     .term-badge {
         font-size: 10px;
         color: #94A3B8;
-        background: #171D27;
+        background: #111419;
         border: 1px solid #252D38;
         padding: 1px 6px;
         border-radius: 4px;
@@ -1175,7 +1170,7 @@ st.markdown("""
         gap: 6px;
     }
     .term-headline {
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 600;
         color: #F1F5F9;
         margin-bottom: 4px;
@@ -1183,17 +1178,18 @@ st.markdown("""
     }
     .term-subhead {
         font-size: 11.5px;
-        color: #64748B;
-        margin-bottom: 14px;
+        color: #94A3B8;
+        margin-bottom: 12px;
         font-family: 'Inter', sans-serif;
+        line-height: 1.4;
     }
     .term-specs-grid {
         display: flex;
         flex-direction: column;
         gap: 6px;
-        background: #0B0E13;
+        background: #111419;
         border: 1px solid #252D38;
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 10px 12px;
         margin-bottom: 12px;
     }
@@ -1208,6 +1204,7 @@ st.markdown("""
     }
     .spec-val {
         color: #F1F5F9;
+        font-family: 'JetBrains Mono', monospace;
     }
     .term-footer-tip {
         font-size: 11px;
@@ -1216,11 +1213,11 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* 10. Diagnostic Banners */
+    /* 13. Diagnostic Banners */
     .diag-banner {
         border-radius: 8px;
-        padding: 12px 14px;
-        margin-bottom: 10px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
         display: flex;
         align-items: flex-start;
         gap: 10px;
@@ -1247,11 +1244,11 @@ st.markdown("""
         color: #F59E0B;
     }
 
-    /* 11. Security Posture Scorecard */
+    /* 14. Security Posture Scorecard */
     .posture-card {
-        background: #121720;
+        background: #171D27;
         border: 1px solid #252D38;
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 12px 14px;
         margin-bottom: 10px;
     }
@@ -1287,7 +1284,7 @@ st.markdown("""
         color: #EF4444;
     }
     .posture-idle {
-        background: #171D27;
+        background: #111419;
         border: 1px solid #252D38;
         color: #64748B;
     }
@@ -1305,11 +1302,11 @@ st.markdown("""
     .posture-bar-perf { background: #94A3B8; height: 100%; transition: width 0.3s; }
     .posture-bar-clean { background: #22C55E; height: 100%; transition: width 0.3s; }
 
-    /* 12. Unified Diff Visualizer */
+    /* 15. Unified Diff Visualizer */
     .diff-unified-box {
         background: #0B0E13;
         border: 1px solid #252D38;
-        border-radius: 8px;
+        border-radius: 6px;
         font-family: 'JetBrains Mono', monospace;
         font-size: 11.5px;
         line-height: 1.6;
@@ -1338,17 +1335,17 @@ st.markdown("""
         user-select: none;
     }
 
-    /* 13. Taint Flow Breadcrumb */
+    /* 16. Taint Flow Breadcrumb */
     .taint-flow-box {
         display: inline-flex;
         align-items: center;
         gap: 6px;
         font-size: 11px;
         font-family: 'JetBrains Mono', monospace;
-        background: #171D27;
+        background: #111419;
         border: 1px solid #252D38;
         border-radius: 6px;
-        padding: 4px 10px;
+        padding: 4px 8px;
         margin-bottom: 8px;
         color: #94A3B8;
     }
@@ -1358,16 +1355,16 @@ st.markdown("""
         font-weight: 500;
     }
 
-    /* 14. Posture Dashboard KPI Cards */
+    /* 17. Posture Dashboard KPI Cards */
     .kpi-card {
         background: #121720;
         border: 1px solid #252D38;
-        border-radius: 10px;
-        padding: 16px 18px;
+        border-radius: 8px;
+        padding: 14px 16px;
     }
     .kpi-title {
         font-size: 11px;
-        font-weight: 500;
+        font-weight: 600;
         color: #64748B;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -1381,15 +1378,15 @@ st.markdown("""
         margin-bottom: 4px;
     }
     .kpi-sub {
-        font-size: 11px;
+        font-size: 11.5px;
         color: #94A3B8;
     }
 
-    /* 15. Benchmark Matrix Table */
+    /* 18. Benchmark Matrix Table */
     .bench-card {
         background: #121720;
         border: 1px solid #252D38;
-        border-radius: 10px;
+        border-radius: 8px;
         overflow: hidden;
     }
     .bench-table {
@@ -1401,15 +1398,15 @@ st.markdown("""
         background: #171D27;
         color: #94A3B8;
         font-weight: 600;
-        padding: 12px 14px;
+        padding: 10px 14px;
         text-align: left;
         border-bottom: 1px solid #252D38;
-        font-size: 11.5px;
+        font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
     .bench-td {
-        padding: 12px 14px;
+        padding: 11px 14px;
         border-bottom: 1px solid #1C2530;
         color: #94A3B8;
     }
@@ -1420,12 +1417,12 @@ st.markdown("""
         color: #F1F5F9 !important;
     }
 
-    /* 16. Pricing Cards */
+    /* 19. Pricing Cards */
     .pricing-card {
         background: #121720;
         border: 1px solid #252D38;
-        border-radius: 10px;
-        padding: 24px 20px;
+        border-radius: 8px;
+        padding: 22px 18px;
         height: 100%;
         display: flex;
         flex-direction: column;
@@ -1433,7 +1430,7 @@ st.markdown("""
         box-sizing: border-box;
     }
     .pricing-card-featured {
-        border-color: #C6A46A !important;
+        border-color: #252D38 !important;
         background: #171D27 !important;
     }
     .pricing-card-active {
@@ -1443,13 +1440,13 @@ st.markdown("""
         position: absolute;
         top: -10px;
         right: 16px;
-        background: #211D16;
-        color: #C6A46A;
+        background: #171D27;
+        color: #F1F5F9;
         font-size: 10px;
         font-weight: 600;
         padding: 2px 8px;
         border-radius: 4px;
-        border: 1px solid #C6A46A;
+        border: 1px solid #252D38;
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
@@ -1460,7 +1457,7 @@ st.markdown("""
         margin-bottom: 8px;
     }
     .card-tier-amt {
-        font-size: 28px;
+        font-size: 26px;
         font-weight: 700;
         color: #F1F5F9;
         font-family: 'JetBrains Mono', monospace;
@@ -1468,8 +1465,8 @@ st.markdown("""
     }
     .card-tier-sub {
         font-size: 11.5px;
-        color: #64748B;
-        margin-bottom: 18px;
+        color: #94A3B8;
+        margin-bottom: 16px;
         min-height: 32px;
         line-height: 1.4;
     }
@@ -1481,7 +1478,7 @@ st.markdown("""
         margin-bottom: 16px;
     }
 
-    /* 17. Streamlit Tabs & Expander */
+    /* 20. Streamlit Tabs & Expanders */
     div[data-testid="stTabs"] button {
         color: #94A3B8 !important;
         font-size: 12.5px !important;
@@ -1491,18 +1488,28 @@ st.markdown("""
         background: transparent !important;
     }
     div[data-testid="stTabs"] button[aria-selected="true"] {
-        color: #C6A46A !important;
-        border-bottom: 2px solid #C6A46A !important;
+        color: #C6A76A !important;
+        border-bottom: 2px solid #C6A76A !important;
         font-weight: 600 !important;
     }
     details[data-testid="stExpander"] {
-        background: #121720 !important;
+        background: #171D27 !important;
         border: 1px solid #252D38 !important;
         border-radius: 8px !important;
+        margin-bottom: 8px !important;
     }
     details[data-testid="stExpander"] summary {
         color: #F1F5F9 !important;
-        font-size: 13px !important;
+        font-size: 12.5px !important;
+        font-weight: 500 !important;
+        padding: 8px 12px !important;
+    }
+    details[data-testid="stExpander"] summary:hover {
+        background: rgba(255, 255, 255, 0.02) !important;
+    }
+    details[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {
+        padding: 10px 12px 14px 12px !important;
+        border-top: 1px solid #1C2530 !important;
     }
 
     /* Alert Banners */
@@ -1526,16 +1533,65 @@ st.markdown("""
         margin-top: 10px;
         font-weight: 500;
     }
+
+    /* 21. Responsive Media Queries */
+    @media (max-width: 992px) {
+        .block-container {
+            padding-left: 1.25rem !important;
+            padding-right: 1.25rem !important;
+        }
+        .hero-heading {
+            font-size: 20px !important;
+        }
+    }
+    @media (max-width: 768px) {
+        .block-container {
+            padding-top: 0.5rem !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        .brand-wrap {
+            gap: 6px;
+        }
+        .brand-title {
+            font-size: 13.5px !important;
+        }
+        .hero-container {
+            padding: 10px 0 8px 0 !important;
+        }
+        .hero-heading {
+            font-size: 18px !important;
+        }
+        .hero-lead {
+            font-size: 12px !important;
+        }
+        .trust-strip {
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px 10px;
+            font-size: 10.5px;
+        }
+        .ide-tab-label {
+            font-size: 11px !important;
+            padding: 0 8px !important;
+        }
+        div[data-testid="stSegmentedControl"] button {
+            font-size: 11.5px !important;
+            padding: 0 8px !important;
+        }
+        .bench-card {
+            overflow-x: auto;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
-
 # ----------------- SIDEBAR ACCOUNT & LICENSE WIDGET -----------------
 with st.sidebar:
     st.markdown("""
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
         <span style="font-size:22px;">🛡️</span>
         <span style="font-size:16px; font-weight:700; color:#F1F5F9;">Kavach AI</span>
-        <span style="background:rgba(198,164,106,0.15); color:#C6A46A; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; border:1px solid rgba(198,164,106,0.3);">v1.4.1</span>
+        <span style="background:#171D27; color:#94A3B8; font-size:10px; font-weight:600; padding:2px 6px; border-radius:4px; border:1px solid #252D38;">v1.4.1</span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1778,8 +1834,8 @@ with nav_col3:
 if st.session_state.get("pending_activation"):
     pending = st.session_state.pending_activation
     st.markdown("""
-    <div style="background: rgba(198, 164, 106, 0.12); border: 1.5px solid #C6A46A; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
-        <div style="font-weight: 700; color: #C6A46A; font-size: 15px;">🎉 Payment Verified! Set Up Your Permanent Account</div>
+    <div style="background: rgba(198, 167, 106, 0.12); border: 1.5px solid #C6A76A; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
+        <div style="font-weight: 700; color: #C6A76A; font-size: 15px;">🎉 Payment Verified! Set Up Your Permanent Account</div>
         <div style="color: #94A3B8; font-size: 12.5px; margin-top: 2px;">
             Set your password below to permanently link your signed license across sessions and browser restarts.
         </div>
@@ -2197,15 +2253,22 @@ if active_tab == "Inspector":
             with r_head1:
                 if not current_code:
                     status_text = "Awaiting Scan"
+                    status_dot = '<span style="width:6px; height:6px; border-radius:50%; background:#64748B; display:inline-block;"></span>'
                 elif analysis_status == "SYNTAX_ERROR":
                     status_text = "Syntax Error"
+                    status_dot = '<span style="width:6px; height:6px; border-radius:50%; background:#F59E0B; display:inline-block;"></span>'
                 elif not findings:
                     status_text = "Clean (0 Issues)"
+                    status_dot = '<span class="status-dot-green"></span>'
                 else:
                     status_text = f"{len(findings)} Issue(s) Detected"
+                    crit_count = metrics.get('critical', 0)
+                    dot_bg = "#EF4444" if crit_count > 0 else "#F59E0B"
+                    status_dot = f'<span style="width:6px; height:6px; border-radius:50%; background:{dot_bg}; display:inline-block;"></span>'
 
                 st.markdown(f"""
                 <div class="ide-tab-label">
+                    {status_dot}
                     <span style="font-weight:600; color:#F1F5F9;">Diagnostics</span>
                     <span class="ide-meta">• {status_text}</span>
                 </div>
@@ -2383,7 +2446,7 @@ if active_tab == "Inspector":
                         exp_safe = html.escape(f.explanation)
                         cwe_safe = html.escape(f.cwe_id or "CWE-General")
                         is_crit = (f.severity.upper() == "CRITICAL")
-                        sev_color = "#EF4444" if is_crit else ("#F59E0B" if f.severity.upper() == "WARNING" else "#C6A46A")
+                        sev_color = "#EF4444" if is_crit else ("#F59E0B" if f.severity.upper() == "WARNING" else "#94A3B8")
 
                         with st.expander(f"L{f.line_number} [{f.severity}] {cat_safe} • {cwe_safe}", expanded=(i <= 2)):
                             # Taint Flow Breadcrumb
@@ -2393,7 +2456,7 @@ if active_tab == "Inspector":
                                 <span>➔</span>
                                 <span class="taint-step" style="background:rgba(245,158,11,0.12); color:#F59E0B;">Taint Tracking</span>
                                 <span>➔</span>
-                                <span class="taint-step" style="background:rgba(198,164,106,0.12); color:#C6A46A;">Sink: {cat_safe}</span>
+                                <span class="taint-step" style="background:#171D27; color:#F1F5F9; border:1px solid #252D38;">Sink: {cat_safe}</span>
                             </div>
                             """, unsafe_allow_html=True)
 
@@ -2526,7 +2589,7 @@ elif active_tab == "Posture Dashboard":
         """, unsafe_allow_html=True)
     with cwe_col4:
         st.markdown("""
-        <div class="kpi-card" style="border-left: 3px solid #C6A46A;">
+        <div class="kpi-card" style="border-left: 3px solid #94A3B8;">
             <div class="kpi-title">CWE-775 / 369</div>
             <div style="font-size:15px; font-weight:600; color:#F1F5F9;">Resource & ZeroDiv</div>
             <div class="kpi-sub">Pre-scanned Closes</div>
@@ -2664,9 +2727,9 @@ elif active_tab == "Pricing":
     checkout_urls = BillingManager.get_checkout_urls()
 
     st.markdown("""
-    <div style="background: rgba(198, 164, 106, 0.08); border: 1px solid rgba(198, 164, 106, 0.4); border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="background: rgba(198, 167, 106, 0.08); border: 1px solid rgba(198, 167, 106, 0.4); border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div>
-            <span style="background: #C6A46A; color: #090B0F; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-right: 8px; text-transform: uppercase;">Founder Launch Pass</span>
+            <span style="background: #171D27; color: #F1F5F9; border: 1px solid #252D38; font-weight: 600; font-size: 11px; padding: 3px 8px; border-radius: 6px; margin-right: 8px; text-transform: uppercase;">Founder Launch Pass</span>
             <span style="font-weight: 600; color: #F1F5F9; font-size: 14px;">Early Adopter Cohort: $149 One-Time Lifetime Access</span>
             <div style="color: #94A3B8; font-size: 12px; margin-top: 4px;">Unlimited Repositories • Lifetime CLI + AST Engine • CI/CD Merge Blocker • SOC 2 Audit Exports</div>
         </div>
