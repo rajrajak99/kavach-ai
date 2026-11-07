@@ -3,6 +3,7 @@ import os
 import ast
 import json
 import math
+from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Any, Tuple, Set
 
@@ -674,10 +675,21 @@ class SurgicalAnalyzer:
         ast_flagged_lines: Set[int] = set()
 
         if lang == "python":
+            fname = file_diff.filename_new or file_diff.filename_old
+            full_code = None
+            if fname and Path(fname).is_file():
+                try:
+                    full_code = Path(fname).read_text(encoding="utf-8", errors="ignore")
+                except Exception:
+                    full_code = None
+
+            is_full_file = (full_code is not None)
             max_ln = max(lines_by_num.keys()) if lines_by_num else 0
-            full_code = "\n".join([lines_by_num.get(i, "") for i in range(1, max_ln + 1)])
+            if full_code is None:
+                full_code = "\n".join([lines_by_num.get(i, "") for i in range(1, max_ln + 1)])
+
             ast_findings, safely_closed_handles, syn_err = self._analyze_python_ast(full_code, lines_by_num, changed_line_nums)
-            if syn_err:
+            if syn_err and (is_full_file or len(lines_by_num) >= max_ln):
                 file_diff.syntax_error = syn_err
             findings.extend(ast_findings)
             for af in ast_findings:
