@@ -928,47 +928,50 @@ class SurgicalAnalyzer:
 
                     # 2. Py SQL Injection
                     if line_num not in ast_flagged_lines:
-                        for pat, label, cwe in self.PY_SQLI_PATTERNS:
-                            if re.search(pat, line_str):
-                                f_m = re.search(r'execute\s*\(\s*f["\'](.*?)\{([a-zA-Z0-9_]+)\}(.*?)["\']\s*\)', line_str)
-                                if f_m:
-                                    q_pre = f_m.group(1).rstrip("'\" ").strip().rstrip("=").strip()
-                                    var_n = f_m.group(2).strip()
-                                    if re.search(r'(?i)\b(ALTER|DROP|CREATE)\b', q_pre):
-                                        fixed = f'{indent_str}# SECURE DDL: Validate identifier syntax before execution\n{indent_str}# if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", {var_n}): raise ValueError("Invalid identifier")'
+                        if not line_str.lstrip().startswith(('fixed =', 'fixed_code =', 'problem_code =', 'line_str =', 'template =', 'code =', '#', '//')):
+                            for pat, label, cwe in self.PY_SQLI_PATTERNS:
+                                if re.search(pat, line_str):
+                                    f_m = re.search(r'execute\s*\(\s*f["\'](.*?)\{([a-zA-Z0-9_]+)\}(.*?)["\']\s*\)', line_str)
+                                    if f_m:
+                                        q_pre = f_m.group(1).rstrip("'\" ").strip().rstrip("=").strip()
+                                        var_n = f_m.group(2).strip()
+                                        if re.search(r'(?i)\b(ALTER|DROP|CREATE)\b', q_pre):
+                                            fixed = f'{indent_str}# SECURE DDL: Validate identifier syntax before execution\n{indent_str}# if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", {var_n}): raise ValueError("Invalid identifier")'
+                                        else:
+                                            fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
                                     else:
-                                        fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
-                                else:
-                                    fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = ?", (user_input,))'
-                                findings.append(PatchFinding(
-                                    severity="SECURITY",
-                                    category=label,
-                                    line_number=line_num,
-                                    problem_code=line_str.strip(),
-                                    fixed_code=fixed.strip(),
-                                    explanation="Raw string interpolation in SQL query permits malicious input execution. Use parameterized queries with tuples instead.",
-                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
-                                    cwe_id=cwe,
-                                    language="python"
-                                ))
-                                break
+                                        fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = ?", (user_input,))'
+                                    findings.append(PatchFinding(
+                                        severity="SECURITY",
+                                        category=label,
+                                        line_number=line_num,
+                                        problem_code=line_str.strip(),
+                                        fixed_code=fixed.strip(),
+                                        explanation="Raw string interpolation in SQL query permits malicious input execution. Use parameterized queries with tuples instead.",
+                                        github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                        cwe_id=cwe,
+                                        language="python"
+                                    ))
+                                    break
 
                     # 3. Py Command Injection
-                    for pat, label, cwe in self.PY_COMMAND_INJECTION_PATTERNS:
-                        if re.search(pat, line_str):
-                            fixed = f'{indent_str}# Prevent command injection by passing arguments as an array\n{indent_str}subprocess.run(["command", safe_argument], check=True)'
-                            findings.append(PatchFinding(
-                                severity="SECURITY",
-                                category=label,
-                                line_number=line_num,
-                                problem_code=line_str.strip(),
-                                fixed_code=fixed.strip(),
-                                explanation="Direct shell command interpolation allows arbitrary command injection. Pass commands as discrete arrays without shell=True.",
-                                github_suggestion_block=f"```suggestion\n{fixed}\n```",
-                                cwe_id=cwe,
-                                language="python"
-                            ))
-                            break
+                    if line_num not in ast_flagged_lines:
+                        if not line_str.lstrip().startswith(('fixed =', 'fixed_code =', 'problem_code =', 'line_str =', 'template =', 'code =', '#', '//')):
+                            for pat, label, cwe in self.PY_COMMAND_INJECTION_PATTERNS:
+                                if re.search(pat, line_str):
+                                    fixed = f'{indent_str}# Prevent command injection by passing arguments as an array\n{indent_str}subprocess.run(["command", safe_argument], check=True)'
+                                    findings.append(PatchFinding(
+                                        severity="SECURITY",
+                                        category=label,
+                                        line_number=line_num,
+                                        problem_code=line_str.strip(),
+                                        fixed_code=fixed.strip(),
+                                        explanation="Direct shell command interpolation allows arbitrary command injection. Pass commands as discrete arrays without shell=True.",
+                                        github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                        cwe_id=cwe,
+                                        language="python"
+                                    ))
+                                    break
 
                     # 4. Py Resource Leak
                     for pat, label, cwe in self.PY_RESOURCE_LEAK_PATTERNS:
@@ -1021,7 +1024,7 @@ class SurgicalAnalyzer:
                         if not (stripped.startswith(('"', "'", 'r"', "r'", 'f"', "f'")) or stripped.endswith(('",', "',", '")', '"', "'"))):
                             denom_match = re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str)
                             denom = denom_match.group(1)
-                            if denom not in ['2', '10', '100', '1000', 'len', 'total_count']:
+                            if denom not in ['2', '10', '100', '1000', 'len', 'total_count', 'length']:
                                 # Check preceding 3 lines for guard on denom
                                 is_guarded = False
                                 for back_idx in range(max(1, line_num - 3), line_num):
