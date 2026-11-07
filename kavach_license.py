@@ -15,7 +15,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
 
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None
 
 try:
     from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -202,21 +205,31 @@ class LicenseManager:
             return None
 
         try:
-            resp = requests.post(
-                cls.LEMON_SQUEEZY_VALIDATE_URL,
-                json={"license_key": clean_key},
-                headers={"Accept": "application/json", "User-Agent": "KavachAI-Verifier/1.4.0"},
-                timeout=1.5
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("valid") is True:
-                    meta = data.get("meta", {})
-                    variant_name = (meta.get("variant_name") or "").lower()
-                    product_name = (meta.get("product_name") or "").lower()
-                    if "team" in variant_name or "enterprise" in variant_name or "team" in product_name:
-                        return PlanTier.TEAM_ENTERPRISE
-                    return PlanTier.DEVELOPER_PRO
+            if requests:
+                resp = requests.post(
+                    cls.LEMON_SQUEEZY_VALIDATE_URL,
+                    json={"license_key": clean_key},
+                    headers={"Accept": "application/json", "User-Agent": "KavachAI-Verifier/1.4.0"},
+                    timeout=1.5
+                )
+                data = resp.json() if resp.status_code == 200 else {}
+            else:
+                import urllib.request
+                req = urllib.request.Request(
+                    cls.LEMON_SQUEEZY_VALIDATE_URL,
+                    data=json.dumps({"license_key": clean_key}).encode("utf-8"),
+                    headers={"Accept": "application/json", "Content-Type": "application/json", "User-Agent": "KavachAI-Verifier/1.4.0"}
+                )
+                with urllib.request.urlopen(req, timeout=1.5) as r:
+                    data = json.loads(r.read().decode("utf-8"))
+
+            if data.get("valid") is True:
+                meta = data.get("meta", {})
+                variant_name = (meta.get("variant_name") or "").lower()
+                product_name = (meta.get("product_name") or "").lower()
+                if "team" in variant_name or "enterprise" in variant_name or "team" in product_name:
+                    return PlanTier.TEAM_ENTERPRISE
+                return PlanTier.DEVELOPER_PRO
         except Exception:
             pass
 
