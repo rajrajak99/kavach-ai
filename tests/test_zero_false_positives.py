@@ -158,3 +158,61 @@ result = session.execute(stmt)
     sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
     assert len(sqli_findings) == 0, f"Expected 0 SQLi findings for safe ORM where filter, got: {sqli_findings}"
 
+# ---------------- 4. B2B ZERO FALSE POSITIVES (PLACEHOLDERS, CONSTANTS & TAINT INDIRECTION) ----------------
+def test_placeholders_multiplication_not_flagged(parser, analyzer):
+    """Confirm placeholders = ','.join('?' * len(ids)) inside queries produces 0 findings."""
+    code = """
+keys = ["a", "b", "c"]
+placeholders = ",".join("?" * len(keys))
+query = f"SELECT * FROM embeddings WHERE id IN ({placeholders})"
+cursor.execute(query, keys)
+cursor.execute(f"SELECT * FROM t WHERE id IN ({','.join('?' * len(keys))})", keys)
+"""
+    diff = parser.parse_raw_snippet("db_cache.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) == 0, f"Expected 0 SQLi findings for safe placeholder multiplication, got: {sqli_findings}"
+
+def test_uppercase_module_constants_not_flagged(parser, analyzer):
+    """Confirm _COLUMNS = 'id, name' inside queries produces 0 findings."""
+    code = """
+_COLUMNS = "id, name, email, created_at"
+TABLE_NAME = "users"
+query = f"SELECT {_COLUMNS} FROM {TABLE_NAME} WHERE id = :id"
+db.execute(query, {"id": 42})
+cursor.execute(f"SELECT {_COLUMNS} FROM users WHERE is_active = 1")
+"""
+    diff = parser.parse_raw_snippet("queries.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) == 0, f"Expected 0 SQLi findings for uppercase module constants, got: {sqli_findings}"
+
+def test_variable_indirection_sqli_is_flagged(parser, analyzer):
+    """Confirm q = f"SELECT * FROM users WHERE name = '{user_input}'"; db.execute(q) IS flagged as CWE-89."""
+    code = """
+user_input = "admin' OR '1'='1"
+q = f"SELECT * FROM users WHERE name = '{user_input}'"
+db.execute(q)
+"""
+    diff = parser.parse_raw_snippet("auth.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) >= 1, f"Expected SQLi finding for variable indirection, got: {sqli_findings}"
+    assert any(f.cwe_id == "CWE-89" for f in sqli_findings)
+    assert any("Variable-Aliased Indirect SQL Injection" in f.category for f in sqli_findings)
+
+def test_pickle_loads_remediation_never_suggests_try_except(parser, analyzer):
+    """Confirm CWE-502 remediation recommends HMAC verification or json.loads, never try/except."""
+    code = """
+import pickle
+data = pickle.loads(untrusted_payload)
+"""
+    diff = parser.parse_raw_snippet("deserializer.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    pickle_findings = [f for f in res['findings'] if f.cwe_id == "CWE-502"]
+    assert len(pickle_findings) == 1
+    assert "try:" not in pickle_findings[0].fixed_code
+    assert "except" not in pickle_findings[0].fixed_code
+    assert "hmac" in pickle_findings[0].fixed_code.lower() or "json" in pickle_findings[0].fixed_code.lower()
+
+

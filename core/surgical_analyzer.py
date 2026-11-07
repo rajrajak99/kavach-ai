@@ -196,11 +196,79 @@ class SurgicalAnalyzer:
                 return left + right
         return None
 
-    def _is_dynamic_sql(self, arg_node: ast.AST, tainted_sql_vars: Dict[str, Any]) -> bool:
+    @staticmethod
+    def _is_safe_placeholder_expr(node: ast.AST, safe_placeholder_vars: Optional[Set[str]] = None) -> bool:
         """
-        Returns True ONLY if the SQL node is dynamically formatted/interpolated,
-        and returns False for static strings, text("SELECT 1"), bound params, etc.
+        Detects expressions that generate safe parameterized SQL placeholders,
+        e.g.:
+          - ",".join("?" * len(keys))
+          - ",".join(["?"] * len(keys))
+          - ",".join(["%s"] * len(keys))
+          - ",".join("?" for _ in keys)
+          - ",".join(["?" for _ in keys])
+          - "?" * len(keys)
+          - [":id0", ":id1", ...]
         """
+        def _is_atom(n: ast.AST) -> bool:
+            if isinstance(n, ast.Constant) and isinstance(n.value, str):
+                s = n.value.strip()
+                return s in ("?", "%s", "$1", "$2") or (bool(s) and set(s).issubset({"?", "%", "s", ",", " ", "(", ")"}))
+            if isinstance(n, (ast.List, ast.Tuple)):
+                return all(_is_atom(elt) for elt in n.elts)
+            if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Mult):
+                return _is_atom(n.left) or _is_atom(n.right)
+            return False
+
+        if _is_atom(node):
+            return True
+
+        if safe_placeholder_vars and isinstance(node, ast.Name) and node.id in safe_placeholder_vars:
+            return True
+
+        # Check .join(...) call on string literal separator e.g. ",".join(...)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "join":
+            if isinstance(node.func.value, ast.Constant) and isinstance(node.func.value.value, str):
+                if node.args:
+                    arg = node.args[0]
+                    if _is_atom(arg):
+                        return True
+                    if isinstance(arg, (ast.ListComp, ast.GeneratorExp)):
+                        if _is_atom(arg.elt):
+                            return True
+                    if safe_placeholder_vars and isinstance(arg, ast.Name) and arg.id in safe_placeholder_vars:
+                        return True
+
+        return False
+
+    def _is_dynamic_sql(
+        self,
+        arg_node: ast.AST,
+        tainted_sql_vars: Dict[str, Any],
+        safe_placeholder_vars: Optional[Set[str]] = None,
+        uppercase_constants: Optional[Set[str]] = None
+    ) -> bool:
+        """
+        Returns True ONLY if the SQL node is dynamically formatted/interpolated with untrusted input,
+        and returns False for static strings, text("SELECT 1"), bound params, module-level uppercase
+        constants (_COLUMNS, TABLE_NAME), and safe placeholder generators (",".join("?" * len(...))).
+        """
+        safe_vars = safe_placeholder_vars or set()
+        const_vars = uppercase_constants or set()
+
+        def _is_safe_var(name: str) -> bool:
+            if name in tainted_sql_vars:
+                return False
+            if name in const_vars:
+                return True
+            if name in safe_vars:
+                return True
+            if name in ("placeholders", "placeholder", "params_placeholders", "in_clause", "q_marks", "bind_placeholders"):
+                return True
+            # Module-level uppercase constant pattern: _COLUMNS, TABLE_NAME, SCHEMA, etc.
+            if re.match(r'^_?[A-Z][A-Z0-9_]*$', name):
+                return True
+            return False
+
         # Unwrap text(...) or select(...) calls
         if isinstance(arg_node, ast.Call):
             func_name = None
@@ -210,38 +278,79 @@ class SurgicalAnalyzer:
                 func_name = arg_node.func.attr
             if func_name in ("text", "literal_column", "select"):
                 if arg_node.args:
-                    return self._is_dynamic_sql(arg_node.args[0], tainted_sql_vars)
+                    return self._is_dynamic_sql(arg_node.args[0], tainted_sql_vars, safe_placeholder_vars, uppercase_constants)
             # Chained parameter binding methods (.bindparams, .params, .where) are safe
             if func_name in ("bindparams", "params", "values", "filter", "where", "filter_by"):
                 return False
 
         # 1. Direct variable that was tracked as dynamic/tainted
-        if isinstance(arg_node, ast.Name) and arg_node.id in tainted_sql_vars:
-            return True
+        if isinstance(arg_node, ast.Name):
+            if arg_node.id in tainted_sql_vars:
+                return True
+            if _is_safe_var(arg_node.id):
+                return False
+            return False
 
         # 2. Pure static string constant
         if isinstance(arg_node, ast.Constant):
             return False
 
-        # 3. JoinedStr (f-string): only dynamic if it contains a FormattedValue
+        # 3. JoinedStr (f-string): dynamic if ANY FormattedValue is not an uppercase constant or safe placeholder
         if isinstance(arg_node, ast.JoinedStr):
-            return any(isinstance(val, ast.FormattedValue) for val in arg_node.values)
+            for val in arg_node.values:
+                if isinstance(val, ast.FormattedValue):
+                    fv = val.value
+                    if isinstance(fv, ast.Name) and _is_safe_var(fv.id):
+                        continue
+                    if isinstance(fv, ast.Constant):
+                        continue
+                    if self._is_safe_placeholder_expr(fv, safe_vars):
+                        continue
+                    # Untrusted or dynamic variable in f-string
+                    return True
+            return False
 
-        # 4. BinOp: string concatenation (+) or modulo formatting (%) with non-constant
+        # 4. BinOp: string concatenation (+) or modulo formatting (%)
         if isinstance(arg_node, ast.BinOp):
-            def _is_all_str_constants(bnode: ast.AST) -> bool:
+            def _is_all_safe_operands(bnode: ast.AST) -> bool:
                 if isinstance(bnode, ast.Constant) and isinstance(bnode.value, str):
                     return True
+                if isinstance(bnode, ast.Name) and _is_safe_var(bnode.id):
+                    return True
+                if self._is_safe_placeholder_expr(bnode, safe_vars):
+                    return True
                 if isinstance(bnode, ast.BinOp) and isinstance(bnode.op, (ast.Add, ast.Mod)):
-                    return _is_all_str_constants(bnode.left) and _is_all_str_constants(bnode.right)
+                    return _is_all_safe_operands(bnode.left) and _is_all_safe_operands(bnode.right)
                 return False
 
-            if not _is_all_str_constants(arg_node):
+            if not _is_all_safe_operands(arg_node):
                 return True
+            return False
 
         # 5. Method call to .format() on a string
         if isinstance(arg_node, ast.Call) and isinstance(arg_node.func, ast.Attribute) and arg_node.func.attr == "format":
-            return True
+            all_safe = True
+            for a in arg_node.args:
+                if isinstance(a, ast.Name) and _is_safe_var(a.id):
+                    continue
+                if isinstance(a, ast.Constant):
+                    continue
+                if self._is_safe_placeholder_expr(a, safe_vars):
+                    continue
+                all_safe = False
+                break
+            if all_safe:
+                for kw in arg_node.keywords:
+                    v = kw.value
+                    if isinstance(v, ast.Name) and _is_safe_var(v.id):
+                        continue
+                    if isinstance(v, ast.Constant):
+                        continue
+                    if self._is_safe_placeholder_expr(v, safe_vars):
+                        continue
+                    all_safe = False
+                    break
+            return not all_safe
 
         return False
 
@@ -285,6 +394,22 @@ class SurgicalAnalyzer:
         safely_closed_handles = self._prescan_finally_closes(tree)
         symbol_table: Dict[str, str] = {}
         tainted_sql_vars: Dict[str, Tuple[int, Any, str]] = {}
+        uppercase_constants: Set[str] = set()
+        safe_placeholder_vars: Set[str] = set()
+
+        # Pre-scan for constants, uppercase SQL identifiers, and safe placeholder generators
+        for pnode in ast.walk(tree):
+            if isinstance(pnode, ast.Assign):
+                for t in pnode.targets:
+                    if isinstance(t, ast.Name):
+                        resolved = self._resolve_string(pnode.value, symbol_table)
+                        if resolved is not None:
+                            symbol_table[t.id] = resolved
+                        if re.match(r'^_?[A-Z][A-Z0-9_]*$', t.id):
+                            if resolved is not None or (isinstance(pnode.value, ast.Constant) and isinstance(pnode.value.value, str)):
+                                uppercase_constants.add(t.id)
+                        if self._is_safe_placeholder_expr(pnode.value, safe_placeholder_vars):
+                            safe_placeholder_vars.add(t.id)
 
         for node in ast.walk(tree):
             # 1. Track String Constants & Obfuscated Secrets
@@ -336,13 +461,10 @@ class SurgicalAnalyzer:
                         sub.value for sub in ast.walk(node.value)
                         if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
                     ]
-                    has_dynamic_sub = any(
-                        isinstance(sub, (ast.Name, ast.Call, ast.Attribute, ast.FormattedValue))
-                        for sub in ast.walk(node.value)
-                    )
                     combined_sql = " ".join(str_constants)
-                    if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|CREATE)\b', combined_sql) and has_dynamic_sub:
-                        tainted_sql_vars[target_name] = (node.lineno, node.value, target_name)
+                    if re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|CREATE)\b', combined_sql):
+                        if self._is_dynamic_sql(node.value, tainted_sql_vars, safe_placeholder_vars, uppercase_constants):
+                            tainted_sql_vars[target_name] = (node.lineno, node.value, target_name)
 
             # 2. Function Calls: Env Fallbacks & Tainted SQL Sinks
             elif isinstance(node, ast.Call):
@@ -399,26 +521,29 @@ class SurgicalAnalyzer:
 
                 # Feature 1: SQL Injection Sink (Direct or Indirect / Variable-Aliased)
                 if isinstance(node.func, ast.Attribute) and node.func.attr in ("execute", "executemany"):
-                    if node.args and node.lineno in changed_line_nums:
+                    if node.args:
                         arg0 = node.args[0]
                         if isinstance(arg0, ast.Name) and arg0.id in tainted_sql_vars:
                             orig_line, _, var_name = tainted_sql_vars[arg0.id]
-                            line_str = lines_by_num.get(node.lineno, f"cursor.execute({var_name})")
-                            indent = len(line_str) - len(line_str.lstrip())
-                            indent_str = " " * indent
-                            fixed = f'{indent_str}# Safe Parameterized Query (Prevents Indirect SQL Injection)\n{indent_str}cursor.execute("SELECT ... WHERE param = ?", (param_value,))'
-                            ast_findings.append(PatchFinding(
-                                severity="CRITICAL",
-                                category="Variable-Aliased Indirect SQL Injection (Taint Flow)",
-                                line_number=node.lineno,
-                                problem_code=line_str.strip(),
-                                fixed_code=fixed.strip(),
-                                explanation=f"Tainted SQL query constructed dynamically in '{var_name}' at line {orig_line} is passed into execute() without parameterization.",
-                                github_suggestion_block=f"```suggestion\n{fixed}\n```",
-                                cwe_id="CWE-89",
-                                language="python"
-                            ))
-                        elif self._is_dynamic_sql(arg0, tainted_sql_vars):
+                            is_relevant = (node.lineno in changed_line_nums) or (orig_line in changed_line_nums)
+                            if is_relevant:
+                                report_line = node.lineno if node.lineno in changed_line_nums else orig_line
+                                line_str = lines_by_num.get(report_line, f"cursor.execute({var_name})")
+                                indent = len(line_str) - len(line_str.lstrip())
+                                indent_str = " " * indent
+                                fixed = f'{indent_str}# Safe Parameterized Query (Prevents Indirect SQL Injection)\n{indent_str}cursor.execute("SELECT ... WHERE param = ?", (param_value,))'
+                                ast_findings.append(PatchFinding(
+                                    severity="CRITICAL",
+                                    category="Variable-Aliased Indirect SQL Injection (Taint Flow)",
+                                    line_number=report_line,
+                                    problem_code=line_str.strip(),
+                                    fixed_code=fixed.strip(),
+                                    explanation=f"Tainted SQL query constructed dynamically in '{var_name}' at line {orig_line} is passed into execute() without parameterization.",
+                                    github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                                    cwe_id="CWE-89",
+                                    language="python"
+                                ))
+                        elif node.lineno in changed_line_nums and self._is_dynamic_sql(arg0, tainted_sql_vars, safe_placeholder_vars, uppercase_constants):
                             # If arg0 is text(...) or select(...), delegate to ORM handlers (Feature 8)
                             is_text_call = False
                             if isinstance(arg0, ast.Call):
@@ -512,21 +637,28 @@ class SurgicalAnalyzer:
                         is_pickle = True
 
                 if is_pickle and node.lineno in changed_line_nums:
-                    line_str = lines_by_num.get(node.lineno, "pickle.loads(...)")
-                    indent = len(line_str) - len(line_str.lstrip())
-                    indent_str = " " * indent
-                    fixed = f"{indent_str}# SECURE: Replace untrusted pickle deserialization with json or signed payloads\n{indent_str}import json\n{indent_str}data = json.loads(payload)"
-                    ast_findings.append(PatchFinding(
-                        severity="CRITICAL",
-                        category="Insecure Deserialization via pickle.loads()",
-                        line_number=node.lineno,
-                        problem_code=line_str.strip(),
-                        fixed_code=fixed.strip(),
-                        explanation="pickle.loads() allows arbitrary object instantiations via __reduce__, leading directly to remote code execution. Replace with json.loads().",
-                        github_suggestion_block=f"```suggestion\n{fixed}\n```",
-                        cwe_id="CWE-502",
-                        language="python"
-                    ))
+                    has_hmac = bool(re.search(r'\b(?:hmac\.compare_digest|compare_digest|verify_signature|verify_hmac)\b', full_code))
+                    if not has_hmac:
+                        line_str = lines_by_num.get(node.lineno, "pickle.loads(...)")
+                        indent = len(line_str) - len(line_str.lstrip())
+                        indent_str = " " * indent
+                        fixed = (
+                            f"{indent_str}# SECURE: Verify cryptographic signature (HMAC) or replace with json\n"
+                            f"{indent_str}# if not hmac.compare_digest(expected_sig, compute_sig(payload)): raise ValueError('Untrusted payload')\n"
+                            f"{indent_str}import json\n"
+                            f"{indent_str}data = json.loads(payload)"
+                        )
+                        ast_findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category="Insecure Deserialization via pickle.loads()",
+                            line_number=node.lineno,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation="pickle.loads() allows arbitrary object instantiations via __reduce__, leading directly to remote code execution. Verify integrity with hmac.compare_digest() or replace with json.loads(). Never rely on try/except.",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-502",
+                            language="python"
+                        ))
 
                 # Feature 6: Improper JWT Signature Verification (CWE-347)
                 is_jwt = False
@@ -599,7 +731,7 @@ class SurgicalAnalyzer:
 
                 if is_orm_raw and node.args and node.lineno in changed_line_nums:
                     arg0 = node.args[0]
-                    if self._is_dynamic_sql(arg0, tainted_sql_vars):
+                    if self._is_dynamic_sql(arg0, tainted_sql_vars, safe_placeholder_vars, uppercase_constants):
                         str_consts = [sub.value for sub in ast.walk(arg0) if isinstance(sub, ast.Constant) and isinstance(sub.value, str)]
                         combined = " ".join(str_consts).strip()
                         is_health_check = bool(re.search(r'(?i)^\s*SELECT\s+1\s*(?:;|\bAS\b|\bFROM\b)?\s*$', combined))
@@ -935,11 +1067,19 @@ class SurgicalAnalyzer:
                                     if f_m:
                                         q_pre = f_m.group(1).rstrip("'\" ").strip().rstrip("=").strip()
                                         var_n = f_m.group(2).strip()
+                                        if var_n.isupper() or (var_n.startswith('_') and var_n[1:].isupper()):
+                                            continue
+                                        if var_n in ("placeholders", "placeholder", "params", "values_clause", "keys", "bind_vars", "columns", "in_clause", "q_marks"):
+                                            continue
+                                        if re.search(r'["\']\s*\*\s*len\(', line_str) or "join(" in line_str:
+                                            continue
                                         if re.search(r'(?i)\b(ALTER|DROP|CREATE)\b', q_pre):
                                             fixed = f'{indent_str}# SECURE DDL: Validate identifier syntax before execution\n{indent_str}# if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", {var_n}): raise ValueError("Invalid identifier")'
                                         else:
                                             fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("{q_pre} = ?", ({var_n},))'
                                     else:
+                                        if re.search(r'\{[^}]*(?:join\(|\*\s*len\(|_?[A-Z][A-Z0-9_]*|\?|%s)[^}]*\}', line_str):
+                                            continue
                                         fixed = f'{indent_str}# Safe Parameterized Query (Prevents SQL Injection)\n{indent_str}cursor.execute("SELECT * FROM table WHERE id = ?", (user_input,))'
                                     findings.append(PatchFinding(
                                         severity="SECURITY",

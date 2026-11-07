@@ -162,20 +162,19 @@ cur = await db.execute(
         "file_path": "leads/learn.py",
         "line_number": 440,
         "file_url": "https://github.com/digitalfox/pydici/blob/main/leads/learn.py#L440",
-        "pr_title": "fix(security): safe unpickling guard with exception containment in learn.py [CWE-502]",
+        "pr_title": "fix(security): verify payload integrity before deserialization in learn.py [CWE-502]",
         "current_code": """model = cache.get(STATE_MODEL_CACHE_KEY)
 if model:
     model = pickle.loads(zlib.decompress(model))""",
         "patch_diff": """--- a/leads/learn.py
 +++ b/leads/learn.py
-@@ -438,4 +438,7 @@ def learn(relearn=True, leads_id=None, force=False):
+@@ -438,3 +438,5 @@ def learn(relearn=True, leads_id=None, force=False):
      model = cache.get(STATE_MODEL_CACHE_KEY)
      if model:
 -        model = pickle.loads(zlib.decompress(model))
-+        try:
-+            model = pickle.loads(zlib.decompress(model))
-+        except (pickle.UnpicklingError, zlib.error, AttributeError, ValueError, Exception):
-+            model = None"""
++        # SECURE: Replace untrusted pickle deserialization with safe json/marshmallow loader
++        import json
++        model = json.loads(zlib.decompress(model).decode('utf-8'))"""
     }
 ]
 

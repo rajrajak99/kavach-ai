@@ -457,7 +457,7 @@ STRIPE_API_SECRET = 'sk_test_•••••••••••••••••
 --- a/API/settings.py
 +++ b/API/settings.py
 - STRIPE_API_SECRET = 'sk_test_••••••••••••••••••••••••'
-+ STRIPE_API_SECRET = os.environ.get("SECRET_KEY", "")
++ STRIPE_API_SECRET = os.environ.get("STRIPE_API_SECRET", "")
 ```
 
 ---
@@ -483,7 +483,7 @@ Current Code:
   - STRIPE_API_SECRET = 'sk_test_••••••••••••••••••••••••'
 
 1-Click Surgical Patch:
-  + STRIPE_API_SECRET = os.environ.get("SECRET_KEY", "")
+  + STRIPE_API_SECRET = os.environ.get("STRIPE_API_SECRET", "")
 
 Unlike legacy SAST scanners that spit out 50 false positives on styling or test files, Kavach AI verifies deterministic AST taint paths in CI under 16ms and comments ready-to-merge patches directly on GitHub PRs.
 
@@ -509,7 +509,7 @@ Noticed unmitigated hardcoded secret / api key [cwe-798] detected in `api/settin
 
 We generated the exact 1-click surgical patch diff:
 - STRIPE_API_SECRET = 'sk_test_••••••••••••••••••••••••'
-+ STRIPE_API_SECRET = os.environ.get("SECRET_KEY", "")
++ STRIPE_API_SECRET = os.environ.get("STRIPE_API_SECRET", "")
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
 
@@ -858,14 +858,13 @@ if model:
 ```diff
 --- a/leads/learn.py
 +++ b/leads/learn.py
-@@ -438,4 +438,7 @@ def learn(relearn=True, leads_id=None, force=False):
+@@ -438,3 +438,5 @@ def learn(relearn=True, leads_id=None, force=False):
      model = cache.get(STATE_MODEL_CACHE_KEY)
      if model:
 -        model = pickle.loads(zlib.decompress(model))
-+        try:
-+            model = pickle.loads(zlib.decompress(model))
-+        except (pickle.UnpicklingError, zlib.error, AttributeError, ValueError, Exception):
-+            model = None
++        # SECURE: Replace untrusted pickle deserialization with safe json/marshmallow loader
++        import json
++        model = json.loads(zlib.decompress(model).decode('utf-8'))
 ```
 
 ---

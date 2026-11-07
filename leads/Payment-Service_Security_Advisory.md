@@ -52,7 +52,7 @@ STRIPE_API_SECRET = 'sk_test_•••••••••••••••••
 --- a/API/settings.py
 +++ b/API/settings.py
 - STRIPE_API_SECRET = 'sk_test_••••••••••••••••••••••••'
-+ STRIPE_API_SECRET = os.environ.get("SECRET_KEY", "")
++ STRIPE_API_SECRET = os.environ.get("STRIPE_API_SECRET", "")
 ```
 
 ---
@@ -81,7 +81,7 @@ Current Code:
   - STRIPE_API_SECRET = 'sk_test_••••••••••••••••••••••••'
 
 1-Click Surgical Patch:
-  + STRIPE_API_SECRET = os.environ.get("SECRET_KEY", "")
+  + STRIPE_API_SECRET = os.environ.get("STRIPE_API_SECRET", "")
 
 Unlike legacy SAST scanners that spit out 50 false positives on styling or test files, Kavach AI verifies deterministic AST taint paths in CI under 16ms and comments ready-to-merge patches directly on GitHub PRs.
 
@@ -109,7 +109,7 @@ Noticed unmitigated hardcoded secret / api key [cwe-798] detected in `api/settin
 
 We generated the exact 1-click surgical patch diff:
 - STRIPE_API_SECRET = 'sk_test_••••••••••••••••••••••••'
-+ STRIPE_API_SECRET = os.environ.get("SECRET_KEY", "")
++ STRIPE_API_SECRET = os.environ.get("STRIPE_API_SECRET", "")
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
 
