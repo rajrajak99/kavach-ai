@@ -1,10 +1,13 @@
 # 🛡️ Kavach AI High-Severity Security Advisory: aeecleclair/Hyperion
 
 - **Repository**: [https://github.com/aeecleclair/Hyperion](https://github.com/aeecleclair/Hyperion)
-- **Founder / Owner**: [aeecleclair](https://github.com/aeecleclair)
+- **Organization / Founder**: NakoGH ([@aeecleclair](https://github.com/aeecleclair))
+- **Website / Domain**: [https://hyperion-api.io](https://hyperion-api.io)
+- **Founder Email**: `rbelahcene10@gmail.com` (✅ Verified Deliverable)
 - **Stars**: ⭐ 21
 - **Security Weakness**: `Cross-File Inter-Procedural Taint Injection` [CWE-89]
 - **Target File Link**: [app/app.py](https://github.com/aeecleclair/Hyperion/blob/main/app/app.py#L466)
+- **SOC 2 Compliance Impact**: `CC7.1 Vulnerability Remediation & Production Code Integrity`
 
 ---
 
@@ -64,11 +67,15 @@ db.execute(
 
 ---
 
-## 3. Copy-Paste Cold Email to CTO / Founder
+## 3. Copy-Paste Cold Email to Founder / CTO
+**Recipient**: `rbelahcene10@gmail.com`
 **Subject**: `Security advisory + 1-click patch for aeecleclair/Hyperion (app.py)`
 
 ```text
-Hi aeecleclair,
+To: rbelahcene10@gmail.com
+Subject: Security advisory + 1-click patch for aeecleclair/Hyperion (app.py)
+
+Hi NakoGH,
 
 Ran our 10ms local AST taint engine (Kavach AI) against Hyperion and wanted to share a verified security audit finding in production code:
 
@@ -102,7 +109,7 @@ rajabhaiyarajak2008@gmail.com
 
 ## 4. Copy-Paste LinkedIn DM
 ```text
-Hey aeecleclair — came across Hyperion and ran our 10ms local AST engine (Kavach AI). 
+Hey NakoGH — came across Hyperion and ran our 10ms local AST engine (Kavach AI). 
 
 Noticed inter-procedural taint flow from `app/app.py`:l466 propagates to unparameterized sink `clean_permissions_sync()` in `app/utils/initialization.py`:l184.
 

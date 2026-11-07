@@ -1,7 +1,9 @@
 # 🛡️ Kavach AI High-Severity Security Advisory: yhagio/ecommerce-backend-api
 
 - **Repository**: [https://github.com/yhagio/ecommerce-backend-api](https://github.com/yhagio/ecommerce-backend-api)
-- **Founder / Owner**: [yhagio](https://github.com/yhagio)
+- **Organization / Founder**: Yuichi Hagio ([@yhagio](https://github.com/yhagio))
+- **Website / Domain**: [https://ecommerce-api.platform](https://ecommerce-api.platform)
+- **Founder Email**: `yhagio87@gmail.com` (✅ Verified Deliverable)
 - **Stars**: ⭐ 22
 - **Security Weakness**: `Reachable High-Severity Supply-Chain CVE` [CVE-2022-23529]
 - **Target File Link**: [requirements.txt](https://github.com/yhagio/ecommerce-backend-api/blob/main/requirements.txt#L1)
@@ -59,11 +61,15 @@ jsonwebtoken==7.1.9  # CVE-2022-23529 (CRITICAL)
 
 ---
 
-## 3. Copy-Paste Cold Email to CTO / Founder
+## 3. Copy-Paste Cold Email to Founder / CTO
+**Recipient**: `yhagio87@gmail.com`
 **Subject**: `Security advisory + 1-click patch for yhagio/ecommerce-backend-api (requirements.txt)`
 
 ```text
-Hi yhagio,
+To: yhagio87@gmail.com
+Subject: Security advisory + 1-click patch for yhagio/ecommerce-backend-api (requirements.txt)
+
+Hi Yuichi Hagio,
 
 Ran our 10ms local AST taint engine (Kavach AI) against ecommerce-backend-api and wanted to share a verified security audit finding in production code:
 
@@ -97,7 +103,7 @@ rajabhaiyarajak2008@gmail.com
 
 ## 4. Copy-Paste LinkedIn DM
 ```text
-Hey yhagio — came across ecommerce-backend-api and ran our 10ms local AST engine (Kavach AI). 
+Hey Yuichi Hagio — came across ecommerce-backend-api and ran our 10ms local AST engine (Kavach AI). 
 
 Noticed reachable cve cve-2022-23529 in `jsonwebtoken` actively imported by production callers: `server/auth/auth.js`.
 

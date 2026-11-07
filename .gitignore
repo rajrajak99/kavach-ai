@@ -43,3 +43,7 @@ bin/
 *.patch
 *.db
 data/
+candidates.json
+leads_targets.json
+new_prs_submitted.json
+direct_submit_links.txt
