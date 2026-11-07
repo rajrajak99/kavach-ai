@@ -120,7 +120,9 @@ def is_hobbyist_script(path_str: str) -> bool:
     return False
 
 def is_template_or_toy_repo(repo_info: Dict[str, Any]) -> bool:
-    """Detects and excludes template repositories, tutorials, boilerplates, and hobbyist bots."""
+    """Detects and excludes template repositories, tutorials, boilerplates, hobbyist bots, and archived repos."""
+    if repo_info.get("archived") or repo_info.get("disabled"):
+        return True
     name = (repo_info.get("name") or "").lower()
     desc = (repo_info.get("description") or "").lower()
     full_name = (repo_info.get("full_name") or "").lower()
