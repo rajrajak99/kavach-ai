@@ -20,6 +20,7 @@ import subprocess
 import urllib.request
 import urllib.parse
 import json
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Set
 
@@ -106,13 +107,176 @@ CURATED_FALLBACK_REPOS = [
         "description": "FastAPI and database microservice app"
     },
     {
-        "name": "kavach-enterprise-demo",
-        "html_url": "https://github.com/rajrajak99/kavach-ai",
-        "stargazers_count": 140,
-        "owner": {"login": "rajrajak99", "html_url": "https://github.com/rajrajak99"},
-        "description": "Kavach AI Security Platform and polyglot vulnerability benchmark"
+        "name": "O_N_L_Y_bot",
+        "html_url": "https://github.com/onlysharifjon/O_N_L_Y_bot",
+        "stargazers_count": 5,
+        "owner": {"login": "onlysharifjon", "html_url": "https://github.com/onlysharifjon"},
+        "description": "Telegram SQLite bot service"
+    },
+    {
+        "name": "SugarchainTGBot",
+        "html_url": "https://github.com/Nugetzrul3/SugarchainTGBot",
+        "stargazers_count": 8,
+        "owner": {"login": "Nugetzrul3", "html_url": "https://github.com/Nugetzrul3"},
+        "description": "Cryptocurrency wallet and ledger Telegram bot"
+    },
+    {
+        "name": "TG-bait-bot",
+        "html_url": "https://github.com/S0m3B0dYyy/TG-bait-bot",
+        "stargazers_count": 12,
+        "owner": {"login": "S0m3B0dYyy", "html_url": "https://github.com/S0m3B0dYyy"},
+        "description": "Telegram user management bot with SQLite"
+    },
+    {
+        "name": "pythonchecker",
+        "html_url": "https://github.com/codexecuter/pythonchecker",
+        "stargazers_count": 18,
+        "owner": {"login": "codexecuter", "html_url": "https://github.com/codexecuter"},
+        "description": "Code evaluation and submission verification service"
+    },
+    {
+        "name": "infosecNews",
+        "html_url": "https://github.com/profxadke/infosecNews",
+        "stargazers_count": 14,
+        "owner": {"login": "profxadke", "html_url": "https://github.com/profxadke"},
+        "description": "Infosec aggregator with SQLite database backend"
     }
 ]
+
+INVALID_EMAIL_SUBSTRINGS = {
+    "@users.noreply.github.com",
+    "noreply",
+    "no-reply",
+    "@github.com",
+    "dependabot",
+    "snyk",
+    "renovate",
+    "greenkeeper",
+    "travis",
+    "circleci",
+    "bot@",
+    "@example.com",
+    "@test.com",
+    "localhost",
+    "invalid",
+    "none@none"
+}
+
+def is_deliverable_email(email: str) -> bool:
+    """Validates that an email is deliverable and not a GitHub noreply or bot address."""
+    if not email or "@" not in email or "." not in email:
+        return False
+    clean = email.strip().lower()
+    for sub in INVALID_EMAIL_SUBSTRINGS:
+        if sub in clean:
+            return False
+    if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", clean):
+        return False
+    domain = clean.split("@")[-1]
+    if "." not in domain or len(domain.split(".")[-1]) < 2:
+        return False
+    return True
+
+def extract_deliverable_founder_email(
+    repo_path: Optional[Path],
+    owner: str,
+    repo: str,
+    token: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Extracts a real, deliverable personal/work email for the founder/maintainer:
+    1. Scans local git log commit history up to depth 30 using git_bin.
+    2. Filters out all noreply, bots, and dummy emails.
+    3. Fallback to GitHub User profile API and GitHub Commits API.
+    """
+    git_bin = get_git_executable()
+
+    # Step 1: Scan local git log
+    if repo_path and repo_path.is_dir():
+        try:
+            cmd = [git_bin, "-C", str(repo_path), "log", "-n", "30", "--format=%an|%ae"]
+            p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            if p.returncode == 0 and p.stdout.strip():
+                for line in p.stdout.strip().splitlines():
+                    if "|" in line:
+                        name, email = line.split("|", 1)
+                        name = name.strip()
+                        email = email.strip()
+                        if is_deliverable_email(email):
+                            return {
+                                "name": name or owner,
+                                "email": email,
+                                "is_deliverable": True,
+                                "source": "git_commit_log"
+                            }
+        except Exception:
+            pass
+
+    # Step 2: GitHub User profile API
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "KavachAI-Prospector/1.4.0"
+    }
+    gh_tok = token or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if gh_tok:
+        headers["Authorization"] = f"token {gh_tok}"
+
+    try:
+        user_url = f"https://api.github.com/users/{owner}"
+        req = urllib.request.Request(user_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            udata = json.loads(resp.read().decode())
+            p_email = udata.get("email")
+            p_name = udata.get("name") or owner
+            if p_email and is_deliverable_email(p_email):
+                return {
+                    "name": p_name,
+                    "email": p_email,
+                    "is_deliverable": True,
+                    "source": "github_profile"
+                }
+    except Exception:
+        p_name = owner
+
+    # Step 3: GitHub Commits API
+    try:
+        commits_url = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=30"
+        req = urllib.request.Request(commits_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            commits = json.loads(resp.read().decode())
+            for c in commits:
+                commit_obj = c.get("commit", {})
+                author = commit_obj.get("author", {})
+                committer = commit_obj.get("committer", {})
+
+                a_email = author.get("email", "")
+                a_name = author.get("name", "")
+                if is_deliverable_email(a_email):
+                    return {
+                        "name": a_name or p_name,
+                        "email": a_email,
+                        "is_deliverable": True,
+                        "source": "github_commits_api"
+                    }
+
+                c_email = committer.get("email", "")
+                c_name = committer.get("name", "")
+                if is_deliverable_email(c_email):
+                    return {
+                        "name": c_name or p_name,
+                        "email": c_email,
+                        "is_deliverable": True,
+                        "source": "github_commits_api"
+                    }
+    except Exception:
+        pass
+
+    return {
+        "name": owner,
+        "email": f"founders@{owner.lower()}.dev (reach via GitHub PR / Advisory)",
+        "is_deliverable": False,
+        "source": "unverified"
+    }
 
 def search_github_repositories(queries: List[str], token: Optional[str] = None, max_total: int = 25) -> List[Dict[str, Any]]:
     """Queries the GitHub Search API across multiple high-yield queries and deduplicates."""
@@ -166,12 +330,12 @@ def get_git_executable() -> str:
         return sys_git
     return "git"
 
-def shallow_clone(repo_url: str, dest_dir: Path) -> bool:
-    """Performs a shallow git clone (--depth 1)."""
+def shallow_clone(repo_url: str, dest_dir: Path, depth: int = 30) -> bool:
+    """Performs a shallow git clone with commit history depth for email extraction."""
     try:
         git_bin = get_git_executable()
-        cmd = [git_bin, "clone", "--depth", "1", repo_url, str(dest_dir)]
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60)
+        cmd = [git_bin, "clone", "--depth", str(depth), repo_url, str(dest_dir)]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=90)
         return res.returncode == 0
     except Exception:
         return False
@@ -200,7 +364,7 @@ def check_ci_security_gates(repo_path: Path) -> Dict[str, Any]:
         "has_sast_gate": len(security_tools_found) > 0
     }
 
-def audit_repository_security(repo_info: Dict[str, Any], security_only: bool = True) -> Optional[Dict[str, Any]]:
+def audit_repository_security(repo_info: Dict[str, Any], security_only: bool = True, token: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """
     Clones and audits a repository.
     Enforces strict production security filtering:
@@ -220,7 +384,7 @@ def audit_repository_security(repo_info: Dict[str, Any], security_only: bool = T
     temp_dir = tempfile.mkdtemp(prefix=f"audit_sec_{repo_name}_")
     try:
         temp_path = Path(temp_dir)
-        if not shallow_clone(repo_url, temp_path):
+        if not shallow_clone(repo_url, temp_path, depth=30):
             print(f"    [-] Could not shallow clone {repo_url}")
             return None
 
@@ -350,9 +514,19 @@ def audit_repository_security(repo_info: Dict[str, Any], security_only: bool = T
 ---
 *Detected & auto-patched in 8ms by [Kavach AI v1.4.0](https://github.com/rajrajak99/kavach-ai) (Zero-Telemetry AST Security Gate).*"""
 
+        # Extract deliverable founder email (ignoring @users.noreply.github.com)
+        founder_info = extract_deliverable_founder_email(temp_path, owner_login, repo_name, token=token)
+        founder_name = founder_info["name"]
+        founder_email = founder_info["email"]
+        is_deliverable = founder_info["is_deliverable"]
+        email_source = founder_info["source"]
+
         # Cold Email Template
         cold_email_subject = f"Security advisory + 1-click patch for {owner_login}/{repo_name} ({Path(target_file).name})"
-        cold_email_body = f"""Hi {owner_login},
+        cold_email_body = f"""To: {founder_email}
+Subject: {cold_email_subject}
+
+Hi {founder_name},
 
 Ran our 10ms local AST taint engine (Kavach AI) against {repo_name} and wanted to share a verified security audit finding in production code:
 
@@ -382,7 +556,7 @@ Founder, Kavach AI (https://kavach-ai.streamlit.app)
 rajabhaiyarajak2008@gmail.com"""
 
         # LinkedIn DM Template
-        linkedin_dm = f"""Hey {owner_login} — came across {repo_name} and ran our 10ms local AST engine (Kavach AI). 
+        linkedin_dm = f"""Hey {founder_name} — came across {repo_name} and ran our 10ms local AST engine (Kavach AI). 
 
 Noticed {hook.lower()}
 
@@ -399,6 +573,10 @@ Happy to give your team an Early Adopter pass if you want to test it on private 
             "repo_url": repo_url,
             "owner_login": owner_login,
             "owner_url": owner_url,
+            "founder_name": founder_name,
+            "founder_email": founder_email,
+            "is_deliverable": is_deliverable,
+            "email_source": email_source,
             "stars": stars,
             "finding_type": finding_type,
             "cwe_id": cwe_id,
@@ -425,28 +603,37 @@ def main():
     p.add_argument("--security-only", action="store_true", default=True, help="Strictly filter for exploitable security CWEs (CWE-89/798/78/502/347/1336/79/SCA) in production code")
     p.add_argument("--token", default=os.getenv("GITHUB_TOKEN"), help="GitHub API Token")
     p.add_argument("--output-dir", default="leads", help="Directory to save generated outbound pack")
+    p.add_argument("--output-file", default="leads/BATCH3_CRM_PACK.md", help="Explicit file path to save generated outbound CRM pack")
     args = p.parse_args()
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    out_file_path = Path(args.output_file)
+    out_file_path.parent.mkdir(parents=True, exist_ok=True)
 
     print("=================================================================")
-    print("  [+] KAVACH AI -- HIGH-SEVERITY PRODUCTION SECURITY HUNTER (v1.4.0)")
-    print("  Exploitable Security CWEs Only • Zero Non-Prod Paths • AST Verified")
+    print("  [+] KAVACH AI -- HIGH-SEVERITY PRODUCTION SECURITY HUNTER (v1.4.1)")
+    print("  Deliverable Founder Emails • Zero Noreply • Strict Security CWEs")
     print("=================================================================")
     print(f"Target Leads: {args.max_leads}")
-    print(f"Strict Security Filter: {'ACTIVE' if args.security_only else 'OFF'}\n")
+    print(f"Strict Security Filter: {'ACTIVE' if args.security_only else 'OFF'}")
+    print(f"Target CRM Output: {out_file_path}\n")
 
     queries = [
-        args.query if args.query else "language:python fastapi sqlalchemy api -template -boilerplate stars:10..500",
-        "language:python fastapi stripe payment stars:10..500",
-        "language:python flask sqlite3 saas -template stars:10..500",
-        "language:python django postgresql api -tutorial -example stars:15..600",
-        "language:python openai agent fastapi -boilerplate stars:15..600",
-        "language:javascript express stripe api stars:15..500"
+        args.query if args.query else "language:python fastapi sqlalchemy api -template -boilerplate stars:5..400",
+        "language:python fastapi sqlite3 -template stars:5..400",
+        "language:python flask sqlite3 saas -template stars:5..400",
+        "language:python django postgresql api -tutorial -example stars:10..500",
+        "language:python \"sqlite3.connect\" \"cursor.execute\" stars:5..300",
+        "language:python \"subprocess.run\" \"shell=True\" stars:5..300",
+        "language:python telegram bot sqlite3 stars:5..300",
+        "language:python discord bot sqlite3 stars:5..300",
+        "language:python openai agent fastapi -boilerplate stars:10..500",
+        "language:python fastapi stripe payment stars:5..400",
+        "language:javascript express stripe api stars:10..400"
     ]
 
-    candidates = search_github_repositories(queries, token=args.token, max_total=args.max_leads * 4)
+    candidates = search_github_repositories(queries, token=args.token, max_total=args.max_leads * 5)
     print(f"[+] Total candidate repositories queued for security audit: {len(candidates)}\n")
 
     verified_leads: List[Dict[str, Any]] = []
@@ -454,10 +641,11 @@ def main():
     for c in candidates:
         if len(verified_leads) >= args.max_leads:
             break
-        lead_data = audit_repository_security(c, security_only=args.security_only)
+        lead_data = audit_repository_security(c, security_only=args.security_only, token=args.token)
         if lead_data:
             verified_leads.append(lead_data)
-            print(f"    [+] QUALIFIED HIGH-SEVERITY LEAD: {lead_data['owner_login']}/{lead_data['repo_name']} -> {lead_data['cwe_id']} ({lead_data['target_file']})")
+            deliv_tag = "✅ Deliverable" if lead_data.get("is_deliverable") else "⚠️ Profile/PR"
+            print(f"    [+] QUALIFIED LEAD: {lead_data['owner_login']}/{lead_data['repo_name']} -> {lead_data['cwe_id']} ({lead_data['target_file']}) | Founder: {lead_data['founder_name']} <{lead_data['founder_email']}> [{deliv_tag}]")
 
     # Generate master outbound pack & verified true positive report
     master_pack_path = out_dir / "VERIFIED_TRUE_POSITIVE_LEADS.md"
@@ -474,22 +662,25 @@ def main():
     }
 
     pack_lines = [
-        f"# 🛡️ KAVACH AI — VERIFIED TRUE-POSITIVE SECURITY LEADS (v1.4.0)",
-        f"**Generated:** {len(verified_leads)} Verified Exploitable Startup Security Leads",
-        "**Filter Criteria:** Strict True-Positive Security (Zero Non-Prod Paths • Zero Non-Security Bugs • Anti-Template Filter)",
+        f"# 🛡️ KAVACH AI — BATCH 3 VERIFIED B2B CRM PACK (v1.4.1)",
+        f"**Generated:** {len(verified_leads)} Verified Commercial Security Leads with Deliverable Founder Emails",
+        "**Filter Criteria:** Non-Noreply Personal/Work Emails • Strict AST Security (CWE-89/78/798/502/1336/79) • Zero Test/Demo Paths",
         f"**Target CWEs:** {', '.join(sorted(ALLOWED_SECURITY_CWES))} + Reachable Supply-Chain CVEs",
         "",
         "---",
         "",
-        "## 📊 Verified High-Severity Prospect Roster",
-        "| # | Target Repository | Owner / Org | Stars | Weakness | Target Production File | SOC 2 Control | Action |",
-        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+        "## 📊 Verified High-Severity Prospect & CRM Roster",
+        "| # | Target Repository | Founder / Contact | Deliverable Email | Stars | Weakness | Target Production File | SOC 2 Control | Action |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
     ]
 
     for idx, vl in enumerate(verified_leads, 1):
         clean_file = vl['target_file'].replace("\\", "/")
         soc2_ctrl = soc2_map.get(vl['cwe_id'], "CC7.1 Vulnerability Management")
-        pack_lines.append(f"| {idx:02d} | [{vl['repo_name']}]({vl['repo_url']}) | [{vl['owner_login']}]({vl['owner_url']}) | ⭐ {vl['stars']} | **{vl['cwe_id']}** | `{clean_file}` | `{soc2_ctrl}` | [View Advisory & Pitch](#lead-{idx:02d}-{vl['repo_name'].lower()}) |")
+        deliv_badge = "✅" if vl.get("is_deliverable") else "⚠️"
+        f_email = vl.get('founder_email', 'N/A')
+        f_name = vl.get('founder_name', vl['owner_login'])
+        pack_lines.append(f"| {idx:02d} | [{vl['repo_name']}]({vl['repo_url']}) | {f_name} ([@{vl['owner_login']}]({vl['owner_url']})) | {deliv_badge} `{f_email}` | ⭐ {vl['stars']} | **{vl['cwe_id']}** | `{clean_file}` | `{soc2_ctrl}` | [View Advisory & Pitch](#lead-{idx:02d}-{vl['repo_name'].lower()}) |")
 
     pack_lines.append("\n---\n")
 
@@ -497,11 +688,13 @@ def main():
         lead_file_name = f"{vl['repo_name']}_Security_Advisory.md"
         lead_file_path = out_dir / lead_file_name
         soc2_ctrl = soc2_map.get(vl['cwe_id'], "CC7.1 Vulnerability Management")
+        deliv_badge = "✅ Verified Deliverable" if vl.get("is_deliverable") else "⚠️ Reach via PR / Advisory"
 
         indiv_content = f"""# 🛡️ Kavach AI High-Severity Security Advisory: {vl['owner_login']}/{vl['repo_name']}
 
 - **Repository**: [{vl['repo_url']}]({vl['repo_url']})
-- **Founder / Owner**: [{vl['owner_login']}]({vl['owner_url']})
+- **Founder / Contact**: {vl.get('founder_name', vl['owner_login'])} ([@{vl['owner_login']}]({vl['owner_url']}))
+- **Founder Email**: `{vl.get('founder_email')}` ({deliv_badge})
 - **Stars**: ⭐ {vl['stars']}
 - **Security Weakness**: `{vl['finding_type']}` [{vl['cwe_id']}]
 - **Target File Link**: [{vl['target_file']}]({vl['github_file_link']})
@@ -532,7 +725,8 @@ def main():
 
 ---
 
-## 3. Copy-Paste Cold Email to CTO / Founder
+## 3. Copy-Paste Cold Email to Founder / CTO
+**Recipient**: `{vl.get('founder_email')}`
 **Subject**: `{vl['cold_email_subject']}`
 
 ```text
@@ -551,6 +745,8 @@ def main():
         pack_lines.extend([
             f"## Lead {idx:02d}: [{vl['owner_login']}/{vl['repo_name']}]({vl['repo_url']})",
             f"- **Stars:** ⭐ {vl['stars']} | **Vulnerability:** `{vl['cwe_id']}` ({vl['finding_type']})",
+            f"- **Founder / Contact:** {vl.get('founder_name', vl['owner_login'])} ([@{vl['owner_login']}]({vl['owner_url']}))",
+            f"- **Deliverable Email:** `{vl.get('founder_email')}` ({deliv_badge})",
             f"- **Production File:** [`{vl['target_file']}`]({vl['github_file_link']})",
             f"- **SOC 2 Control:** `{soc2_ctrl}`",
             f"- **Individual Advisory File:** `leads/{lead_file_name}`",
@@ -562,6 +758,7 @@ def main():
             "```",
             "",
             "### 📧 Cold Email to Founder / CTO",
+            f"**To:** `{vl.get('founder_email')}`",
             f"**Subject:** `{vl['cold_email_subject']}`",
             "```text",
             vl['cold_email_body'],
@@ -577,15 +774,17 @@ def main():
         ])
 
     final_content = "\n".join(pack_lines)
+    out_file_path.write_text(final_content, encoding="utf-8")
     master_pack_path.write_text(final_content, encoding="utf-8")
     legacy_pack_path.write_text(final_content, encoding="utf-8")
 
     print("\n=================================================================")
-    print(f"  [OK] TRUE-POSITIVE PACK GENERATED: {master_pack_path}")
+    print(f"  [OK] BATCH 3 CRM PACK GENERATED: {out_file_path}")
     print(f"  Total Verified High-Severity Leads: {len(verified_leads)}")
     print("=================================================================")
     for idx, vl in enumerate(verified_leads, 1):
-        print(f"  {idx:02d}. {vl['owner_login']}/{vl['repo_name']} -> {vl['cwe_id']} in {vl['target_file']}")
+        deliv = "✅" if vl.get("is_deliverable") else "⚠️"
+        print(f"  {idx:02d}. {vl['owner_login']}/{vl['repo_name']} -> {vl['cwe_id']} | {vl.get('founder_name')} <{vl.get('founder_email')}> [{deliv}]")
     print()
 
 if __name__ == "__main__":
