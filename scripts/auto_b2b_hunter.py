@@ -66,7 +66,15 @@ def is_non_production_path(path_str: str) -> bool:
     if any(p in NON_PROD_DIRS for p in parts):
         return True
     filename = parts[-1]
-    if filename.startswith("test_") or filename.endswith("_test.py") or filename.endswith(".test.js") or filename.endswith(".spec.js"):
+    if (filename in ("tests.py", "test.py", "tests.js", "test.js", "test.ts", "tests.ts")
+            or filename.startswith("test_") 
+            or filename.endswith("_test.py") 
+            or filename.endswith(".test.js") 
+            or filename.endswith(".spec.js")
+            or filename.endswith(".test.ts") 
+            or filename.endswith(".spec.ts")):
+        return True
+    if any(p.endswith("_tests") or p.endswith("_test") or p.startswith("test_") for p in parts[:-1]):
         return True
     return False
 
@@ -609,7 +617,10 @@ def audit_repository_security(repo_info: Dict[str, Any], security_only: bool = T
             target_file = "requirements.txt"
             line_no = 1
             prob_snip = f"{r_cve.package_name}=={r_cve.installed_version}  # {r_cve.cve_id} ({r_cve.severity})"
-            fix_snip = f"{r_cve.package_name}>={r_cve.fixed_version}"
+            if r_cve.fixed_version.startswith(f"{r_cve.package_name}>="):
+                fix_snip = r_cve.fixed_version
+            else:
+                fix_snip = f"{r_cve.package_name}>={r_cve.fixed_version}"
             hook = f"Reachable CVE {r_cve.cve_id} in `{r_cve.package_name}` actively imported by production callers: {callers_str}."
 
         # Priority 4: Missing Pre-Merge CI SAST Gate (Only if NOT security_only)
@@ -640,6 +651,12 @@ def audit_repository_security(repo_info: Dict[str, Any], security_only: bool = T
         # Build GitHub File Link
         github_file_link = f"{repo_url}/blob/main/{target_file}#L{line_no}" if line_no else f"{repo_url}/tree/main/{target_file}"
 
+        # Build clean multiline diff blocks
+        diff_del = "\n".join(f"- {line}" for line in prob_snip.splitlines()) if prob_snip else ""
+        diff_add = "\n".join(f"+ {line}" for line in fix_snip.splitlines()) if fix_snip else ""
+        email_diff_del = "\n".join(f"  - {line}" for line in prob_snip.splitlines()) if prob_snip else ""
+        email_diff_add = "\n".join(f"  + {line}" for line in fix_snip.splitlines()) if fix_snip else ""
+
         # 1-Click GitHub Security Issue / PR Advisory Template
         github_issue_title = f"[Security Advisory] Fix {cwe_id} in {Path(target_file).name}"
         github_issue_body = f"""### 🛡️ Vulnerability Report & 1-Click Surgical Patch
@@ -664,8 +681,8 @@ def audit_repository_security(repo_info: Dict[str, Any], security_only: bool = T
 ```diff
 --- a/{target_file}
 +++ b/{target_file}
-- {prob_snip.splitlines()[0]}
-+ {fix_snip.splitlines()[0]}
+{diff_del}
+{diff_add}
 ```
 
 ---
@@ -703,10 +720,10 @@ Ran our 10ms local AST taint engine (Kavach AI) against {repo_name} and wanted t
 • Impact: {hook}
 
 Current Code:
-  - {prob_snip.splitlines()[0]}
+{email_diff_del}
 
 1-Click Surgical Patch:
-  + {fix_snip.splitlines()[0]}
+{email_diff_add}
 
 Unlike legacy SAST scanners that spit out 50 false positives on styling or test files, Kavach AI verifies deterministic AST taint paths in CI under 16ms and comments ready-to-merge patches directly on GitHub PRs.
 
@@ -729,8 +746,8 @@ rajabhaiyarajak2008@gmail.com"""
 Noticed {hook.lower()}
 
 We generated the exact 1-click surgical patch diff:
-- {prob_snip.splitlines()[0]}
-+ {fix_snip.splitlines()[0]}
+{diff_del}
+{diff_add}
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
 
