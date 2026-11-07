@@ -37,14 +37,26 @@ DUMMY_SECRET_INDICATORS = {
     "skip", "governor", "footer", "test_key", "test_token", "test_secret"
 }
 
-def is_dummy_or_placeholder_secret(val: str) -> bool:
+def is_dummy_or_placeholder_secret(val: str, var_name: str = "") -> bool:
     """
     Returns True if the string is clearly a placeholder, dummy token,
-    state key, UI filter, path, or non-secret identifier.
+    state key, cookie/header name, UI filter, path, or non-secret identifier.
     """
     clean = val.strip().strip("'\"`")
     if not clean:
         return True
+
+    # 1. Variable name indicators: ending in _KEY_NAME, _COOKIE_NAME, _HEADER, etc.
+    if var_name:
+        v_upper = var_name.upper().strip()
+        non_secret_suffixes = (
+            "_KEY_NAME", "_COOKIE_NAME", "_HEADER", "_HEADER_NAME",
+            "_STORAGE_KEY", "_TOKEN_KEY", "_PARAM_NAME", "_PARAM",
+            "_COOKIE", "_COOKIE_KEY", "_STATE_KEY", "_STORE_KEY", "_NAME"
+        )
+        has_known_prefix = any(clean.startswith(p) for p in KNOWN_SECRET_PREFIXES)
+        if any(v_upper.endswith(sfx) for sfx in non_secret_suffixes) and not has_known_prefix:
+            return True
 
     # Obvious templates like <YOUR_API_KEY>, [skip-governor-footer], ${API_KEY}
     if (clean.startswith("<") and clean.endswith(">")) or \
@@ -72,6 +84,14 @@ def is_dummy_or_placeholder_secret(val: str) -> bool:
     # Very low character diversity (e.g. "xxxxxxxxxxxxxxxx")
     if len(set(clean)) <= 4:
         return True
+
+    # Words separated by underscores or hyphens with low entropy (e.g. "aso_refresh_token")
+    if not has_known_prefix and (clean.islower() or clean.isupper()):
+        if "_" in clean or "-" in clean:
+            parts = [p for p in re.split(r'[_\-]', clean) if p]
+            ident_words = {"aso", "refresh", "token", "session", "key", "auth", "user", "id", "store", "cookie", "header", "state", "client", "access", "login"}
+            if all(p.lower() in ident_words for p in parts) or calculate_shannon_entropy(clean) < 3.4:
+                return True
 
     return False
 
@@ -922,8 +942,9 @@ class SurgicalAnalyzer:
                     for pat, label, cwe in self.JS_SECRET_PATTERNS:
                         m = re.search(pat, line_str)
                         if m:
+                            var_name = m.group(1) if len(m.groups()) >= 2 else line_str.split("=")[0].strip()
                             sec_val = (m.groups()[-1] if m.groups() else m.group(0)).strip("'\"`")
-                            if is_dummy_or_placeholder_secret(sec_val):
+                            if is_dummy_or_placeholder_secret(sec_val, var_name):
                                 continue
                             if not any(sec_val.startswith(p) for p in KNOWN_SECRET_PREFIXES) and calculate_shannon_entropy(sec_val) < 3.2:
                                 continue
@@ -1035,8 +1056,9 @@ class SurgicalAnalyzer:
                         for pat, label, cwe in self.PY_SECRET_PATTERNS:
                             m = re.search(pat, line_str)
                             if m:
+                                var_name = line_str.split("=")[0].strip()
                                 sec_val = (m.groups()[-1] if m.groups() else m.group(0)).strip("'\"`")
-                                if is_dummy_or_placeholder_secret(sec_val):
+                                if is_dummy_or_placeholder_secret(sec_val, var_name):
                                     continue
                                 if not any(sec_val.startswith(p) for p in KNOWN_SECRET_PREFIXES) and calculate_shannon_entropy(sec_val) < 3.2:
                                     continue
