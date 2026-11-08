@@ -2717,6 +2717,7 @@ elif active_tab == "Pricing":
             <div>
                 <span style="background: #C6A76A; color: #090B0F; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 6px; margin-right: 8px; text-transform: uppercase; letter-spacing: 0.05em;">★ Limited Founder Cohort</span>
                 <span style="font-weight: 700; color: #F1F5F9; font-size: 16px;">Early Adopter Pass: $149 One-Time Lifetime Access</span>
+                <span style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 600; font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-left: 6px;">Save $49/mo vs Pro</span>
                 <div style="color: #94A3B8; font-size: 12.5px; margin-top: 6px;">
                     ✓ Unlimited Private Repositories &nbsp;•&nbsp; ✓ Pre-Merge GitHub Actions Gate &nbsp;•&nbsp; ✓ Zero-Noise 10ms AST Engine &nbsp;•&nbsp; ✓ SOC 2 Audit Exports
                 </div>
@@ -2740,11 +2741,11 @@ elif active_tab == "Pricing":
     with b_col2:
         billing_cycle = st.segmented_control(
             "Billing Cycle",
-            ["Annual (Save 35%)", "Monthly"],
-            default="Annual (Save 35%)",
+            ["Annual (Save 20-25%)", "Monthly"],
+            default="Annual (Save 20-25%)",
             label_visibility="collapsed",
             key="pricing_billing_toggle"
-        ) or "Annual (Save 35%)"
+        ) or "Annual (Save 20-25%)"
 
     st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
 
@@ -2777,14 +2778,14 @@ elif active_tab == "Pricing":
             use_container_width=True
         )
 
-    # 2. DEVELOPER PRO ($19/mo annual or $29/mo monthly)
+    # 2. DEVELOPER PRO ($39/mo annual or $49/mo monthly)
     with p2:
         if billing_cycle == "Monthly":
-            pro_price = "$29"
-            pro_sub = "$29 billed monthly • Solo Devs & Consultants"
+            pro_price = "$49"
+            pro_sub = "$49 billed monthly • Solo Devs & Consultants"
         else:
-            pro_price = "$19"
-            pro_sub = "$228 billed annually (Save 35%) • Solo Devs & Consultants"
+            pro_price = "$39"
+            pro_sub = "$468 billed annually (Save 20%) • Solo Devs & Consultants"
 
         pro_active = "pricing-card-active" if is_pro else ""
         st.markdown(f"""
@@ -2816,14 +2817,14 @@ elif active_tab == "Pricing":
                 use_container_width=True
             )
 
-    # 3. TEAM ENTERPRISE ($99/mo annual or $119/mo monthly)
+    # 3. TEAM ENTERPRISE ($149/mo annual or $199/mo monthly)
     with p3:
         if billing_cycle == "Monthly":
-            team_price = "$119"
-            team_sub = "$119 billed monthly • Startups & Orgs"
+            team_price = "$199"
+            team_sub = "$199 billed monthly • Startups & Orgs"
         else:
-            team_price = "$99"
-            team_sub = "$1,188 billed annually (Save 17%) • Startups & Orgs"
+            team_price = "$149"
+            team_sub = "$1,788 billed annually (Save 25%) • Startups & Orgs"
 
         team_active = "pricing-card-active" if is_team else ""
         st.markdown(f"""
