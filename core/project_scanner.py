@@ -315,7 +315,7 @@ class ProjectASTScanner:
                 for p in func_params:
                     if any(isinstance(sub, ast.Name) and sub.id == p for sub in ast.walk(call_node.args[0])):
                         ln = call_node.lineno
-                        snip = lines[ln - 1].strip() if 0 < ln <= len(lines) else f"subprocess.run({p}, shell=True)"
+                        snip = lines[ln - 1].strip() if 0 < ln <= len(lines) else f"subprocess.{call_node.func.attr}({p}, ...)"
                         return ("Command", ln, p, snip, "CWE-78")
 
         # Insecure Deserialization sinks

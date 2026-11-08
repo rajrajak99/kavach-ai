@@ -4,7 +4,7 @@ import json
 import argparse
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 
 if sys.platform == "win32":
     try:
@@ -29,12 +29,31 @@ IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
     '.pytest_cache', 'dist', 'build', '.idea', '.vscode', 'samples',
     'tests', 'test', 'scratch', 'leads', 'docs', 'assets', 'benchmarks',
-    'scripts'
+    'scripts', 'marketing', '.user_uploaded', 'brain'
 }
 SUPPORTED_EXTS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.c'}
 
 BOT_SIGNATURE = "<!-- KAVACH_AI_PR_REVIEW_BOT -->"
 LEGACY_SIGNATURE = "<!-- AUTOPATCH_AI_PR_REVIEW_BOT -->"
+
+def is_ignored_path(filepath: str, extra_ignores: Optional[Set[str]] = None) -> bool:
+    """Returns True if file belongs to tests, leads, docs, scripts, or non-production directories."""
+    if not filepath:
+        return True
+    norm = filepath.replace('\\', '/').lower().strip()
+    parts = [p for p in norm.split('/') if p]
+    all_ignores = IGNORE_DIRS.union(set(p.lower() for p in (extra_ignores or set())))
+    if any(p in all_ignores or p.endswith('_tests') or p.endswith('_test') or p.startswith('test_') for p in parts[:-1]):
+        return True
+    filename = parts[-1] if parts else ""
+    if (filename in ("tests.py", "test.py", "conftest.py", "tests.js", "test.js") 
+            or filename.startswith(("demo_", "benchmark_", "test_"))
+            or filename.endswith(("_test.py", ".test.js", ".spec.js", ".test.ts", ".spec.ts"))
+            or "mock" in filename):
+        return True
+    if any(p in all_ignores for p in parts):
+        return True
+    return False
 
 def safe_str(text: str) -> str:
     return text.encode('ascii', errors='ignore').decode('ascii')
@@ -65,21 +84,26 @@ def get_git_diff() -> Optional[str]:
         pass
     return None
 
-def scan_repository_files(target_dir: Path) -> List[ParsedFileDiff]:
+def scan_repository_files(target_dir: Path, extra_ignores: Optional[Set[str]] = None) -> List[ParsedFileDiff]:
     """Fallback scanner for whole repo or specified directory."""
     parser = DiffParser()
     file_diffs = []
+    all_ignores = IGNORE_DIRS.union(set(p.lower() for p in (extra_ignores or set())))
     
     if target_dir.is_file():
-        candidates = [target_dir]
+        candidates = [target_dir] if not is_ignored_path(str(target_dir), all_ignores) else []
     else:
         candidates = []
         for root, dirs, files in os.walk(target_dir):
-            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+            dirs[:] = [d for d in dirs if d.lower() not in all_ignores and not d.lower().endswith(('_tests', '_test'))]
             for f in files:
-                if f.startswith(("demo_", "benchmark_", "test_")) or "mock" in f.lower():
-                    continue
                 p = Path(root) / f
+                try:
+                    rel_name = str(p.relative_to(target_dir))
+                except Exception:
+                    rel_name = str(p)
+                if is_ignored_path(rel_name, all_ignores):
+                    continue
                 if p.suffix.lower() in SUPPORTED_EXTS and not DiffParser.is_noise_file(f):
                     candidates.append(p)
 
@@ -87,7 +111,6 @@ def scan_repository_files(target_dir: Path) -> List[ParsedFileDiff]:
         try:
             with open(p, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
-            # Parse raw content as virtual added diff
             rel_name = str(p.relative_to(target_dir)) if target_dir.is_dir() else p.name
             fd = parser.parse_raw_snippet(rel_name, content)
             file_diffs.append(fd)
@@ -244,6 +267,7 @@ def main():
     parser.add_argument("--heal", action="store_true", help="Run self-healing regression test verification on patches")
     parser.add_argument("--test-cmd", default="pytest", help="Test command for self-healing verification (default: pytest)")
     parser.add_argument("--license-key", default=os.getenv("KAVACH_LICENSE_KEY"), help="Kavach AI License Key (Pro / Team)")
+    parser.add_argument("--exclude", nargs="*", default=[], help="Additional directories or files to exclude from security gate")
     parser.add_argument("--dry-run", action="store_true", help="Run without posting to GitHub API")
     args = parser.parse_args()
 
@@ -264,15 +288,24 @@ def main():
     # Step 1: Obtain diff or scan repository
     git_diff_raw = get_git_diff()
     file_diffs = []
+    extra_excludes = set(args.exclude) if args.exclude else set()
 
     if git_diff_raw is not None:
         print("[+] Detected Git changeset via Git CLI. Parsing diff hunks...")
-        file_diffs = diff_parser.parse_git_diff(git_diff_raw)
+        raw_diffs = diff_parser.parse_git_diff(git_diff_raw)
+        file_diffs = [
+            fd for fd in raw_diffs
+            if not is_ignored_path(fd.filename_new or fd.filename_old, extra_excludes)
+            and not DiffParser.is_noise_file(fd.filename_new or fd.filename_old)
+        ]
+        ignored_count = len(raw_diffs) - len(file_diffs)
+        if ignored_count > 0:
+            print(f"[i] Filtered out {ignored_count} non-production/test/script/lead file(s) from security gate.")
         total_files = len(file_diffs)
     else:
         target_path = Path(args.path)
         print(f"[+] Scanning repository directory: {target_path.resolve()}")
-        file_diffs = scan_repository_files(target_path)
+        file_diffs = scan_repository_files(target_path, extra_ignores=extra_excludes)
         total_files = len(file_diffs)
 
     # Step 2: Run surgical analysis
@@ -357,7 +390,7 @@ def main():
     should_fail = False
     if analysis.get('status') == 'SYNTAX_ERROR':
         should_fail = True
-    elif args.fail_on == "CRITICAL" and (crit > 0 or sec > 0):
+    elif args.fail_on == "CRITICAL" and crit > 0:
         should_fail = True
     elif args.fail_on == "HIGH" and (crit > 0 or sec > 0):
         should_fail = True

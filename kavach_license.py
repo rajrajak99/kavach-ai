@@ -27,7 +27,7 @@ try:
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
-DEFAULT_MASTER_SECRET = "kavach_master_hmac_secret_key_v1_4_0_deterministic_salt"
+DEFAULT_MASTER_SECRET = "kavach_master_hmac_placeholder_salt_v1_4_0"
 
 def get_master_secret(master_secret: Optional[str] = None) -> str:
     """Retrieves master HMAC secret with deterministic fallback."""

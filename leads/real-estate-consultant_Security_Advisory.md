@@ -54,6 +54,7 @@ dangerouslySetInnerHTML={{
 +++ b/frontend/app/layout.tsx
 - dangerouslySetInnerHTML={{
 + // Safe DOM Injection with DOMPurify sanitization (Prevents XSS)
++         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cleanPayload) }}
 ```
 
 ---
@@ -83,6 +84,7 @@ Current Code:
 
 1-Click Surgical Patch:
   + // Safe DOM Injection with DOMPurify sanitization (Prevents XSS)
+  +         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cleanPayload) }}
 
 Unlike legacy SAST scanners that spit out 50 false positives on styling or test files, Kavach AI verifies deterministic AST taint paths in CI under 16ms and comments ready-to-merge patches directly on GitHub PRs.
 
@@ -111,6 +113,7 @@ Noticed unmitigated dom cross-site scripting (xss) via dangerouslysetinnerhtml [
 We generated the exact 1-click surgical patch diff:
 - dangerouslySetInnerHTML={{
 + // Safe DOM Injection with DOMPurify sanitization (Prevents XSS)
++         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cleanPayload) }}
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
 

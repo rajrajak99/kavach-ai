@@ -20,7 +20,7 @@
 jsonwebtoken==7.1.9  # CVE-2022-23529 (CRITICAL)
 
 # 1-Click Surgical Patch:
-jsonwebtoken>=jsonwebtoken>=9.0.0
+jsonwebtoken>=9.0.0
 ```
 
 ---
@@ -52,7 +52,7 @@ jsonwebtoken==7.1.9  # CVE-2022-23529 (CRITICAL)
 --- a/requirements.txt
 +++ b/requirements.txt
 - jsonwebtoken==7.1.9  # CVE-2022-23529 (CRITICAL)
-+ jsonwebtoken>=jsonwebtoken>=9.0.0
++ jsonwebtoken>=9.0.0
 ```
 
 ---
@@ -81,7 +81,7 @@ Current Code:
   - jsonwebtoken==7.1.9  # CVE-2022-23529 (CRITICAL)
 
 1-Click Surgical Patch:
-  + jsonwebtoken>=jsonwebtoken>=9.0.0
+  + jsonwebtoken>=9.0.0
 
 Unlike legacy SAST scanners that spit out 50 false positives on styling or test files, Kavach AI verifies deterministic AST taint paths in CI under 16ms and comments ready-to-merge patches directly on GitHub PRs.
 
@@ -109,7 +109,7 @@ Noticed reachable cve cve-2022-23529 in `jsonwebtoken` actively imported by prod
 
 We generated the exact 1-click surgical patch diff:
 - jsonwebtoken==7.1.9  # CVE-2022-23529 (CRITICAL)
-+ jsonwebtoken>=jsonwebtoken>=9.0.0
++ jsonwebtoken>=9.0.0
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
 

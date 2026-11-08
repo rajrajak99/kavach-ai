@@ -58,6 +58,9 @@ db.execute(
 --- a/app/app.py
 +++ b/app/app.py
 - // Source: app/app.py:L466
+- initialization.clean_permissions_sync(db, permissions_list)
+- // Sinks to: app/utils/initialization.py:L184
+- db.execute(
 + // In app/app.py: Pass clean bound parameters instead of raw tainted string
 ```
 
@@ -85,6 +88,9 @@ Ran our 10ms local AST taint engine (Kavach AI) against Hyperion and wanted to s
 
 Current Code:
   - // Source: app/app.py:L466
+  - initialization.clean_permissions_sync(db, permissions_list)
+  - // Sinks to: app/utils/initialization.py:L184
+  - db.execute(
 
 1-Click Surgical Patch:
   + // In app/app.py: Pass clean bound parameters instead of raw tainted string
@@ -115,6 +121,9 @@ Noticed inter-procedural taint flow from `app/app.py`:l466 propagates to unparam
 
 We generated the exact 1-click surgical patch diff:
 - // Source: app/app.py:L466
+- initialization.clean_permissions_sync(db, permissions_list)
+- // Sinks to: app/utils/initialization.py:L184
+- db.execute(
 + // In app/app.py: Pass clean bound parameters instead of raw tainted string
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.

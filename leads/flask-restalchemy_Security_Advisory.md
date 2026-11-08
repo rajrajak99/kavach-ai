@@ -20,7 +20,7 @@
 flask==1.0.0  # CVE-2023-30861 (HIGH)
 
 # 1-Click Surgical Patch:
-flask>=flask>=2.3.2
+flask>=2.3.2
 ```
 
 ---
@@ -52,7 +52,7 @@ flask==1.0.0  # CVE-2023-30861 (HIGH)
 --- a/requirements.txt
 +++ b/requirements.txt
 - flask==1.0.0  # CVE-2023-30861 (HIGH)
-+ flask>=flask>=2.3.2
++ flask>=2.3.2
 ```
 
 ---
@@ -81,7 +81,7 @@ Current Code:
   - flask==1.0.0  # CVE-2023-30861 (HIGH)
 
 1-Click Surgical Patch:
-  + flask>=flask>=2.3.2
+  + flask>=2.3.2
 
 Unlike legacy SAST scanners that spit out 50 false positives on styling or test files, Kavach AI verifies deterministic AST taint paths in CI under 16ms and comments ready-to-merge patches directly on GitHub PRs.
 
@@ -109,7 +109,7 @@ Noticed reachable cve cve-2023-30861 in `flask` actively imported by production 
 
 We generated the exact 1-click surgical patch diff:
 - flask==1.0.0  # CVE-2023-30861 (HIGH)
-+ flask>=flask>=2.3.2
++ flask>=2.3.2
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
 

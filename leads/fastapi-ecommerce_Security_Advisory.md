@@ -58,6 +58,9 @@ coupon = self.db.execute(select(Coupon).where(Coupon.code == code)).scalar_one_o
 --- a/app/api/v1/routes/cart.py
 +++ b/app/api/v1/routes/cart.py
 - // Source: app/api/v1/routes/cart.py:L132
+- cart_service.apply_coupon(cart, code)
+- // Sinks to: app/services/cart_service.py:L208
+- coupon = self.db.execute(select(Coupon).where(Coupon.code == code)).scalar_one_or_none()
 + // In app/api/v1/routes/cart.py: Pass clean bound parameters instead of raw tainted string
 ```
 
@@ -85,6 +88,9 @@ Ran our 10ms local AST taint engine (Kavach AI) against fastapi-ecommerce and wa
 
 Current Code:
   - // Source: app/api/v1/routes/cart.py:L132
+  - cart_service.apply_coupon(cart, code)
+  - // Sinks to: app/services/cart_service.py:L208
+  - coupon = self.db.execute(select(Coupon).where(Coupon.code == code)).scalar_one_or_none()
 
 1-Click Surgical Patch:
   + // In app/api/v1/routes/cart.py: Pass clean bound parameters instead of raw tainted string
@@ -115,6 +121,9 @@ Noticed inter-procedural taint flow from `app/api/v1/routes/cart.py`:l132 propag
 
 We generated the exact 1-click surgical patch diff:
 - // Source: app/api/v1/routes/cart.py:L132
+- cart_service.apply_coupon(cart, code)
+- // Sinks to: app/services/cart_service.py:L208
+- coupon = self.db.execute(select(Coupon).where(Coupon.code == code)).scalar_one_or_none()
 + // In app/api/v1/routes/cart.py: Pass clean bound parameters instead of raw tainted string
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.

@@ -5,54 +5,54 @@
 - **Website / Domain**: [https://www.rafaelurben.ch/django-kmuhelper/](https://www.rafaelurben.ch/django-kmuhelper/)
 - **Founder Email**: `github@rafaelurben.ch` (✅ Verified Deliverable)
 - **Stars**: ⭐ 14
-- **Security Weakness**: `High-Severity Application Security Vulnerability` [CWE-798]
-- **Target File Link**: [kmuhelper_tests/settings.py](https://github.com/rafaelurben/django-kmuhelper/blob/main/kmuhelper_tests/settings.py#L4)
-- **SOC 2 Compliance Impact**: `CC6.1 Logical Access & Hardcoded Secret Prevention`
+- **Security Weakness**: `Reachable High-Severity Supply-Chain CVE` [CVE-2023-32681]
+- **Target File Link**: [requirements.txt](https://github.com/rafaelurben/django-kmuhelper/blob/main/requirements.txt#L1)
+- **SOC 2 Compliance Impact**: `CC7.1 Vulnerability Management`
 
 ---
 
 ## 1. Verified AST / SCA Technical Evidence
-- **File & Line**: `kmuhelper_tests/settings.py`:L4
-- **Diagnosis**: Unmitigated Hardcoded Secret / API Key [CWE-798] detected in `kmuhelper_tests/settings.py`:L4.
+- **File & Line**: `requirements.txt`:L1
+- **Diagnosis**: Reachable CVE CVE-2023-32681 in `requests` actively imported by production callers: `kmuhelper/utils.py`, `kmuhelper/modules/main/models.py`.
 
 ```python
 # Vulnerable Code:
-SECRET_KEY = "fa^c^jx6$epw$%#b3bc)=cn_dp@misn+5l-cogxw$w3lsdl3r="
+requests==2.26.0  # CVE-2023-32681 (HIGH)
 
 # 1-Click Surgical Patch:
-SECRET_KEY = os.environ.get("SECRET_KEY", "")
+requests>=2.31.0
 ```
 
 ---
 
 ## 2. 1-Click GitHub Security Issue / PR Advisory Template
-**Issue Title**: `[Security Advisory] Fix CWE-798 in settings.py`
+**Issue Title**: `[Security Advisory] Fix CVE-2023-32681 in requirements.txt`
 
 ```markdown
 ### 🛡️ Vulnerability Report & 1-Click Surgical Patch
 
 **Target Repository**: [rafaelurben/django-kmuhelper](https://github.com/rafaelurben/django-kmuhelper)  
-**Vulnerability Type**: `High-Severity Application Security Vulnerability` [CWE-798]  
-**File Location**: [kmuhelper_tests/settings.py:L4](https://github.com/rafaelurben/django-kmuhelper/blob/main/kmuhelper_tests/settings.py#L4)
+**Vulnerability Type**: `Reachable High-Severity Supply-Chain CVE` [CVE-2023-32681]  
+**File Location**: [requirements.txt:L1](https://github.com/rafaelurben/django-kmuhelper/blob/main/requirements.txt#L1)
 
 ---
 
 ### Technical Evidence
-Unmitigated Hardcoded Secret / API Key [CWE-798] detected in `kmuhelper_tests/settings.py`:L4.
+Reachable CVE CVE-2023-32681 in `requests` actively imported by production callers: `kmuhelper/utils.py`, `kmuhelper/modules/main/models.py`.
 
 ```python
 # Current Code:
-SECRET_KEY = "fa^c^jx6$epw$%#b3bc)=cn_dp@misn+5l-cogxw$w3lsdl3r="
+requests==2.26.0  # CVE-2023-32681 (HIGH)
 ```
 
 ---
 
 ### 1-Click Surgical Remediation Diff
 ```diff
---- a/kmuhelper_tests/settings.py
-+++ b/kmuhelper_tests/settings.py
-- SECRET_KEY = "fa^c^jx6$epw$%#b3bc)=cn_dp@misn+5l-cogxw$w3lsdl3r="
-+ SECRET_KEY = os.environ.get("SECRET_KEY", "")
+--- a/requirements.txt
++++ b/requirements.txt
+- requests==2.26.0  # CVE-2023-32681 (HIGH)
++ requests>=2.31.0
 ```
 
 ---
@@ -63,25 +63,25 @@ SECRET_KEY = "fa^c^jx6$epw$%#b3bc)=cn_dp@misn+5l-cogxw$w3lsdl3r="
 
 ## 3. Copy-Paste Cold Email to Founder / CTO
 **Recipient**: `github@rafaelurben.ch`
-**Subject**: `Security advisory + 1-click patch for rafaelurben/django-kmuhelper (settings.py)`
+**Subject**: `Security advisory + 1-click patch for rafaelurben/django-kmuhelper (requirements.txt)`
 
 ```text
 To: github@rafaelurben.ch
-Subject: Security advisory + 1-click patch for rafaelurben/django-kmuhelper (settings.py)
+Subject: Security advisory + 1-click patch for rafaelurben/django-kmuhelper (requirements.txt)
 
 Hi Rafael,
 
 Ran our 10ms local AST taint engine (Kavach AI) against django-kmuhelper and wanted to share a verified security audit finding in production code:
 
-• Vulnerability: High-Severity Application Security Vulnerability [CWE-798]
-• Location: [kmuhelper_tests/settings.py:L4](https://github.com/rafaelurben/django-kmuhelper/blob/main/kmuhelper_tests/settings.py#L4)
-• Impact: Unmitigated Hardcoded Secret / API Key [CWE-798] detected in `kmuhelper_tests/settings.py`:L4.
+• Vulnerability: Reachable High-Severity Supply-Chain CVE [CVE-2023-32681]
+• Location: [requirements.txt:L1](https://github.com/rafaelurben/django-kmuhelper/blob/main/requirements.txt#L1)
+• Impact: Reachable CVE CVE-2023-32681 in `requests` actively imported by production callers: `kmuhelper/utils.py`, `kmuhelper/modules/main/models.py`.
 
 Current Code:
-  - SECRET_KEY = "fa^c^jx6$epw$%#b3bc)=cn_dp@misn+5l-cogxw$w3lsdl3r="
+  - requests==2.26.0  # CVE-2023-32681 (HIGH)
 
 1-Click Surgical Patch:
-  + SECRET_KEY = os.environ.get("SECRET_KEY", "")
+  + requests>=2.31.0
 
 Unlike legacy SAST scanners that spit out 50 false positives on styling or test files, Kavach AI verifies deterministic AST taint paths in CI under 16ms and comments ready-to-merge patches directly on GitHub PRs.
 
@@ -105,11 +105,11 @@ rajabhaiyarajak2008@gmail.com
 ```text
 Hey Rafael — came across django-kmuhelper and ran our 10ms local AST engine (Kavach AI). 
 
-Noticed unmitigated hardcoded secret / api key [cwe-798] detected in `kmuhelper_tests/settings.py`:l4.
+Noticed reachable cve cve-2023-32681 in `requests` actively imported by production callers: `kmuhelper/utils.py`, `kmuhelper/modules/main/models.py`.
 
 We generated the exact 1-click surgical patch diff:
-- SECRET_KEY = "fa^c^jx6$epw$%#b3bc)=cn_dp@misn+5l-cogxw$w3lsdl3r="
-+ SECRET_KEY = os.environ.get("SECRET_KEY", "")
+- requests==2.26.0  # CVE-2023-32681 (HIGH)
++ requests>=2.31.0
 
 We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
 
