@@ -802,6 +802,20 @@ def main():
     out_file_path = Path(args.output_file)
     out_file_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Auto-resolve GitHub Token from git credential helper if not passed
+    if not args.token:
+        try:
+            git_bin = str(_root / "bin" / "git" / "cmd" / "git.exe")
+            if os.path.exists(git_bin):
+                p_proc = subprocess.Popen([git_bin, 'credential', 'fill'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                out_cred, _ = p_proc.communicate('protocol=https\nhost=github.com\n')
+                creds = dict(l.split('=', 1) for l in out_cred.splitlines() if '=' in l)
+                if creds.get('password'):
+                    args.token = creds['password']
+                    print("  [+] Authenticated via GitHub Credential Manager (rajrajak99)", flush=True)
+        except Exception:
+            pass
+
     print("=================================================================", flush=True)
     print("  [+] KAVACH AI -- HIGH-SEVERITY B2B SAAS PROSPECT HUNTER (v1.4.1)", flush=True)
     print("  Strict B2B SaaS Organizations • Deliverable Founder Emails • Zero Noreply", flush=True)
