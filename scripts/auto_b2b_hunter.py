@@ -732,10 +732,10 @@ Unlike legacy SAST scanners that spit out 50 false positives on styling or test 
 Takes 60 seconds to plug into GitHub Actions:
 ```yaml
 - name: Kavach AI Pre-Merge Gate
-  uses: rajrajak99/kavach-ai@v1.4.0
+  uses: rajrajak99/kavach-ai@v1.4.1
 ```
 
-Would love to set up an Early Adopter pass ($149 One-Time) or Team CI Gate if you want automated pre-merge gates across your private repositories.
+Would love to set up a Growth Team pilot ($99/mo, 0 per-seat tax) or Enterprise Air-Gapped Runner if you want automated pre-merge gates across your private repositories.
 
 Best,
 Raja Rajak
@@ -751,9 +751,9 @@ We generated the exact 1-click surgical patch diff:
 {diff_del}
 {diff_add}
 
-We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.0.
+We built a plug-and-play GitHub Action that blocks vulnerable PRs and comments with the exact fix before merge: uses: rajrajak99/kavach-ai@v1.4.1.
 
-Happy to give your team an Early Adopter pass if you want to test it on private repos: https://kavach-ai.streamlit.app!"""
+Happy to set your team up with a Growth Team pilot ($99/mo) if you want to test it on private repos: https://kavach-ai.streamlit.app!"""
 
         return {
             "repo_name": repo_name,
@@ -834,10 +834,16 @@ def main():
         'language:python "langchain" "fastapi" api -starter stars:10..600',
         'language:python "supabase" "fastapi" -tutorial stars:5..600',
         'language:python "fastapi" "sqlalchemy" saas stars:5..600',
-        'language:python "django" "billing" stars:5..600'
+        'language:python "django" "billing" stars:5..600',
+        'language:python "fastapi" "jwt" auth -tutorial stars:5..800',
+        'language:python "django" "stripe" saas stars:5..800',
+        'language:python "fastapi" "postgres" saas stars:5..800',
+        'language:python "flask" "jwt" auth -template stars:5..800',
+        'language:python "tortoise-orm" "fastapi" stars:5..800',
+        'language:python "fastapi" "redis" enterprise stars:5..800'
     ]
 
-    candidates = search_github_repositories(queries, token=args.token, max_total=args.max_leads * 5)
+    candidates = search_github_repositories(queries, token=args.token, max_total=args.max_leads * 8)
     print(f"[+] Total candidate repositories queued for security audit: {len(candidates)}\n", flush=True)
 
     verified_leads: List[Dict[str, Any]] = []

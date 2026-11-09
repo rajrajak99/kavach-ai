@@ -33,8 +33,9 @@ class BillingManager:
         """
         urls = {
             "pro": os.getenv("KAVACH_CHECKOUT_PRO_URL", "").strip(),
-            "team": os.getenv("KAVACH_CHECKOUT_TEAM_URL", "").strip(),
-            "ltd": os.getenv("KAVACH_CHECKOUT_LTD_URL", "").strip(),
+            "growth": os.getenv("KAVACH_CHECKOUT_GROWTH_URL", "").strip() or os.getenv("KAVACH_CHECKOUT_TEAM_URL", "").strip(),
+            "team": os.getenv("KAVACH_CHECKOUT_TEAM_URL", "").strip() or os.getenv("KAVACH_CHECKOUT_GROWTH_URL", "").strip(),
+            "enterprise": os.getenv("KAVACH_CHECKOUT_ENTERPRISE_URL", "").strip(),
         }
 
         # Also attempt to check Streamlit secrets if running inside Streamlit
@@ -43,10 +44,12 @@ class BillingManager:
             if hasattr(st, "secrets"):
                 if not urls["pro"] and "KAVACH_CHECKOUT_PRO_URL" in st.secrets:
                     urls["pro"] = str(st.secrets["KAVACH_CHECKOUT_PRO_URL"]).strip()
+                if not urls["growth"] and "KAVACH_CHECKOUT_GROWTH_URL" in st.secrets:
+                    urls["growth"] = str(st.secrets["KAVACH_CHECKOUT_GROWTH_URL"]).strip()
                 if not urls["team"] and "KAVACH_CHECKOUT_TEAM_URL" in st.secrets:
                     urls["team"] = str(st.secrets["KAVACH_CHECKOUT_TEAM_URL"]).strip()
-                if not urls["ltd"] and "KAVACH_CHECKOUT_LTD_URL" in st.secrets:
-                    urls["ltd"] = str(st.secrets["KAVACH_CHECKOUT_LTD_URL"]).strip()
+                if not urls["enterprise"] and "KAVACH_CHECKOUT_ENTERPRISE_URL" in st.secrets:
+                    urls["enterprise"] = str(st.secrets["KAVACH_CHECKOUT_ENTERPRISE_URL"]).strip()
         except Exception:
             pass
 
@@ -87,7 +90,7 @@ class BillingManager:
             f"License Key:     {license_key}\n"
             f"Order ID:        {payment_id or 'OFFLINE-ACTIVATION'}\n"
             f"Issued At:       {date_str}\n"
-            f"Validity:        10 Years (Permanent / Stateless)\n\n"
+            f"Validity:        Active Recurring B2B Subscription\n\n"
             "--------------------------------------------------------------------------------\n"
             "HOW TO USE YOUR LICENSE KEY:\n"
             "--------------------------------------------------------------------------------\n"
@@ -134,11 +137,11 @@ class BillingManager:
         if is_success:
             # Map tier string to recognized plan
             target_tier = "FREE"
-            if "PRO" in tier_str or "DEV" in tier_str:
+            if "PRO" in tier_str or "DEV" in tier_str or "INDIE" in tier_str:
                 target_tier = "DEVELOPER_PRO"
-            elif "TEAM" in tier_str or "ENTERPRISE" in tier_str:
+            elif "GROWTH" in tier_str or "TEAM" in tier_str or "STARTUP" in tier_str:
                 target_tier = "TEAM_ENTERPRISE"
-            elif "LTD" in tier_str or "LIFETIME" in tier_str:
+            elif "ENTERPRISE" in tier_str or "COMPLIANCE" in tier_str:
                 target_tier = "TEAM_ENTERPRISE"
             else:
                 target_tier = "DEVELOPER_PRO"

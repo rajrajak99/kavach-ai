@@ -34,7 +34,7 @@ kavach .
 
 To validate it on real code, we've been running it against production open-source SaaS repos and opening surgical PRs. Maintainers have already reviewed and accepted patches on real platforms (including `cobranca-api`, `flask-restalchemy`, and `drf-stripe-subscription`).
 
-We are bootstrapping Kavach AI and offering an Early Adopter Founder Pass ($149 One-Time Lifetime Access for unlimited private repos and CI gates) capped at 50 developers to work closely with early users.
+We are bootstrapping Kavach AI and offering our Growth Team plan ($99/mo or $990/yr for up to 15 engineers with zero per-seat tax, unlimited private repos, automated PR bot, and SOC 2 / ISO 27001 report exports) to work closely with early users.
 
 Check out the live interactive playground (no signup required):
 👉 https://kavach-ai.streamlit.app
@@ -87,7 +87,7 @@ c.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema
 You can test any snippet or repo in our live playground without signing up:
 👉 https://kavach-ai.streamlit.app
 
-We’re giving away an Early Adopter Founder Pass ($149 lifetime) for the first 50 builders who want automated pre-merge gates across their private repos.
+We're offering our Growth Team plan ($99/month, zero per-seat tax) for teams who want automated pre-merge gates across their private repos with SOC 2 compliance readiness.
 
 Code is open on GitHub: https://github.com/rajrajak99/kavach-ai
 
@@ -127,9 +127,11 @@ It takes 60 seconds to plug into GitHub Actions:
 uses: rajrajak99/kavach-ai@v1.4.1
 
 6/7
-We are opening our Early Adopter Cohort:
-$149 One-Time Lifetime Access (Unlimited private repos & CI gates).
-Strictly capped at 50 founders before we move to $99/mo. (37 already claimed).
+Flexible recurring plans designed for developer teams:
+- Free Community ($0) for open source
+- Pro Indie ($29/mo) for solo developers
+- Growth Team ($99/mo, 0 per-seat tax) for startups up to 15 engineers
+- Global Enterprise ($499/mo) for air-gapped runners & compliance
 
 7/7
 Try the live sandbox (no signup required):
@@ -153,7 +155,7 @@ Quick question — what tool are you currently using to catch code-level securit
 
 Most founders tell us Snyk and SonarQube are too noisy and slow down their team. We built Kavach AI specifically to block SQLi, secret leaks, and critical CVEs in CI under 16ms with zero false positives.
 
-We're onboarding our first 50 early-stage teams with an Early Adopter Pass ($149 One-Time for lifetime unlimited private repos + CI gate) instead of our $99/month subscription.
+We're onboarding fast-moving teams onto our Growth Team plan ($99/month, zero per-seat tax for up to 15 engineers) with automated pre-merge gates and SOC 2 report generation.
 
 Would love to set you up if you want automated pre-merge security across your private repositories:
 https://kavach-ai.streamlit.app

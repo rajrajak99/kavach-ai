@@ -13,7 +13,7 @@
 [![False Positives: 0.0%](https://img.shields.io/badge/False%20Positives-0.0%25%20(Zero%20Noise)-gold.svg)](#)
 [![Architecture: 100% Offline](https://img.shields.io/badge/Architecture-100%25%20Offline%20AST-blueviolet.svg)](#-enterprise-trust--zero-data-retention-soc-2-ready)
 [![Compliance: SOC 2 Ready](https://img.shields.io/badge/Compliance-SOC%202%20Ready-success.svg)](#-enterprise-trust--zero-data-retention-soc-2-ready)
-[![Founder Pass: $149 LTD](https://img.shields.io/badge/Founder%20Pass-%24149%20Lifetime-gold.svg)](https://kavach-ai.streamlit.app)
+[![Pricing: $99/mo Growth Team](https://img.shields.io/badge/Pricing-%2499%2Fmo%20Growth-gold.svg)](https://kavach-ai.streamlit.app)
 [![Web Console](https://img.shields.io/badge/Web%20Console-Live-brightgreen.svg)](https://kavach-ai.streamlit.app)
 
 Kavach AI is an autonomous, high-speed static security inspector and surgical code repair engine. Operating like an impenetrable armor across your **GitHub Pull Requests (CI/CD)**, local CLI, VS Code editor, and Web Console, it eliminates critical security hazards (CWE-89 SQLi, CWE-798 Secret Leaks, CWE-120 Buffer Overflows) and generates **1-click ready-to-merge patches** with zero-regression self-healing verification.

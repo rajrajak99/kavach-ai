@@ -2708,63 +2708,33 @@ elif active_tab == "Pricing":
     </div>
     """, unsafe_allow_html=True)
 
-    # Founder Launch LTD Banner & Real Checkout Pipeline
     checkout_urls = BillingManager.get_checkout_urls()
-
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, rgba(198, 167, 106, 0.15) 0%, rgba(18, 23, 32, 0.98) 100%); border: 1px solid rgba(198, 167, 106, 0.6); border-radius: 10px; padding: 18px 22px; margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-            <div>
-                <span style="background: #C6A76A; color: #090B0F; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 6px; margin-right: 8px; text-transform: uppercase; letter-spacing: 0.05em;">★ Limited Founder Cohort</span>
-                <span style="font-weight: 700; color: #F1F5F9; font-size: 16px;">Early Adopter Pass: $149 One-Time Lifetime Access</span>
-                <span style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 600; font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-left: 6px;">Save $49/mo vs Pro</span>
-                <div style="color: #94A3B8; font-size: 12.5px; margin-top: 6px;">
-                    ✓ Unlimited Private Repositories &nbsp;•&nbsp; ✓ Pre-Merge GitHub Actions Gate &nbsp;•&nbsp; ✓ Zero-Noise 10ms AST Engine &nbsp;•&nbsp; ✓ SOC 2 Audit Exports
-                </div>
-                <div style="color: #F59E0B; font-size: 12px; margin-top: 6px; font-weight: 600;">
-                    ⚠️ Important: Strictly limited to first 5 adopters. Lifetime access will be permanently retired once these 5 passes are claimed, moving strictly to $49/mo & $199/mo.
-                </div>
-            </div>
-            <div style="text-align: right;">
-                <div style="font-size: 11.5px; color: #C6A76A; font-weight: 600;">Cohort Cap: 5 Passes</div>
-                <div style="font-size: 13.5px; font-weight: 700; color: #EF4444; margin-top: 2px;">🔥 3 / 5 Claimed — Only 2 Left!</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    c_ltd1, c_ltd2, c_ltd3 = st.columns([1.1, 1.8, 1.1], gap="small")
-    with c_ltd2:
-        if checkout_urls.get("ltd"):
-            st.link_button("⚡ Claim 1 of 2 Remaining Lifetime Passes ($149)", checkout_urls["ltd"], type="primary", use_container_width=True)
-        else:
-            st.link_button("⚡ Claim 1 of 2 Remaining Lifetime Passes ($149)", BillingManager.get_invoice_request_url("Founder Lifetime Pass", "One-Time $149 (Final 2 Passes)"), type="primary", use_container_width=True)
 
     b_col1, b_col2, b_col3 = st.columns([1.5, 1.2, 1.5], gap="small", vertical_alignment="center")
     with b_col2:
         billing_cycle = st.segmented_control(
             "Billing Cycle",
-            ["Annual (Save 20-25%)", "Monthly"],
-            default="Annual (Save 20-25%)",
+            ["Annual (Save 20%)", "Monthly"],
+            default="Annual (Save 20%)",
             label_visibility="collapsed",
             key="pricing_billing_toggle"
-        ) or "Annual (Save 20-25%)"
+        ) or "Annual (Save 20%)"
 
     st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
 
-    p1, p2, p3 = st.columns(3, gap="medium")
+    p1, p2, p3, p4 = st.columns(4, gap="medium")
 
     # 1. COMMUNITY ($0)
     with p1:
         free_active = "pricing-card-active" if is_free else ""
         st.markdown(f"""
         <div class="pricing-card {free_active}">
-            <div class="card-tier-title">Community</div>
+            <div class="card-tier-title">Free Community</div>
             <div class="card-tier-amt">$0</div>
-            <div class="card-tier-sub">Forever free for public open-source repos</div>
+            <div class="card-tier-sub">Free for public open-source repositories & local scans</div>
             <div class="card-features-list">
                 ✓ <b>Unlimited public repositories</b><br>
-                ✓ High-speed offline AST scanning<br>
+                ✓ High-speed offline AST scanning (&lt;16ms)<br>
                 ✓ Local CLI execution (<code>kavach .</code>)<br>
                 ✓ Free for students & open source<br>
                 ✓ Zero code telemetry or data retention
@@ -2777,85 +2747,199 @@ elif active_tab == "Pricing":
             key="btn_activate_free",
             disabled=is_free,
             on_click=select_plan,
-            args=(PlanTier.FREE.value, "Community Free ($0)"),
+            args=(PlanTier.FREE.value, "Free Community ($0)"),
             use_container_width=True
         )
 
-    # 2. DEVELOPER PRO ($39/mo annual or $49/mo monthly)
+    # 2. PRO INDIE ($29/mo or $290/yr)
     with p2:
         if billing_cycle == "Monthly":
-            pro_price = "$49"
-            pro_sub = "$49 billed monthly • Solo Devs & Consultants"
+            pro_price = "$29"
+            pro_sub = "$29 billed monthly • Solo Devs & Small Teams"
         else:
-            pro_price = "$39"
-            pro_sub = "$468 billed annually (Save 20%) • Solo Devs & Consultants"
+            pro_price = "$24.16"
+            pro_sub = "$290 billed annually (Save $58) • Solo Devs"
 
         pro_active = "pricing-card-active" if is_pro else ""
         st.markdown(f"""
-        <div class="pricing-card pricing-card-featured {pro_active}">
-            <div class="popular-badge">Most Popular</div>
-            <div class="card-tier-title">Developer Pro</div>
+        <div class="pricing-card {pro_active}">
+            <div class="card-tier-title">Pro Indie</div>
             <div class="card-tier-amt">{pro_price}<span style="font-size:14px; color:#64748B; font-weight:500;">/mo</span></div>
             <div class="card-tier-sub">{pro_sub}</div>
             <div class="card-features-list">
-                ✓ <b>Unlimited personal private repos</b><br>
-                ✓ Cryptographic Ed25519 token verification<br>
-                ✓ 1-click surgical auto-remediations<br>
-                ✓ Local Git pre-commit hooks & CLI<br>
-                ✓ Pre-audit SOC2 & ISO-27001 report exports
+                ✓ <b>Up to 3 developers</b><br>
+                ✓ <b>Private repo CI/CD gates</b><br>
+                ✓ 1-click surgical AST auto-patching<br>
+                ✓ <code>kavach --login</code> CLI sync<br>
+                ✓ Zero false-positive AST taint engine
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         if checkout_urls.get("pro") and not is_pro:
-            st.link_button(f"Checkout Developer Pro ({pro_price}/mo)", checkout_urls["pro"], type="primary", use_container_width=True)
+            st.link_button(f"Checkout Pro Indie ({pro_price}/mo)", checkout_urls["pro"], type="primary", use_container_width=True)
         else:
             st.button(
-                "✓ Active Plan" if is_pro else f"Select Developer Pro ({pro_price}/mo)",
+                "✓ Active Plan" if is_pro else f"Select Pro Indie ({pro_price}/mo)",
                 key="btn_activate_pro",
                 disabled=is_pro,
                 type="primary" if not is_pro else "secondary",
                 on_click=select_plan,
-                args=(PlanTier.DEVELOPER_PRO.value, f"Developer Pro ({pro_price}/mo)"),
+                args=(PlanTier.DEVELOPER_PRO.value, f"Pro Indie ({pro_price}/mo)"),
                 use_container_width=True
             )
 
-    # 3. TEAM ENTERPRISE ($149/mo annual or $199/mo monthly)
+    # 3. GROWTH TEAM ($99/mo or $990/yr) - 🔥 MOST POPULAR FOR STARTUPS
     with p3:
         if billing_cycle == "Monthly":
-            team_price = "$199"
-            team_sub = "$199 billed monthly • Startups & Orgs"
+            growth_price = "$99"
+            growth_sub = "$99 billed monthly • Funded Startups & Teams"
         else:
-            team_price = "$149"
-            team_sub = "$1,788 billed annually (Save 25%) • Startups & Orgs"
+            growth_price = "$82.50"
+            growth_sub = "$990 billed annually (Save $198) • Teams"
 
-        team_active = "pricing-card-active" if is_team else ""
+        growth_active = "pricing-card-active" if is_team else ""
         st.markdown(f"""
-        <div class="pricing-card {team_active}">
-            <div class="card-tier-title">Team Enterprise</div>
-            <div class="card-tier-amt">{team_price}<span style="font-size:14px; color:#64748B; font-weight:500;">/mo</span></div>
-            <div class="card-tier-sub">{team_sub}</div>
+        <div class="pricing-card pricing-card-featured {growth_active}">
+            <div class="popular-badge" style="background:#C6A76A; color:#090B0F; font-weight:700; border-color:#C6A76A;">🔥 Most Popular For Startups</div>
+            <div class="card-tier-title">Growth Team</div>
+            <div class="card-tier-amt">{growth_price}<span style="font-size:14px; color:#64748B; font-weight:500;">/mo</span></div>
+            <div class="card-tier-sub">{growth_sub}</div>
             <div class="card-features-list">
-                ✓ <b>GitHub Organizations support</b><br>
-                ✓ <b>Unlimited team repositories</b><br>
-                ✓ Autonomous PR review bot & merge blocker<br>
+                ✓ <b>Up to 15 engineers</b> (Zero per-seat tax)<br>
+                ✓ <b>Unlimited private repositories</b><br>
+                ✓ Automated PR review & merge blocker bot<br>
+                ✓ <b>SOC 2 / ISO 27001 / GDPR PDF Generator</b><br>
                 ✓ Pytest self-healing engine integration<br>
-                ✓ SOC2 Type II & ISO-27001 executive reports
+                ✓ Priority CI queue & SLA response
             </div>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-        if checkout_urls.get("team") and not is_team:
-            st.link_button(f"Checkout Team Enterprise ({team_price}/mo)", checkout_urls["team"], type="primary", use_container_width=True)
+        growth_url = checkout_urls.get("growth") or checkout_urls.get("team")
+        if growth_url and not is_team:
+            st.link_button(f"Upgrade Growth Team ({growth_price}/mo)", growth_url, type="primary", use_container_width=True)
         else:
             st.button(
-                "✓ Active Plan" if is_team else f"Select Team Enterprise ({team_price}/mo)",
-                key="btn_activate_team",
+                "✓ Active Plan" if is_team else f"Select Growth Team ({growth_price}/mo)",
+                key="btn_activate_growth",
                 disabled=is_team,
+                type="primary" if not is_team else "secondary",
                 on_click=select_plan,
-                args=(PlanTier.TEAM_ENTERPRISE.value, f"Team Enterprise ({team_price}/mo)"),
+                args=(PlanTier.TEAM_ENTERPRISE.value, f"Growth Team ({growth_price}/mo)"),
                 use_container_width=True
             )
+
+    # 4. GLOBAL ENTERPRISE & COMPLIANCE ($499/mo or $4,990/yr)
+    with p4:
+        if billing_cycle == "Monthly":
+            ent_price = "$499"
+            ent_sub = "$499 billed monthly • Large Orgs & Scaleups"
+        else:
+            ent_price = "$415.80"
+            ent_sub = "$4,990 billed annually (Save $998)"
+
+        st.markdown(f"""
+        <div class="pricing-card">
+            <div class="card-tier-title">Global Enterprise</div>
+            <div class="card-tier-amt">{ent_price}<span style="font-size:14px; color:#64748B; font-weight:500;">/mo</span></div>
+            <div class="card-tier-sub">{ent_sub}</div>
+            <div class="card-features-list">
+                ✓ <b>Unlimited engineers & orgs</b><br>
+                ✓ <b>100% air-gapped Docker runner</b><br>
+                ✓ Custom AST rules & proprietary patterns<br>
+                ✓ <b>Signed executive compliance reports</b><br>
+                ✓ SOC 2, HIPAA, PCI-DSS, ISO 27001 exports<br>
+                ✓ 24/7 Priority SLA & dedicated security lead
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+        if checkout_urls.get("enterprise"):
+            st.link_button(f"Contact Enterprise ({ent_price}/mo)", checkout_urls["enterprise"], type="secondary", use_container_width=True)
+        else:
+            st.link_button(
+                "Contact Enterprise",
+                BillingManager.get_invoice_request_url("Global Enterprise & Compliance", "Annual ($4,990/yr)"),
+                type="secondary",
+                use_container_width=True
+            )
+
+    # ROI & COMPETITIVE COMPARISON TABLE
+    st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #121720; border: 1px solid #252D38; border-radius: 10px; overflow: hidden; margin-bottom: 24px;">
+        <div style="padding: 16px 20px; background: #171D27; border-bottom: 1px solid #252D38; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <span style="font-size: 15px; font-weight: 700; color: #F1F5F9;">💰 Transparent ROI: Kavach AI vs Legacy Security Scanners</span>
+                <div style="font-size: 12px; color: #94A3B8; margin-top: 2px;">Why modern engineering teams choose Kavach AI over noisy legacy tools.</div>
+            </div>
+            <span style="background: rgba(34, 197, 94, 0.15); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 700; font-size: 11.5px; padding: 4px 10px; border-radius: 6px;">Save $3,810+ Every Single Year</span>
+        </div>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
+                <thead>
+                    <tr style="background: #0D1015; color: #64748B; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #252D38;">
+                        <th style="padding: 12px 16px;">Feature / Metric</th>
+                        <th style="padding: 12px 16px; background: rgba(198, 167, 106, 0.08); color: #C6A76A; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">🛡️ Kavach AI (Growth Team)</th>
+                        <th style="padding: 12px 16px;">Semgrep Team</th>
+                        <th style="padding: 12px 16px;">Snyk Developer</th>
+                    </tr>
+                </thead>
+                <tbody style="color: #94A3B8;">
+                    <tr style="border-bottom: 1px solid #1C2530;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F5F9;">Monthly Cost</td>
+                        <td style="padding: 12px 16px; background: rgba(198, 167, 106, 0.05); color: #22C55E; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">$99 / month</td>
+                        <td style="padding: 12px 16px;">$400 / month</td>
+                        <td style="padding: 12px 16px;">$500 / month</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1C2530;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F5F9;">Annual Subscription</td>
+                        <td style="padding: 12px 16px; background: rgba(198, 167, 106, 0.05); color: #22C55E; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">$990 / year</td>
+                        <td style="padding: 12px 16px;">$4,800 / year</td>
+                        <td style="padding: 12px 16px;">$6,000 / year</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1C2530;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F5F9;">Per-Seat Developer Tax</td>
+                        <td style="padding: 12px 16px; background: rgba(198, 167, 106, 0.05); color: #22C55E; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">$0 (Zero Per-Seat Fee)</td>
+                        <td style="padding: 12px 16px;">$40 to $65 / seat / mo</td>
+                        <td style="padding: 12px 16px;">$50 to $95 / seat / mo</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1C2530;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F5F9;">CI/CD Scan Latency</td>
+                        <td style="padding: 12px 16px; background: rgba(198, 167, 106, 0.05); color: #22C55E; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">&lt; 16ms (Instant AST)</td>
+                        <td style="padding: 12px 16px;">2 to 8 seconds</td>
+                        <td style="padding: 12px 16px;">15 to 45 seconds</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1C2530;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F5F9;">False Positive Rate</td>
+                        <td style="padding: 12px 16px; background: rgba(198, 167, 106, 0.05); color: #22C55E; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">0% (Verified AST Taint)</td>
+                        <td style="padding: 12px 16px;">15% - 25% (High noise)</td>
+                        <td style="padding: 12px 16px;">30% - 40% (Very noisy)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1C2530;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F5F9;">1-Click Auto-Remediation</td>
+                        <td style="padding: 12px 16px; background: rgba(198, 167, 106, 0.05); color: #22C55E; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">Included (Direct GitHub Diffs)</td>
+                        <td style="padding: 12px 16px;">Basic (Requires manual edits)</td>
+                        <td style="padding: 12px 16px;">PR bot (Frequent breakages)</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #1C2530;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F5F9;">Pre-Audit Compliance Reports</td>
+                        <td style="padding: 12px 16px; background: rgba(198, 167, 106, 0.05); color: #22C55E; font-weight: 700; border-left: 1px solid rgba(198, 167, 106, 0.3); border-right: 1px solid rgba(198, 167, 106, 0.3);">SOC 2 / ISO 27001 / GDPR PDF</td>
+                        <td style="padding: 12px 16px;">Enterprise ($$$) only</td>
+                        <td style="padding: 12px 16px;">Expensive add-on</td>
+                    </tr>
+                    <tr style="background: rgba(34, 197, 94, 0.06);">
+                        <td style="padding: 14px 16px; font-weight: 700; color: #F1F5F9;">Annual Team Cost</td>
+                        <td style="padding: 14px 16px; background: rgba(198, 167, 106, 0.12); color: #22C55E; font-weight: 800; font-size: 14px; border-left: 1px solid rgba(198, 167, 106, 0.4); border-right: 1px solid rgba(198, 167, 106, 0.4);">$990 / year</td>
+                        <td style="padding: 14px 16px; color: #EF4444; font-weight: 700;">$4,800 / year</td>
+                        <td style="padding: 14px 16px; color: #EF4444; font-weight: 700;">$6,000 / year</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # LICENSE ACTIVATION STRIP
     st.markdown("<div style='margin-top:22px;'></div>", unsafe_allow_html=True)
