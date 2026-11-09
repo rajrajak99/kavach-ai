@@ -2712,7 +2712,7 @@ elif active_tab == "Pricing":
     checkout_urls = BillingManager.get_checkout_urls()
 
     st.markdown("""
-    <div style="background: linear-gradient(135deg, rgba(198, 167, 106, 0.12) 0%, rgba(18, 23, 32, 0.95) 100%); border: 1px solid rgba(198, 167, 106, 0.5); border-radius: 10px; padding: 18px 22px; margin-bottom: 16px;">
+    <div style="background: linear-gradient(135deg, rgba(198, 167, 106, 0.15) 0%, rgba(18, 23, 32, 0.98) 100%); border: 1px solid rgba(198, 167, 106, 0.6); border-radius: 10px; padding: 18px 22px; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
             <div>
                 <span style="background: #C6A76A; color: #090B0F; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 6px; margin-right: 8px; text-transform: uppercase; letter-spacing: 0.05em;">★ Limited Founder Cohort</span>
@@ -2721,21 +2721,24 @@ elif active_tab == "Pricing":
                 <div style="color: #94A3B8; font-size: 12.5px; margin-top: 6px;">
                     ✓ Unlimited Private Repositories &nbsp;•&nbsp; ✓ Pre-Merge GitHub Actions Gate &nbsp;•&nbsp; ✓ Zero-Noise 10ms AST Engine &nbsp;•&nbsp; ✓ SOC 2 Audit Exports
                 </div>
+                <div style="color: #F59E0B; font-size: 12px; margin-top: 6px; font-weight: 600;">
+                    ⚠️ Important: Strictly limited to first 5 adopters. Lifetime access will be permanently retired once these 5 passes are claimed, moving strictly to $49/mo & $199/mo.
+                </div>
             </div>
             <div style="text-align: right;">
-                <div style="font-size: 11.5px; color: #C6A76A; font-weight: 600;">Cohort Cap: 50 Passes</div>
-                <div style="font-size: 13px; font-weight: 700; color: #22C55E;">● 37 / 50 Claimed — 13 Remaining</div>
+                <div style="font-size: 11.5px; color: #C6A76A; font-weight: 600;">Cohort Cap: 5 Passes</div>
+                <div style="font-size: 13.5px; font-weight: 700; color: #EF4444; margin-top: 2px;">🔥 3 / 5 Claimed — Only 2 Left!</div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    c_ltd1, c_ltd2, c_ltd3 = st.columns([1.2, 1.6, 1.2], gap="small")
+    c_ltd1, c_ltd2, c_ltd3 = st.columns([1.1, 1.8, 1.1], gap="small")
     with c_ltd2:
         if checkout_urls.get("ltd"):
-            st.link_button("⚡ Claim Founder Lifetime Pass ($149)", checkout_urls["ltd"], type="primary", use_container_width=True)
+            st.link_button("⚡ Claim 1 of 2 Remaining Lifetime Passes ($149)", checkout_urls["ltd"], type="primary", use_container_width=True)
         else:
-            st.link_button("⚡ Claim Founder Lifetime Pass ($149)", BillingManager.get_invoice_request_url("Founder Lifetime Pass", "One-Time $149"), type="primary", use_container_width=True)
+            st.link_button("⚡ Claim 1 of 2 Remaining Lifetime Passes ($149)", BillingManager.get_invoice_request_url("Founder Lifetime Pass", "One-Time $149 (Final 2 Passes)"), type="primary", use_container_width=True)
 
     b_col1, b_col2, b_col3 = st.columns([1.5, 1.2, 1.5], gap="small", vertical_alignment="center")
     with b_col2:
