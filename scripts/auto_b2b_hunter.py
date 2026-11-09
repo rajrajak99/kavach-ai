@@ -464,13 +464,14 @@ def search_github_repositories(queries: List[str], token: Optional[str] = None, 
         except Exception as e:
             print(f"[!] Search note for query '{q}': {e}. Continuing...")
 
-    # Supplement with curated fallbacks if API was rate limited
-    for fb in CURATED_FALLBACK_REPOS:
-        if is_template_or_toy_repo(fb):
-            continue
-        if fb["html_url"] not in seen_urls:
-            seen_urls.add(fb["html_url"])
-            all_candidates.append(fb)
+    # Supplement with curated fallbacks ONLY if API was completely rate limited / returned zero candidates
+    if len(all_candidates) == 0:
+        for fb in CURATED_FALLBACK_REPOS:
+            if is_template_or_toy_repo(fb):
+                continue
+            if fb["html_url"] not in seen_urls:
+                seen_urls.add(fb["html_url"])
+                all_candidates.append(fb)
 
     # Sort all candidates by B2B ICP Commercial Priority score (Organizations & live sites first)
     all_candidates.sort(key=b2b_icp_score, reverse=True)
@@ -787,6 +788,37 @@ Happy to set your team up with a Growth Team pilot ($99/mo) if you want to test 
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
+def load_historical_exclusions(leads_dir: Path, exclude_file: Optional[Path] = None) -> tuple[Set[str], Set[str]]:
+    """Scans all existing markdown files in leads/ to extract previously contacted repos and emails."""
+    seen_repos: Set[str] = set()
+    seen_emails: Set[str] = set()
+    email_regex = re.compile(r'([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)')
+    repo_regex = re.compile(r'(?:github\.com/|github\.com%2f)([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)')
+
+    if not leads_dir.exists():
+        return seen_repos, seen_emails
+
+    skip_names = {exclude_file.name} if exclude_file else set()
+    skip_names.add("ONE_CLICK_OUTBOUND_EMAILS.md")
+
+    for f in leads_dir.glob("*.md"):
+        if f.name in skip_names:
+            continue
+        try:
+            text = f.read_text(encoding="utf-8", errors="ignore")
+            for em in email_regex.findall(text):
+                em_clean = em.lower().strip()
+                if not any(x in em_clean for x in ['rajrajak', 'kavach', 'example', 'sentry', 'domain.com', 'company.com']):
+                    seen_emails.add(em_clean)
+            for rp in repo_regex.findall(text):
+                rp_clean = rp.lower().strip().rstrip(".git").rstrip("/").rstrip(")")
+                if not any(x in rp_clean for x in ['rajrajak99', 'kavach-ai']):
+                    seen_repos.add(rp_clean)
+        except Exception:
+            pass
+
+    return seen_repos, seen_emails
+
 def main():
     p = argparse.ArgumentParser(description="Kavach AI — High-Severity B2B Prospect Hunter & Outbound Pack Generator")
     p.add_argument("--query", help="Custom GitHub Search query")
@@ -816,34 +848,42 @@ def main():
         except Exception:
             pass
 
+    # Load historical exclusions for 100% fresh leads
+    seen_repos, seen_emails = load_historical_exclusions(out_dir, exclude_file=out_file_path)
+
     print("=================================================================", flush=True)
     print("  [+] KAVACH AI -- HIGH-SEVERITY B2B SAAS PROSPECT HUNTER (v1.4.1)", flush=True)
     print("  Strict B2B SaaS Organizations • Deliverable Founder Emails • Zero Noreply", flush=True)
     print("=================================================================", flush=True)
     print(f"Target Leads: {args.max_leads}", flush=True)
     print(f"Strict Security Filter: {'ACTIVE' if args.security_only else 'OFF'}", flush=True)
+    print(f"Historical Exclusions: {len(seen_repos)} repos, {len(seen_emails)} emails excluded", flush=True)
     print(f"Target CRM Output: {out_file_path}\n", flush=True)
 
     queries = [
-        args.query if args.query else 'language:python "fastapi" "stripe" -template -tutorial stars:5..600',
-        'language:python "django" "celery" saas -tutorial stars:5..600',
-        'language:python "flask" "sqlalchemy" api -example stars:10..600',
-        'language:python "fastapi" "webhook" -tutorial stars:5..600',
-        'language:python "django" "tenant" -boilerplate stars:5..600',
+        args.query if args.query else 'language:python "fastapi" "jwt" auth -template -tutorial stars:5..600',
+        'language:python "fastapi" "auth" saas -tutorial stars:5..600',
+        'language:python "django" "rest_framework" saas -tutorial stars:5..600',
+        'language:python "fastapi" "sqlalchemy" api -example stars:10..600',
+        'language:python "flask" "auth" api -example stars:10..600',
+        'language:python "fastapi" "webhook" saas stars:5..600',
+        'language:python "django" "stripe" saas stars:5..600',
+        'language:python "fastapi" "pydantic" saas -starter stars:10..600',
+        'language:python "django" "celery" saas stars:10..600',
+        'language:python "fastapi" "mongodb" saas stars:5..600',
+        'language:python "fastapi" "redis" enterprise stars:5..600',
+        'language:python "litestar" api stars:5..600',
+        'language:python "fastapi" "microservice" stars:5..600',
+        'language:python "django" "multitenant" stars:5..600',
+        'language:python "fastapi" "graphql" stars:5..600',
+        'language:python "flask" "celery" saas stars:5..600',
         'language:python "fastapi" "oauth" auth -template stars:5..600',
-        'language:python "langchain" "fastapi" api -starter stars:10..600',
-        'language:python "supabase" "fastapi" -tutorial stars:5..600',
-        'language:python "fastapi" "sqlalchemy" saas stars:5..600',
-        'language:python "django" "billing" stars:5..600',
-        'language:python "fastapi" "jwt" auth -tutorial stars:5..800',
-        'language:python "django" "stripe" saas stars:5..800',
-        'language:python "fastapi" "postgres" saas stars:5..800',
-        'language:python "flask" "jwt" auth -template stars:5..800',
-        'language:python "tortoise-orm" "fastapi" stars:5..800',
-        'language:python "fastapi" "redis" enterprise stars:5..800'
+        'language:python "fastapi" "postgres" saas stars:5..600',
+        'language:python "django" "tenant" -boilerplate stars:5..600',
+        'language:python "fastapi" "stripe" -template -tutorial stars:5..600'
     ]
 
-    candidates = search_github_repositories(queries, token=args.token, max_total=args.max_leads * 8)
+    candidates = search_github_repositories(queries, token=args.token, max_total=args.max_leads * 20)
     print(f"[+] Total candidate repositories queued for security audit: {len(candidates)}\n", flush=True)
 
     verified_leads: List[Dict[str, Any]] = []
@@ -851,12 +891,24 @@ def main():
     for c in candidates:
         if len(verified_leads) >= args.max_leads:
             break
+        
+        repo_slug = (c.get("full_name") or f"{c['owner']['login']}/{c['name']}").lower().strip()
+        if repo_slug in seen_repos or any(repo_slug.endswith(sr) or sr.endswith(repo_slug) for sr in seen_repos):
+            continue
+
         lead_data = audit_repository_security(c, security_only=args.security_only, token=args.token)
         if lead_data:
+            f_email = (lead_data.get("founder_email") or "").lower().strip()
+            if f_email and f_email in seen_emails:
+                print(f"    [-] Skipping {repo_slug}: email {f_email} already contacted in prior batch.", flush=True)
+                continue
             verified_leads.append(lead_data)
+            seen_repos.add(repo_slug)
+            if f_email:
+                seen_emails.add(f_email)
             deliv_tag = "✅ Deliverable" if lead_data.get("is_deliverable") else "⚠️ Profile/PR"
             org_tag = "Org" if lead_data.get("is_org") else "User"
-            print(f"    [+] QUALIFIED LEAD: {lead_data['owner_login']}/{lead_data['repo_name']} [{org_tag}] -> {lead_data['cwe_id']} ({lead_data['target_file']}) | Founder: {lead_data['founder_name']} <{lead_data['founder_email']}> [{deliv_tag}]", flush=True)
+            print(f"    [+] QUALIFIED FRESH LEAD: {lead_data['owner_login']}/{lead_data['repo_name']} [{org_tag}] -> {lead_data['cwe_id']} ({lead_data['target_file']}) | Founder: {lead_data['founder_name']} <{lead_data['founder_email']}> [{deliv_tag}]", flush=True)
 
     # Generate master outbound pack & verified true positive report
     master_pack_path = out_dir / "VERIFIED_TRUE_POSITIVE_LEADS.md"

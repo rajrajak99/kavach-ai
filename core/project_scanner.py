@@ -15,6 +15,9 @@ from typing import List, Dict, Any, Optional, Set, Tuple
 
 from core.diff_parser import DiffParser, ParsedFileDiff
 from core.surgical_analyzer import SurgicalAnalyzer, PatchFinding
+from core.polyglot.go_scanner import GoScanner
+from core.polyglot.ts_scanner import TSScanner
+from core.polyglot.terraform_scanner import TerraformScanner
 
 @dataclass
 class CrossFileTaintFinding:
@@ -49,14 +52,17 @@ class FunctionSinkSignature:
 class ProjectASTScanner:
     """
     Project-wide static analyzer that builds cross-file call graphs and
-    traces untrusted user input across multiple Python modules.
+    traces untrusted user input across multiple Python modules and polyglot files.
     """
 
-    SUPPORTED_EXTS = {'.py', '.js', '.jsx', '.ts', '.tsx'}
+    SUPPORTED_EXTS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.go', '.tf'}
 
     def __init__(self):
         self.analyzer = SurgicalAnalyzer()
         self.diff_parser = DiffParser()
+        self.go_scanner = GoScanner()
+        self.ts_scanner = TSScanner()
+        self.tf_scanner = TerraformScanner()
 
     def scan_project_directory(self, project_dir: str) -> Dict[str, Any]:
         """
@@ -141,10 +147,52 @@ class ProjectASTScanner:
             diff = self.diff_parser.parse_raw_snippet(fpath, code)
             res = self.analyzer.generate_pull_request_review([diff])
             findings = res.get('findings', [])
+
+            # Polyglot routing
+            if fpath.endswith(".go"):
+                for gf in self.go_scanner.scan_code(code, file_path=fpath):
+                    findings.append(PatchFinding(
+                        severity=gf.severity,
+                        category=gf.category,
+                        line_number=gf.line_number,
+                        problem_code=gf.vulnerable_snippet,
+                        fixed_code=gf.remediation_patch,
+                        explanation=gf.explanation,
+                        github_suggestion_block=gf.remediation_patch,
+                        cwe_id=gf.cwe_id,
+                        language="go"
+                    ))
+            elif fpath.endswith((".ts", ".tsx")):
+                for tf in self.ts_scanner.scan_code(code, file_path=fpath):
+                    findings.append(PatchFinding(
+                        severity=tf.severity,
+                        category=tf.category,
+                        line_number=tf.line_number,
+                        problem_code=tf.vulnerable_snippet,
+                        fixed_code=tf.remediation_patch,
+                        explanation=tf.explanation,
+                        github_suggestion_block=tf.remediation_patch,
+                        cwe_id=tf.cwe_id,
+                        language="typescript"
+                    ))
+            elif fpath.endswith(".tf"):
+                for tff in self.tf_scanner.scan_code(code, file_path=fpath):
+                    findings.append(PatchFinding(
+                        severity=tff.severity,
+                        category=tff.category,
+                        line_number=tff.line_number,
+                        problem_code=tff.vulnerable_snippet,
+                        fixed_code=tff.remediation_patch,
+                        explanation=tff.explanation,
+                        github_suggestion_block=tff.remediation_patch,
+                        cwe_id=tff.cwe_id,
+                        language="terraform"
+                    ))
+
             if findings:
                 file_findings[fpath] = findings
                 total_crit += sum(1 for f in findings if f.severity == 'CRITICAL')
-                total_sec += sum(1 for f in findings if f.severity == 'SECURITY')
+                total_sec += sum(1 for f in findings if f.severity in ('SECURITY', 'HIGH'))
                 total_perf += sum(1 for f in findings if f.severity == 'PERFORMANCE')
 
         # ---------------- PASS 1: BUILD FUNCTION SINK SIGNATURES ----------------
