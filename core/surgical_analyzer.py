@@ -228,11 +228,21 @@ class SurgicalAnalyzer:
           - ",".join(["?" for _ in keys])
           - "?" * len(keys)
           - [":id0", ":id1", ...]
+          - calls = ["set_config(%s, %s, true)"] * len(settings)
+          - calls = [f"set_config(${i}, ${i + 1}, true)" for i in range(1, len(params), 2)]
+          - [f"${i}" for i in range(...)]
         """
         def _is_atom(n: ast.AST) -> bool:
             if isinstance(n, ast.Constant) and isinstance(n.value, str):
                 s = n.value.strip()
-                return s in ("?", "%s", "$1", "$2") or (bool(s) and set(s).issubset({"?", "%", "s", ",", " ", "(", ")"}))
+                if s in ("?", "%s", "$1", "$2"):
+                    return True
+                if bool(s) and set(s).issubset({"?", "%", "s", ",", " ", "(", ")"}):
+                    return True
+                # Safe function call placeholders with parameter markers (%s, $1, ?) and no dangerous SQL keywords
+                if ("%s" in s or "?" in s or bool(re.search(r'\$\d+', s))) and not re.search(r'(?i)\b(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|UNION)\b', s):
+                    return True
+                return False
             if isinstance(n, (ast.List, ast.Tuple)):
                 return all(_is_atom(elt) for elt in n.elts)
             if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Mult):
@@ -245,6 +255,18 @@ class SurgicalAnalyzer:
         if safe_placeholder_vars and isinstance(node, ast.Name) and node.id in safe_placeholder_vars:
             return True
 
+        # Check ListComp or GeneratorExp over range(...) (e.g. [f"${i}" for i in range(...)] or [f"set_config(${i}...)" for i in range(...)])
+        if isinstance(node, (ast.ListComp, ast.GeneratorExp)):
+            is_range_based = any(
+                isinstance(gen.iter, ast.Call) and (
+                    (isinstance(gen.iter.func, ast.Name) and gen.iter.func.id == "range") or
+                    (isinstance(gen.iter.func, ast.Attribute) and gen.iter.func.attr == "range")
+                )
+                for gen in node.generators
+            )
+            if is_range_based:
+                return True
+
         # Check .join(...) call on string literal separator e.g. ",".join(...)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "join":
             if isinstance(node.func.value, ast.Constant) and isinstance(node.func.value.value, str):
@@ -254,6 +276,33 @@ class SurgicalAnalyzer:
                         return True
                     if isinstance(arg, (ast.ListComp, ast.GeneratorExp)):
                         if _is_atom(arg.elt):
+                            return True
+                        if any(isinstance(gen.iter, ast.Call) and isinstance(gen.iter.func, ast.Name) and gen.iter.func.id == "range" for gen in arg.generators):
+                            return True
+                    if isinstance(arg, (ast.List, ast.Tuple)):
+                        all_elts_safe = True
+                        for elt in arg.elts:
+                            if isinstance(elt, ast.Starred):
+                                val = elt.value
+                                if safe_placeholder_vars and isinstance(val, ast.Name) and val.id in safe_placeholder_vars:
+                                    continue
+                                if isinstance(val, ast.Name) and re.match(r'^_?[A-Z][A-Z0-9_]*$', val.id):
+                                    continue
+                                all_elts_safe = False
+                                break
+                            elif isinstance(elt, ast.Name):
+                                if safe_placeholder_vars and elt.id in safe_placeholder_vars:
+                                    continue
+                                if re.match(r'^_?[A-Z][A-Z0-9_]*$', elt.id):
+                                    continue
+                                all_elts_safe = False
+                                break
+                            elif isinstance(elt, ast.Constant):
+                                continue
+                            else:
+                                all_elts_safe = False
+                                break
+                        if all_elts_safe:
                             return True
                     if safe_placeholder_vars and isinstance(arg, ast.Name) and arg.id in safe_placeholder_vars:
                         return True

@@ -228,5 +228,28 @@ SESSION_STORAGE_KEY = "user_auth_session"
     secret_findings = [f for f in res['findings'] if f.cwe_id == "CWE-798"]
     assert len(secret_findings) == 0, f"Expected 0 findings for storage key names, got: {secret_findings}"
 
+def test_asyncpg_indexed_placeholders_and_constant_propagation(parser, analyzer):
+    """Verify that PostgreSQL asyncpg $1, $2 placeholders and module constants in join are zero false positive."""
+    code = '''
+_STARTED_AT_SETTING = "set_config('fraiseql.started_at', 'now', true)"
 
+async def set_session_vars(cursor_or_conn, settings, params):
+    is_cursor = hasattr(cursor_or_conn, "execute")
+    if is_cursor:
+        calls = ["set_config(%s, %s, true)"] * len(settings)
+    else:
+        calls = [f"set_config(${i}, ${i + 1}, true)" for i in range(1, len(params), 2)]
+    statement = "SELECT " + ", ".join([*calls, _STARTED_AT_SETTING])
+
+    if not params:
+        await cursor_or_conn.execute(statement)
+    elif is_cursor:
+        await cursor_or_conn.execute(statement, params)
+    else:
+        await cursor_or_conn.execute(statement, *params)
+'''
+    diff = parser.parse_raw_snippet("db.py", code)
+    res = analyzer.generate_pull_request_review([diff])
+    sqli_findings = [f for f in res['findings'] if f.cwe_id == "CWE-89"]
+    assert len(sqli_findings) == 0, f"Expected 0 findings for safe asyncpg placeholders, got: {sqli_findings}"
 
