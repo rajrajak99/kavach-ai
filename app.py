@@ -186,9 +186,9 @@ if "project_scan_result" not in st.session_state:
 if "project_sca_findings" not in st.session_state:
     st.session_state.project_sca_findings = None
 
-# ----------------- URL AUTO-LOGIN & SESSION RESTORATION -----------------
+# ----------------- URL AUTO-LOGIN & SESSION RESTORATION (GUARDED) -----------------
 try:
-    if hasattr(st, "query_params") and "session_token" in st.query_params:
+    if not st.session_state.get("is_authenticated") and hasattr(st, "query_params") and "session_token" in st.query_params:
         _sess_token = str(st.query_params["session_token"]).strip()
         if _sess_token:
             _verified = verify_signed_license(_sess_token)
@@ -212,9 +212,10 @@ try:
 except Exception:
     pass
 
-# ----------------- PAYMENT GATEWAY REDIRECT ACTIVATION -----------------
+# ----------------- PAYMENT GATEWAY REDIRECT ACTIVATION (GUARDED) -----------------
 try:
-    if hasattr(st, "query_params"):
+    if "redirect_activation_checked" not in st.session_state and hasattr(st, "query_params") and any(k in st.query_params for k in ("order_id", "checkout_id", "session_id", "payment_id")):
+        st.session_state.redirect_activation_checked = True
         _act_res = BillingManager.inspect_and_activate_redirect(dict(st.query_params))
         if _act_res and _act_res.get("activated"):
             if _act_res.get("needs_email"):
@@ -610,52 +611,73 @@ if st.session_state.get("toast_msg"):
 components.html('''
 <script>
 (function() {
-    function enforceDarkEditor() {
+    // Singleton guard: prevent spawning duplicate intervals/observers across Streamlit reruns
+    if (window.parent && window.parent.__kavachDarkEditorLoaded) return;
+    if (window.parent) window.parent.__kavachDarkEditorLoaded = true;
+
+    function applyDarkEditor(iframe) {
         try {
-            const iframes = window.parent.document.querySelectorAll('iframe');
-            iframes.forEach(function(iframe) {
-                try {
-                    const idoc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (!idoc) return;
-                    if (idoc.body) {
-                        idoc.body.style.backgroundColor = '#111419';
-                        idoc.body.style.color = '#F1F5F9';
-                    }
-                    var styleEl = idoc.getElementById('kavach-dark-editor-override');
-                    if (!styleEl) {
-                        styleEl = idoc.createElement('style');
-                        styleEl.id = 'kavach-dark-editor-override';
-                        idoc.head.appendChild(styleEl);
-                    }
-                    styleEl.textContent = [
-                        '.ace_editor, .ace_editor * { font-family: "JetBrains Mono", monospace !important; }',
-                        '.ace_editor { background-color: #111419 !important; color: #F1F5F9 !important; border: 1px solid #252D38 !important; border-radius: 8px !important; }',
-                        '.ace_gutter { background-color: #1A1D23 !important; color: #64748B !important; border-right: 1px solid #252D38 !important; }',
-                        '.ace_gutter-cell { color: #64748B !important; }',
-                        '.ace_gutter-active-line { background-color: rgba(255, 255, 255, 0.04) !important; color: #F1F5F9 !important; }',
-                        '.ace_scroller, .ace_content { background-color: #111419 !important; }',
-                        '.ace_cursor { border-left: 2px solid #C6A76A !important; }',
-                        '.ace_marker-layer .ace_active-line { background: rgba(255, 255, 255, 0.02) !important; }',
-                        '.ace_marker-layer .ace_selection { background: #252D38 !important; }',
-                        '.ace_text-layer { color: #F1F5F9 !important; }',
-                        '.ace_comment, .ace_comment.ace_line, .ace_comment.ace_block { color: #64748B !important; font-style: italic !important; }',
-                        '.ace_keyword, .ace_keyword.ace_operator, .ace_storage { color: #C6A76A !important; font-weight: 600 !important; }',
-                        '.ace_string, .ace_string.ace_regexp { color: #22C55E !important; }',
-                        '.ace_function, .ace_support.ace_function { color: #94A3B8 !important; }',
-                        '.ace_variable, .ace_identifier { color: #F1F5F9 !important; }',
-                        '.ace_constant.ace_numeric { color: #F59E0B !important; }'
-                    ].join('\n');
-                } catch(e) {}
-            });
+            const idoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (!idoc) return;
+            if (idoc.body) {
+                idoc.body.style.backgroundColor = '#111419';
+                idoc.body.style.color = '#F1F5F9';
+            }
+            if (!idoc.getElementById('kavach-dark-editor-override')) {
+                const styleEl = idoc.createElement('style');
+                styleEl.id = 'kavach-dark-editor-override';
+                styleEl.textContent = [
+                    '.ace_editor, .ace_editor * { font-family: "JetBrains Mono", monospace !important; }',
+                    '.ace_editor { background-color: #111419 !important; color: #F1F5F9 !important; border: 1px solid #252D38 !important; border-radius: 8px !important; }',
+                    '.ace_gutter { background-color: #1A1D23 !important; color: #64748B !important; border-right: 1px solid #252D38 !important; }',
+                    '.ace_gutter-cell { color: #64748B !important; }',
+                    '.ace_gutter-active-line { background-color: rgba(255, 255, 255, 0.04) !important; color: #F1F5F9 !important; }',
+                    '.ace_scroller, .ace_content { background-color: #111419 !important; }',
+                    '.ace_cursor { border-left: 2px solid #C6A76A !important; }',
+                    '.ace_marker-layer .ace_active-line { background: rgba(255, 255, 255, 0.02) !important; }',
+                    '.ace_marker-layer .ace_selection { background: #252D38 !important; }',
+                    '.ace_text-layer { color: #F1F5F9 !important; }',
+                    '.ace_comment, .ace_comment.ace_line, .ace_comment.ace_block { color: #64748B !important; font-style: italic !important; }',
+                    '.ace_keyword, .ace_keyword.ace_operator, .ace_storage { color: #C6A76A !important; font-weight: 600 !important; }',
+                    '.ace_string, .ace_string.ace_regexp { color: #22C55E !important; }',
+                    '.ace_function, .ace_support.ace_function { color: #94A3B8 !important; }',
+                    '.ace_variable, .ace_identifier { color: #F1F5F9 !important; }',
+                    '.ace_constant.ace_numeric { color: #F59E0B !important; }'
+                ].join('\\n');
+                idoc.head.appendChild(styleEl);
+            }
         } catch(e) {}
     }
-    enforceDarkEditor();
-    setInterval(enforceDarkEditor, 250);
+
+    function scanAllIframes() {
+        try {
+            if (window.parent && window.parent.document) {
+                const iframes = window.parent.document.querySelectorAll('iframe');
+                iframes.forEach(applyDarkEditor);
+            }
+        } catch(e) {}
+    }
+
+    scanAllIframes();
+
+    // Use a lightweight MutationObserver on the body so styles apply reactively without CPU-hogging polling
+    try {
+        if (window.parent && window.parent.document && window.parent.document.body) {
+            const observer = new MutationObserver(function() {
+                scanAllIframes();
+            });
+            observer.observe(window.parent.document.body, { childList: true, subtree: true });
+        }
+    } catch(e) {
+        setInterval(scanAllIframes, 2000);
+    }
 })();
 </script>
 ''', height=0, width=0)
 
-st.markdown("""
+@st.cache_data
+def get_enterprise_css() -> str:
+    return """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -1584,7 +1606,9 @@ st.markdown("""
         }
     }
 </style>
-""", unsafe_allow_html=True)
+"""
+
+st.markdown(get_enterprise_css(), unsafe_allow_html=True)
 # ----------------- SIDEBAR ACCOUNT & LICENSE WIDGET -----------------
 with st.sidebar:
     st.markdown("""
@@ -1929,9 +1953,21 @@ def render_project_archive_inspector():
         st.markdown("<div style='font-size:12px; color:#94A3B8; margin-bottom:6px;'>Or test instant benchmark project:</div>", unsafe_allow_html=True)
         btn_run_demo = st.button("⚡ Run Multi-File Demo Project", key="btn_run_demo_proj", type="primary", use_container_width=True)
 
-    if uploaded_zip or btn_run_demo:
-        zip_bytes = uploaded_zip.read() if uploaded_zip else create_demo_project_zip()
-        proj_name = uploaded_zip.name if uploaded_zip else "demo_flask_service.zip"
+    scan_needed = False
+    if btn_run_demo:
+        zip_bytes = create_demo_project_zip()
+        proj_name = "demo_flask_service.zip"
+        scan_needed = True
+    elif uploaded_zip:
+        upload_sig = f"{uploaded_zip.name}_{uploaded_zip.size}"
+        if st.session_state.get("_last_uploaded_zip_sig") != upload_sig:
+            st.session_state._last_uploaded_zip_sig = upload_sig
+            uploaded_zip.seek(0)
+            zip_bytes = uploaded_zip.read()
+            proj_name = uploaded_zip.name
+            scan_needed = True
+
+    if scan_needed:
         with st.spinner("Executing inter-procedural AST taint tracing & SCA reachability matrix..."):
             proj_scanner = ProjectASTScanner()
             proj_res = proj_scanner.scan_zip_archive(zip_bytes, project_name=proj_name)
@@ -2221,7 +2257,6 @@ if active_tab == "Inspector":
                 )
                 if ace_code is not None and ace_code != st.session_state.user_code:
                     st.session_state.user_code = ace_code
-                    st.rerun()
             else:
                 code_input = st.text_area(
                     "Code Input:",
