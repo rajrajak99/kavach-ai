@@ -159,3 +159,24 @@
 | 16 | ERPNext (Frappe) | frappe/erpnext | `kandoimihir@gmail.com` | Accounting & Inventory SQL Cursor Security Gate | 📤 Delivered |
 | 17 | Odoo | odoo/odoo | `roan@odoo.com` | Enterprise Python ERP AST Security Gate | 📤 Delivered |
 | 18 | InvenTree | inventree/InvenTree | `security@inventree.org` | Supply Chain ERP Security Gate | 📤 Delivered |
+
+---
+
+## 🎯 10 High-Conversion Competitor Displacement Leads (via team.kavachai@gmail.com)
+**Date:** 2026-11-10 (16:40 IST)
+**Sender:** team.kavachai@gmail.com
+**Strategy:** Competitor Displacement (Semgrep $4.8k, Snyk $6k, SonarQube $5.4k -> Kavach AI $990/yr)
+**Status:** 10 Emails Successfully Delivered
+
+| # | Target Organization | Repo / Product | Email | Scanner Displaced | Pitch Focus & Missed Flaw | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Langfuse Inc. | langfuse/langfuse | `clemens@langfuse.com` | Semgrep ($4,800/yr) | Prisma Raw SQL Query Taint (`CWE-89`) | 📤 Delivered |
+| 2 | OpenMeter | openmeterio/openmeter | `peter@openmeter.io` | Semgrep ($4,800/yr) | Dynamic SQL Injection via `fmt.Sprintf` (`CWE-89`) | 📤 Delivered |
+| 3 | Infisical | Infisical/infisical | `maidul@infisical.com` | Snyk ($6,000/yr) | Command Injection via `os/exec` (`CWE-78`) | 📤 Delivered |
+| 4 | Medplum | medplum/medplum | `cody@medplum.com` | SonarQube ($5,400/yr) | Arbitrary Code Execution via `eval()` (`CWE-95`) | 📤 Delivered |
+| 5 | Formbricks | formbricks/formbricks | `johannes@formbricks.com` | SonarQube ($5,400/yr) | Raw SQL Injection via `prisma.$queryRawUnsafe` (`CWE-89`) | 📤 Delivered |
+| 6 | Strapi | strapi/strapi | `aurelien@strapi.io` | SonarQube ($5,400/yr) | Raw Query Concatenation via `knex.raw` (`CWE-89`) | 📤 Delivered |
+| 7 | Vyuh Labs | vyuh-labs/dxkit | `siddarth.ch1990@gmail.com` | Snyk ($6,000/yr) | Remote Command Injection via Node `exec()` (`CWE-78`) | 📤 Delivered |
+| 8 | Fiscalismia Cloud | fiscalismia/fiscalismia-backend | `hangrybear666+github@proton.me` | Snyk ($6,000/yr) | Remote Command Injection via `child_process.exec` (`CWE-78`) | 📤 Delivered |
+| 9 | SigNoz | SigNoz/signoz | `pranay@signoz.io` | SonarQube ($5,400/yr) | Dynamic SQL Query in ClickHouse Reader (`CWE-89`) | 📤 Delivered |
+| 10 | Moov Financial | moov-io/paygate | `adam@moov.io` | SonarQube ($5,400/yr) | Database Pool Leak on Context Cancel (`CWE-400`) | 📤 Delivered |
