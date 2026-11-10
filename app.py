@@ -43,6 +43,7 @@ import json
 import datetime
 import time
 import requests
+import re
 import pandas as pd
 
 try:
@@ -381,23 +382,129 @@ def logout_github():
     st.session_state.auth_error = None
     st.session_state.toast_msg = "Logged out of GitHub."
 
-# ----------------- CALLBACKS -----------------
-def select_plan(tier_val: str, plan_name: str):
-    user_handle = st.session_state.github_user['login'] if st.session_state.github_user else "local-builder"
-    key_val = ""
-    if tier_val == PlanTier.DEVELOPER_PRO.value:
-        key_val = f"KV-PRO-{user_handle.upper()}"
-        st.session_state.is_pro_user = True
-    elif tier_val == PlanTier.TEAM_ENTERPRISE.value:
-        key_val = f"KV-TEAM-{user_handle.upper()}"
-        st.session_state.is_pro_user = True
-    else:
-        key_val = ""
-        st.session_state.is_pro_user = False
+# ----------------- CALLBACKS & PAYWALL ENFORCEMENT -----------------
+def claim_free_trial(email: str, tier: str = "PRO"):
+    """
+    Validates work email, generates a cryptographically signed 14-day trial key,
+    activates it for the session, registers the user, and records the lead.
+    """
+    clean_email = email.strip().lower()
+    if not clean_email or "@" not in clean_email or clean_email.startswith("@") or "." not in clean_email.split("@")[-1] or " " in clean_email:
+        return False, "Please enter a valid work email address."
 
-    st.session_state.license_tier = tier_val
-    st.session_state.license_key = key_val
-    st.session_state.toast_msg = f"{plan_name} Active!"
+    # Generate authentic signed key
+    trial_key = generate_signed_license(clean_email, tier=tier, valid_days=14)
+    v = verify_signed_license(trial_key)
+    if not v.get("valid"):
+        return False, "Could not issue trial license signature."
+
+    # Activate session
+    st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if tier.upper() in ("TEAM", "ENTERPRISE") else PlanTier.DEVELOPER_PRO.value
+    st.session_state.license_key = trial_key
+    st.session_state.is_pro_user = True
+    st.session_state.is_authenticated = True
+    st.session_state.user_email = clean_email
+    if hasattr(st, "query_params"):
+        st.query_params["session_token"] = trial_key
+
+    # Record in Account Store
+    try:
+        acc_store = get_account_store()
+        acc_store.register_or_upgrade_user(clean_email, tier=tier, license_key=trial_key)
+    except Exception:
+        pass
+
+    try:
+        leads_file = Path(__file__).resolve().parent / "leads" / "TRIAL_SIGNUPS.json"
+        leads_file.parent.mkdir(parents=True, exist_ok=True)
+        records = []
+        if leads_file.exists():
+            try:
+                with open(leads_file, "r", encoding="utf-8") as f:
+                    records = json.load(f)
+            except Exception:
+                records = []
+        records.append({
+            "email": clean_email,
+            "tier": tier,
+            "license_key": trial_key,
+            "issued_at": datetime.datetime.now().isoformat(),
+            "expires_in_days": 14
+        })
+        with open(leads_file, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=2)
+    except Exception:
+        pass
+
+    return True, trial_key
+
+def select_plan(tier_val: str, plan_name: str):
+    """
+    Strict plan selector: Free plan is always available.
+    Paid tiers cannot be activated without cryptographic license key.
+    """
+    if tier_val == PlanTier.FREE.value:
+        st.session_state.license_tier = PlanTier.FREE.value
+        st.session_state.license_key = ""
+        st.session_state.is_pro_user = False
+        st.session_state.toast_msg = "Community Free ($0) Active!"
+    else:
+        st.session_state.toast_msg = f"License required for {plan_name}"
+
+def render_paywall_card(feature_name: str, tier_needed: str = "PRO"):
+    """
+    Renders an enterprise-grade paywall card with license key entry
+    and frictionless 14-day VIP trial lead capture.
+    """
+    plan_title = "Kavach Pro ($29/mo)" if tier_needed == "PRO" else "Growth Team ($99/mo)"
+    st.markdown(f"""
+    <div style="background: rgba(18, 23, 32, 0.95); border: 1px solid rgba(198, 167, 106, 0.4); border-left: 4px solid #C6A76A; border-radius: 8px; padding: 18px 22px; margin: 12px 0 16px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-wrap:wrap; gap:8px;">
+            <div style="font-size: 14.5px; font-weight: 700; color: #F1F5F9;">
+                🔒 {html.escape(feature_name)} requires {plan_title}
+            </div>
+            <span style="background: rgba(198, 167, 106, 0.15); color: #C6A76A; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(198, 167, 106, 0.3);">
+                COMMERCIAL LICENSE
+            </span>
+        </div>
+        <div style="font-size: 12.5px; color: #94A3B8; line-height: 1.5; margin-bottom: 14px;">
+            Automated AST remediation, private repository CI gates, and executive compliance audits are reserved for licensed engineering teams. Enter a license key or claim a 14-day free VIP trial below.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    pw_id = re.sub(r'[^a-zA-Z0-9_]', '_', feature_name)
+    tab_trial, tab_key = st.tabs(["⚡ Claim Free 14-Day VIP Trial", "🔑 Enter License Key"])
+    with tab_trial:
+        t_col1, t_col2 = st.columns([2.2, 1.2], vertical_alignment="bottom")
+        with t_col1:
+            tr_email = st.text_input("Work Email:", placeholder="engineer@company.com", key=f"pw_trial_email_{pw_id}")
+        with t_col2:
+            if st.button("Get Instant 14-Day Pass", key=f"btn_trial_{pw_id}", type="primary", use_container_width=True):
+                ok, res = claim_free_trial(tr_email, tier=tier_needed)
+                if ok:
+                    st.success(f"🎉 14-Day VIP Trial Activated! Key: {res[:20]}...")
+                    st.rerun()
+                else:
+                    st.error(res)
+    with tab_key:
+        k_col1, k_col2 = st.columns([2.2, 1.2], vertical_alignment="bottom")
+        with k_col1:
+            inp_k = st.text_input("License Key:", placeholder="KAVACH-PRO-...", key=f"pw_key_inp_{pw_id}")
+        with k_col2:
+            if st.button("Unlock Feature", key=f"btn_unlock_{pw_id}", type="primary", use_container_width=True):
+                if not inp_k:
+                    st.error("Please enter your license key.")
+                else:
+                    tier = LicenseManager.get_tier_for_key(inp_k)
+                    if tier:
+                        st.session_state.license_tier = tier.value
+                        st.session_state.license_key = inp_k
+                        st.session_state.is_pro_user = (tier != PlanTier.FREE)
+                        st.success(f"✓ {tier.value} Activated! Feature Unlocked.")
+                        st.rerun()
+                    else:
+                        st.error("Invalid or expired license key.")
 
 def activate_custom_key():
     key = st.session_state.get("custom_key_input", "").strip()
@@ -2096,18 +2203,22 @@ def render_project_archive_inspector():
             sca_findings=sca_f,
             cross_file_findings=cf_findings
         )
-        c_rep1, c_rep2 = st.columns([2.0, 1.2], vertical_alignment="center")
-        with c_rep1:
-            st.markdown("<div style='font-size:12.5px; color:#94A3B8;'>Export enterprise-grade SOC 2 Type II and ISO-27001 audit report covering cross-file taint flows and supply chain reachability.</div>", unsafe_allow_html=True)
-        with c_rep2:
-            st.download_button(
-                "📥 Download SOC 2 Pre-Audit (.md)",
-                report_md,
-                file_name=f"kavach_soc2_audit_{p_res.get('project_name', 'report')}.md",
-                mime="text/markdown",
-                use_container_width=True,
-                type="primary"
-            )
+        is_team_tier = (st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value or "TEAM" in str(st.session_state.license_tier))
+        if is_team_tier or st.session_state.is_pro_user:
+            c_rep1, c_rep2 = st.columns([2.0, 1.2], vertical_alignment="center")
+            with c_rep1:
+                st.markdown("<div style='font-size:12.5px; color:#94A3B8;'>Export enterprise-grade SOC 2 Type II and ISO-27001 audit report covering cross-file taint flows and supply chain reachability.</div>", unsafe_allow_html=True)
+            with c_rep2:
+                st.download_button(
+                    "📥 Download SOC 2 Pre-Audit (.md)",
+                    report_md,
+                    file_name=f"kavach_soc2_audit_{p_res.get('project_name', 'report')}.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                    type="primary"
+                )
+        else:
+            render_paywall_card("Executive SOC 2 & ISO 27001 Audit Export", tier_needed="TEAM")
 
 # ================= TAB 1: CODE INSPECTOR =================
 if active_tab == "Inspector":
@@ -2421,14 +2532,18 @@ if active_tab == "Inspector":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-                    st.download_button(
-                        "📑 Download SOC 2 & ISO-27001 Certification (.md)",
-                        data=generate_soc2_compliance_report(st.session_state.user_code, analysis),
-                        file_name=f"Kavach_AI_SOC2_Clean_{datetime.date.today().isoformat()}.md",
-                        mime="text/markdown",
-                        key="btn_download_soc2_clean",
-                        use_container_width=True
-                    )
+                    if st.session_state.is_pro_user:
+                        st.download_button(
+                            "📑 Download SOC 2 & ISO-27001 Certification (.md)",
+                            data=generate_soc2_compliance_report(st.session_state.user_code, analysis),
+                            file_name=f"Kavach_AI_SOC2_Clean_{datetime.date.today().isoformat()}.md",
+                            mime="text/markdown",
+                            key="btn_download_soc2_clean",
+                            use_container_width=True
+                        )
+                    else:
+                        with st.popover("🔒 Download SOC 2 & ISO-27001 Certification (.md)", use_container_width=True):
+                            render_paywall_card("SOC 2 & ISO-27001 Certification", tier_needed="PRO")
                 else:
                     if metrics['critical'] > 0:
                         st.markdown(f"""
@@ -2451,14 +2566,18 @@ if active_tab == "Inspector":
                         </div>
                         """, unsafe_allow_html=True)
 
-                    st.download_button(
-                        "📑 Download SOC 2 & ISO-27001 Pre-Audit Report (.md)",
-                        data=generate_soc2_compliance_report(st.session_state.user_code, analysis),
-                        file_name=f"Kavach_AI_SOC2_PreAudit_{datetime.date.today().isoformat()}.md",
-                        mime="text/markdown",
-                        key="btn_download_soc2_inspector",
-                        use_container_width=True
-                    )
+                    if st.session_state.is_pro_user:
+                        st.download_button(
+                            "📑 Download SOC 2 & ISO-27001 Pre-Audit Report (.md)",
+                            data=generate_soc2_compliance_report(st.session_state.user_code, analysis),
+                            file_name=f"Kavach_AI_SOC2_PreAudit_{datetime.date.today().isoformat()}.md",
+                            mime="text/markdown",
+                            key="btn_download_soc2_inspector",
+                            use_container_width=True
+                        )
+                    else:
+                        with st.popover("🔒 Download SOC 2 & ISO-27001 Pre-Audit Report (.md)", use_container_width=True):
+                            render_paywall_card("SOC 2 & ISO-27001 Pre-Audit Report", tier_needed="PRO")
                     st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
 
                     for i, f in enumerate(findings, 1):
@@ -2493,14 +2612,17 @@ if active_tab == "Inspector":
                             diff_html_parts.append('</div>')
                             st.markdown("".join(diff_html_parts), unsafe_allow_html=True)
 
-                            st.button(
-                                f"🪄 Apply Patch #{i}",
-                                key=f"btn_apply_fix_{i}",
-                                type="primary",
-                                on_click=apply_patch_to_editor,
-                                args=(f.problem_code, f.fixed_code),
-                                use_container_width=True
-                            )
+                            if st.session_state.is_pro_user:
+                                st.button(
+                                    f"🪄 Apply Patch #{i}",
+                                    key=f"btn_apply_fix_{i}",
+                                    type="primary",
+                                    on_click=apply_patch_to_editor,
+                                    args=(f.problem_code, f.fixed_code),
+                                    use_container_width=True
+                                )
+                            else:
+                                render_paywall_card(f"1-Click AST Auto-Patch #{i}", tier_needed="PRO")
 
     else:
         render_project_archive_inspector()
@@ -2811,18 +2933,13 @@ elif active_tab == "Pricing":
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-        if checkout_urls.get("pro") and not is_pro:
+        if is_pro:
+            st.button("✓ Active Plan", key="btn_activate_pro", disabled=True, use_container_width=True)
+        elif checkout_urls.get("pro"):
             st.link_button(f"Checkout Pro Indie ({pro_price}/mo)", checkout_urls["pro"], type="primary", use_container_width=True)
         else:
-            st.button(
-                "✓ Active Plan" if is_pro else f"Select Pro Indie ({pro_price}/mo)",
-                key="btn_activate_pro",
-                disabled=is_pro,
-                type="primary" if not is_pro else "secondary",
-                on_click=select_plan,
-                args=(PlanTier.DEVELOPER_PRO.value, f"Pro Indie ({pro_price}/mo)"),
-                use_container_width=True
-            )
+            with st.popover(f"Upgrade Pro Indie ({pro_price}/mo)", use_container_width=True):
+                render_paywall_card(f"Pro Indie ({pro_price}/mo)", tier_needed="PRO")
 
     # 3. GROWTH TEAM ($99/mo or $990/yr) - 🔥 MOST POPULAR FOR STARTUPS
     with p3:
@@ -2852,18 +2969,13 @@ elif active_tab == "Pricing":
         """, unsafe_allow_html=True)
         st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
         growth_url = checkout_urls.get("growth") or checkout_urls.get("team")
-        if growth_url and not is_team:
+        if is_team:
+            st.button("✓ Active Plan", key="btn_activate_growth", disabled=True, use_container_width=True)
+        elif growth_url:
             st.link_button(f"Upgrade Growth Team ({growth_price}/mo)", growth_url, type="primary", use_container_width=True)
         else:
-            st.button(
-                "✓ Active Plan" if is_team else f"Select Growth Team ({growth_price}/mo)",
-                key="btn_activate_growth",
-                disabled=is_team,
-                type="primary" if not is_team else "secondary",
-                on_click=select_plan,
-                args=(PlanTier.TEAM_ENTERPRISE.value, f"Growth Team ({growth_price}/mo)"),
-                use_container_width=True
-            )
+            with st.popover(f"Upgrade Growth Team ({growth_price}/mo)", use_container_width=True):
+                render_paywall_card(f"Growth Team ({growth_price}/mo)", tier_needed="TEAM")
 
     # 4. GLOBAL ENTERPRISE & COMPLIANCE ($499/mo or $4,990/yr)
     with p4:
