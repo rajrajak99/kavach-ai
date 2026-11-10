@@ -79,3 +79,30 @@
 | 28 | Flagsmith | Kim Gustyr | `kim.gustyr@flagsmith.com` | Enterprise Feature Flags / Django | 📤 Sent |
 | 29 | Dittofeed | Shady Duan | `shady.duan@mirmiles.com` | Customer Engagement / TypeScript | 📤 Sent |
 | 30 | Documenso | Documenso Security | `security@documenso.com` | Digital Signatures / Next.js, Prisma | 📤 Sent |
+---
+
+## 🛡️ Maintainer Conversion & Resent Enterprise Pipeline (via team.kavachai@gmail.com)
+**Date:** 2026-11-10 (13:35 IST)
+**Sender:** 	eam.kavachai@gmail.com
+**Status:** 17 Emails Successfully Delivered
+
+| # | Target / Maintainer | Repo / Org | Email | Context / Offer | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Ruslan Babin | ythosa/minuki | asus714@yandex.ru | Merged PR #22 • 30-Day Free VIP Team Access | 📤 Delivered |
+| 2 | Yonas Mekonnen | Sanoy24/fastapi-ecommerce | myonas886@gmail.com | Merged PR #81 • 30-Day Free VIP Team Access | 📤 Delivered |
+| 3 | Horilla HRMS | horilla-opensource/horilla | support@horilla.com | Payroll & PII Continuous Security Gate | 📤 Delivered |
+| 4 | Papermark | mfts/papermark | marc@papermark.io | Investor Dataroom Document Security Gate | 📤 Delivered |
+| 5 | OpenSign | OpenSignLabs/OpenSign | contact@opensignlabs.com | Digital Signature Cryptographic AST Gate | 📤 Delivered |
+| 6 | Chatwoot | chatwoot/chatwoot | sojan@chatwoot.com | HIPAA & SOC 2 Continuous Security Gate | 📤 Delivered |
+| 7 | Chaskiq | chaskiq/chaskiq | support@chaskiq.io | B2B Messaging Security Gate | 📤 Delivered |
+| 8 | Supabase | supabase/supabase | security@supabase.io | Sub-16ms Go, Python & Terraform AST Gate | 📤 Delivered |
+| 9 | Appwrite | ppwrite/appwrite | security@appwrite.io | Cloud BaaS Pre-Merge Security Gate | 📤 Delivered |
+| 10 | PocketBase | pocketbase/pocketbase | support@pocketbase.io | Go AST SQL Filter Verification Gate | 📤 Delivered |
+| 11 | Directus | directus/directus | security@directus.io | Dynamic SQL & REST API Security Gate | 📤 Delivered |
+| 12 | NocoDB | 
+ocodb/nocodb | support@nocodb.com | Smart Spreadsheet Dynamic SQL Gate | 📤 Delivered |
+| 13 | Authentik | goauthentik/authentik | security@goauthentik.io | Enterprise SSO Zero-False-Positive AST Gate | 📤 Delivered |
+| 14 | Zitadel | zitadel/zitadel | eduardo.gomero@primer.io | Cloud-Native Identity Go AST Security Gate | 📤 Delivered |
+| 15 | Cerbos | cerbos/cerbos | dennis@cerbos.dev | Microservices Authorization AST Security Gate | 📤 Delivered |
+| 16 | Wazuh | wazuh/wazuh | security@wazuh.com | Enterprise SIEM API & Agent Security Gate | 📤 Delivered |
+| 17 | Faraday | infobyte/faraday | devops@faradaysec.com | Vulnerability Management AST Security Gate | 📤 Delivered |
