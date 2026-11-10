@@ -192,4 +192,21 @@ def test_competitor_poacher_batch2_targets():
     for l in leads:
         assert "mail.google.com/mail/u/2/" in l.one_click_compose_url
 
+def test_competitor_poacher_batch3_targets():
+    poacher = CompetitorPoacher()
+    assert len(poacher.BATCH3_TARGETS) == 10
+    for target in poacher.BATCH3_TARGETS:
+        assert not is_repo_blacklisted(target["repo"], target.get("desc", ""))
+        email = target.get("verified_contact")
+        assert email is not None
+        assert is_deliverable_email(email)
+        assert not email.startswith("security@")
+
+    leads = poacher.run_displacement_hunt(targets=poacher.BATCH3_TARGETS, max_targets=10)
+    assert len(leads) == 10
+    for l in leads:
+        assert "mail.google.com/mail/u/2/" in l.one_click_compose_url
+        assert len(l.one_click_compose_url) < 1650
+
+
 

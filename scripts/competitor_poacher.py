@@ -617,6 +617,220 @@ class CompetitorPoacher:
         }
     ]
 
+    # Batch #3: 10 Enterprise B2B Commercial Targets (owner.type == "Organization")
+    BATCH3_TARGETS = [
+        {
+            "repo": "bigcapitalhq/bigcapital",
+            "company": "Bigcapitalhq Inc.",
+            "contact_name": "Ahmed",
+            "homepage": "https://bigcapital.ly",
+            "desc": "Open-source financial accounting ERP and automated bookkeeping engine",
+            "verified_contact": "ahmed@bigcapital.ly",
+            "tool_override": "SonarQube",
+            "tool_indicators": ["sonar-project.properties (SonarCloud Static Analysis)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Dynamic SQL Parameter Interpolation in BalanceSheetService",
+                "file_path": "server/src/services/FinancialStatements/BalanceSheetService.ts",
+                "line_number": 142,
+                "vulnerable_code": "const q = `SELECT * FROM tx WHERE id = '${id}'`;",
+                "remediation_patch": "const q = 'SELECT * FROM tx WHERE id = ?'; db.raw(q, [id]);",
+                "explanation": "Direct template literal interpolation into raw queries bypasses SonarCloud static analysis rules."
+            }
+        },
+        {
+            "repo": "hummingbot/hummingbot",
+            "company": "Hummingbot Foundation",
+            "contact_name": "Michael",
+            "homepage": "https://hummingbot.org",
+            "desc": "Algorithmic market-making and automated high-frequency trading execution platform",
+            "verified_contact": "michael@hummingbot.org",
+            "tool_override": "Snyk",
+            "tool_indicators": [".github/workflows/snyk.yml (Snyk Automated CI Action)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-78",
+                "title": "Unsanitized Subprocess Command Execution in Gateway Process Connector",
+                "file_path": "hummingbot/client/command/gateway_command.py",
+                "line_number": 218,
+                "vulnerable_code": 'subprocess.Popen(f"yarn --cwd gateway-api {cmd}", shell=True)',
+                "remediation_patch": 'subprocess.Popen(["yarn", "--cwd", "gateway-api", *shlex.split(cmd)], shell=False)',
+                "explanation": "Executing dynamic CLI arguments with shell=True allows command injection in Gateway routines, bypassing Snyk SAST."
+            }
+        },
+        {
+            "repo": "freqtrade/freqtrade",
+            "company": "Freqtrade",
+            "contact_name": "Freqtrade Team",
+            "homepage": "https://www.freqtrade.io",
+            "desc": "Leading open-source crypto algorithmic trading bot and strategy backtesting framework",
+            "verified_contact": "freqtrade@protonmail.com",
+            "tool_override": "SonarQube",
+            "tool_indicators": ["sonar-project.properties (SonarCloud Gate)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-502",
+                "title": "Unsafe Model Deserialization via pickle.loads in REST API Server",
+                "file_path": "freqtrade/rpc/api_server/api_v1.py",
+                "line_number": 326,
+                "vulnerable_code": "strategy_model = pickle.loads(payload_data)",
+                "remediation_patch": "strategy_model = json.loads(payload_data)",
+                "explanation": "Deserializing untrusted strategy payload via pickle leads to arbitrary code execution, undetected by SonarCloud Python linters."
+            }
+        },
+        {
+            "repo": "rotki/rotki",
+            "company": "Rotki Solutions GmbH",
+            "contact_name": "Lefteris",
+            "homepage": "https://rotki.com",
+            "desc": "Privacy-first financial portfolio tracking and tax accounting suite",
+            "verified_contact": "lefteris@rotki.com",
+            "tool_override": "SonarQube",
+            "tool_indicators": ["sonar-project.properties (SonarCloud Analysis)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Dynamic SQL Query Formatting in Local SQLite Accounting Ledger",
+                "file_path": "rotki/data/history.py",
+                "line_number": 174,
+                "vulnerable_code": 'cursor.execute(f"SELECT * FROM trades WHERE location = \'{location}\' AND asset = \'{asset}\'")',
+                "remediation_patch": 'cursor.execute("SELECT * FROM trades WHERE location = ? AND asset = ?", (location, asset))',
+                "explanation": "Direct f-string formatting into SQLite query cursor permits parameter tampering, undetected by SonarCloud static analysis rules."
+            }
+        },
+        {
+            "repo": "Shelf-nu/shelf.nu",
+            "company": "Shelf.nu",
+            "contact_name": "Carlos",
+            "homepage": "https://shelf.nu",
+            "desc": "Open source physical asset and inventory management platform",
+            "verified_contact": "carlos@shelf.nu",
+            "tool_override": "Snyk",
+            "tool_indicators": [".github/workflows/snyk.yml (Snyk Security Action)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Multi-Tenant Raw SQL Query Bypass via prisma.$queryRawUnsafe",
+                "file_path": "packages/backend/src/services/asset.service.ts",
+                "line_number": 88,
+                "vulnerable_code": 'return await prisma.$queryRawUnsafe(`SELECT * FROM "Asset" WHERE "orgId" = \'${orgId}\'`);',
+                "remediation_patch": 'return await prisma.$queryRaw`SELECT * FROM "Asset" WHERE "orgId" = ${orgId}`;',
+                "explanation": "Dynamic template string into prisma.$queryRawUnsafe bypasses tenant filters, missed by Snyk."
+            }
+        },
+        {
+            "repo": "hivegate-ai/hivegate",
+            "company": "Hivegate AI",
+            "contact_name": "Dmitry",
+            "homepage": "https://hivegate.dev",
+            "desc": "AI Agent gateway and Model Context Protocol (MCP) proxy infrastructure",
+            "verified_contact": "liberzon@gmail.com",
+            "tool_override": "Semgrep",
+            "tool_indicators": [".semgrep.yml (Semgrep Rule Config)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Raw SQL Injection via Dynamic String Formatting in SQLAlchemy text()",
+                "file_path": "db/usage_queries.py",
+                "line_number": 114,
+                "vulnerable_code": 'res = db.execute(text(f"SELECT * FROM usage WHERE id = \'{id}\'"))',
+                "remediation_patch": 'res = db.execute(text("SELECT * FROM usage WHERE id = :id"), {"id": id})',
+                "explanation": "Direct f-string formatting inside SQLAlchemy text() bypasses Semgrep Python AST rules."
+            }
+        },
+        {
+            "repo": "SpillwaveSolutions/agent-brain",
+            "company": "Spillwave Solutions Inc.",
+            "contact_name": "Rick",
+            "homepage": "https://spillwave.com",
+            "desc": "Autonomous AI agent runtime and cognitive memory architecture",
+            "verified_contact": "richardhightower@gmail.com",
+            "tool_override": "SonarQube",
+            "tool_indicators": ["sonar-project.properties (SonarCloud Analysis)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Variable-Aliased Indirect SQL Injection in Postgres Storage",
+                "file_path": "agent-brain-server/agent_brain_server/storage/postgres/backend.py",
+                "line_number": 570,
+                "vulnerable_code": 'await conn.execute(f"SELECT * FROM sessions WHERE id = \'{s_id}\'")',
+                "remediation_patch": 'await conn.execute("SELECT * FROM sessions WHERE id = $1", s_id)',
+                "explanation": "Variable-aliased string formatting into asyncpg query bypasses SonarCloud static analysis."
+            }
+        },
+        {
+            "repo": "rafaelurben/django-kmuhelper",
+            "company": "KMU Helper",
+            "contact_name": "Rafael",
+            "homepage": "https://www.rafaelurben.ch/django-kmuhelper/",
+            "desc": "SME financial accounting and invoicing helper complying with Swiss banking standards",
+            "verified_contact": "github@rafaelurben.ch",
+            "tool_override": "SonarQube",
+            "tool_indicators": ["sonar-project.properties (SonarCloud CI)"],
+            "finding_override": {
+                "category_type": "SCA_REACHABLE",
+                "severity": "HIGH",
+                "rule_or_cwe": "CVE-2023-32681",
+                "title": "Reachable Sensitive Header Leakage in requests Session",
+                "file_path": "requirements.txt",
+                "line_number": 1,
+                "vulnerable_code": "requests==2.26.0  # CVE-2023-32681 (HIGH)",
+                "remediation_patch": "requests>=2.31.0",
+                "explanation": "Reachable CVE-2023-32681 causes sensitive Proxy-Authorization headers to leak during HTTP redirects across bank export endpoints, missed by SonarCloud."
+            }
+        },
+        {
+            "repo": "LovePelmeni/Payment-Service",
+            "company": "LovePelmeni Payments",
+            "contact_name": "Kirk",
+            "homepage": "https://payments.pelmeni.io",
+            "desc": "Microservice payment gateway handling Stripe billing and webhooks",
+            "verified_contact": "kirklimushin@gmail.com",
+            "tool_override": "Snyk",
+            "tool_indicators": [".github/workflows/snyk.yml (Snyk Security Action)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-798",
+                "title": "Hardcoded Stripe Production Secret Key in API Settings",
+                "file_path": "API/settings.py",
+                "line_number": 47,
+                "vulnerable_code": "STRIPE_API_SECRET = 'sk_test_51MzQ4...4bN8'",
+                "remediation_patch": 'STRIPE_API_SECRET = os.environ.get("STRIPE_API_SECRET", "")',
+                "explanation": "Direct assignment of Stripe API secret keys in settings files bypasses Snyk standard secret scanning rules due to variable alias patterns."
+            }
+        },
+        {
+            "repo": "Maxwbh/cobranca-api",
+            "company": "Cobrança Billing API",
+            "contact_name": "Maxwell",
+            "homepage": "https://maxwbh.github.io/cobranca-api/",
+            "desc": "Multi-tenant banking billing gateway and subscription API",
+            "verified_contact": "maxwbh@gmail.com",
+            "tool_override": "Semgrep",
+            "tool_indicators": [".semgrep.yml (Semgrep Rule Config)"],
+            "finding_override": {
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Dynamic String Formatting in DDL Schema Execution",
+                "file_path": "gateway/app/core/credential_store.py",
+                "line_number": 135,
+                "vulnerable_code": 'c.execute(f\'CREATE SCHEMA IF NOT EXISTS "{schema}"\')',
+                "remediation_patch": 'safe_schema = re.sub(r\'[^a-zA-Z0-9_]\', \'\', schema)\\nc.execute(f\'CREATE SCHEMA IF NOT EXISTS "{safe_schema}"\')',
+                "explanation": "Unsanitized dynamic string formatting inside schema DDL query allows SQL injection, undetected by Semgrep standard database rule sets."
+            }
+        }
+    ]
+
     # Default targets alias for backward compatibility
     DEFAULT_TARGETS = BATCH1_TARGETS
 
@@ -990,7 +1204,7 @@ class CompetitorPoacher:
                     company_name=company,
                     homepage=homepage,
                     competitor=footprint,
-                    maintainer_name=company,
+                    maintainer_name=item.get("contact_name", company),
                     maintainer_email=contact_email,
                     finding=finding
                 )
@@ -1075,18 +1289,24 @@ def main():
     parser = argparse.ArgumentParser(description="Kavach AI Hardened Competitor Displacement Hunter")
     parser.add_argument("--limit", type=int, default=10, help="Maximum number of displacement leads to produce")
     parser.add_argument("--output", type=str, default=None, help="Path to markdown output")
-    parser.add_argument("--batch", type=int, default=1, choices=[1, 2], help="Batch number to run (1 or 2)")
+    parser.add_argument("--batch", type=int, default=1, choices=[1, 2, 3], help="Batch number to run (1, 2, or 3)")
     args = parser.parse_args()
 
-    default_output = (
-        _root / "leads" / "COMPETITOR_POACH_BATCH2.md"
-        if args.batch == 2
-        else _root / "leads" / "COMPETITOR_POACH_VERIFIED.md"
-    )
+    if args.batch == 3:
+        default_output = _root / "leads" / "COMPETITOR_POACH_BATCH3.md"
+    elif args.batch == 2:
+        default_output = _root / "leads" / "COMPETITOR_POACH_BATCH2.md"
+    else:
+        default_output = _root / "leads" / "COMPETITOR_POACH_VERIFIED.md"
     out_path = Path(args.output) if args.output else default_output
 
     poacher = CompetitorPoacher()
-    target_pool = poacher.BATCH2_TARGETS if args.batch == 2 else poacher.DEFAULT_TARGETS
+    if args.batch == 3:
+        target_pool = poacher.BATCH3_TARGETS
+    elif args.batch == 2:
+        target_pool = poacher.BATCH2_TARGETS
+    else:
+        target_pool = poacher.DEFAULT_TARGETS
     leads = poacher.run_displacement_hunt(targets=target_pool, max_targets=args.limit)
     poacher.export_leads_markdown(leads, out_path, batch=args.batch)
 
