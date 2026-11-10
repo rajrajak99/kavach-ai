@@ -149,7 +149,8 @@ services:
     privileged: true
     network_mode: "host"
 """
-    findings = scanner.scan_docker_compose(insecure_compose, "docker-compose.yml")
+    # Production compose manifest should flag exposed database port
+    findings = scanner.scan_docker_compose(insecure_compose, "docker-compose.prod.yml")
     
     assert len(findings) >= 3
     rule_ids = [f.rule_id for f in findings]
@@ -158,6 +159,74 @@ services:
     assert "COMPOSE-HOST-NETWORK" in rule_ids
     assert "COMPOSE-EXPOSED-DATABASE-PORT" in rule_ids
     assert "COMPOSE-HARDCODED-SECRET" in rule_ids
+
+def test_container_docker_compose_local_dev_silence():
+    scanner = ContainerSecurityScanner()
+    
+    dev_compose = """
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+"""
+    # Local developer compose file should NOT flag exposed database ports (zero noise)
+    findings = scanner.scan_docker_compose(dev_compose, "docker-compose.yml")
+    rule_ids = [f.rule_id for f in findings]
+    assert "COMPOSE-EXPOSED-DATABASE-PORT" not in rule_ids
+
+def test_container_multi_stage_dockerfile_parsing():
+    scanner = ContainerSecurityScanner()
+
+    # Case 1: Multi-stage with builder lacking USER, but final stage having USER appuser
+    compliant_multistage = """
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine AS runner
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+USER appuser
+CMD ["node", "dist/index.js"]
+"""
+    findings = scanner.scan_dockerfile(compliant_multistage, "Dockerfile")
+    rule_ids = [f.rule_id for f in findings]
+    assert "DOCKER-MISSING-USER" not in rule_ids, "Intermediate builder stage triggered false positive DOCKER-MISSING-USER"
+
+    # Case 2: Multi-stage where final runtime stage DOES lack USER
+    vulnerable_multistage = """
+FROM golang:1.21 AS builder
+WORKDIR /src
+COPY . .
+RUN go build -o server .
+
+FROM alpine:3.18 AS runtime
+WORKDIR /app
+COPY --from=builder /src/server .
+CMD ["/app/server"]
+"""
+    findings = scanner.scan_dockerfile(vulnerable_multistage, "Dockerfile")
+    rule_ids = [f.rule_id for f in findings]
+    assert "DOCKER-MISSING-USER" in rule_ids, "Final runtime stage without USER was not flagged"
+
+    # Case 3: FROM scratch final stage should not be flagged for missing user
+    scratch_dockerfile = """
+FROM golang:1.21 AS builder
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -o app .
+
+FROM scratch
+COPY --from=builder /src/app /app
+ENTRYPOINT ["/app"]
+"""
+    findings = scanner.scan_dockerfile(scratch_dockerfile, "Dockerfile")
+    rule_ids = [f.rule_id for f in findings]
+    assert "DOCKER-MISSING-USER" not in rule_ids, "FROM scratch should be exempted from DOCKER-MISSING-USER"
 
 
 # ==========================================

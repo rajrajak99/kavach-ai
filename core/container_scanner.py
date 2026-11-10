@@ -19,6 +19,28 @@ class ContainerFinding:
     description: str
     remediation: str
 
+def is_production_compose(file_path: str) -> bool:
+    """
+    Checks if a compose manifest is designated for production deployments
+    (e.g. docker-compose.prod.yml, compose.production.yaml, prod/docker-compose.yml).
+    Local developer manifests (docker-compose.yml, docker-compose.dev.yml) return False.
+    """
+    norm = file_path.replace("\\", "/").lower()
+    filename = norm.split("/")[-1]
+    
+    # Check filename for prod / production keywords
+    if any(p in filename for p in (".prod.", "-prod.", "_prod.", ".production.", "-production.", "_production.")):
+        return True
+    if filename in ("docker-compose.prod.yml", "docker-compose.prod.yaml", "docker-compose.production.yml", "docker-compose.production.yaml"):
+        return True
+        
+    # Check parent directory names for production markers
+    parts = norm.split("/")[:-1]
+    if any(part in ("prod", "production", "live") for part in parts):
+        return True
+        
+    return False
+
 class ContainerSecurityScanner:
     """
     Sub-10ms AST & regex-based container security scanner.
@@ -46,26 +68,53 @@ class ContainerSecurityScanner:
     def scan_dockerfile(self, content: str, file_path: str = "Dockerfile") -> List[ContainerFinding]:
         """
         Audits a Dockerfile line-by-line for container vulnerabilities and misconfigurations.
+        Performs multi-stage build awareness: only the FINAL runtime stage is evaluated
+        for missing non-root USER directives (and exempted if FROM scratch).
+        Intermediate build stages (AS builder, AS base, AS installer) are never flagged.
         """
         findings: List[ContainerFinding] = []
         lines = content.splitlines()
 
-        has_user = False
-        has_healthcheck = False
-        user_line_idx = 0
-        last_from_idx = 0
+        stages: List[Dict[str, Any]] = []
+        known_aliases: Set[str] = set()
+        current_stage: Optional[Dict[str, Any]] = None
 
         for idx, line in enumerate(lines, start=1):
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
 
-            # 1. Base Image Tagging
+            # 1. Base Image & Build Stage Detection
             if stripped.upper().startswith("FROM "):
-                last_from_idx = idx
-                image_ref = stripped.split()[1] if len(stripped.split()) > 1 else ""
-                # Ignore multi-stage build aliases like 'builder'
-                if ":" not in image_ref and "@" not in image_ref and "scratch" not in image_ref.lower():
+                tokens = stripped.split()
+                img_idx = 1
+                while img_idx < len(tokens) and tokens[img_idx].startswith("--"):
+                    img_idx += 1
+                image_ref = tokens[img_idx] if img_idx < len(tokens) else ""
+                
+                stage_alias = None
+                for i in range(img_idx + 1, len(tokens) - 1):
+                    if tokens[i].upper() == "AS":
+                        stage_alias = tokens[i + 1]
+                        known_aliases.add(stage_alias.lower())
+                        break
+
+                is_scratch = "scratch" in image_ref.lower()
+                current_stage = {
+                    "from_line_num": idx,
+                    "image_ref": image_ref,
+                    "stage_alias": stage_alias,
+                    "has_user": False,
+                    "explicit_root": False,
+                    "has_healthcheck": False,
+                    "is_scratch": is_scratch
+                }
+                stages.append(current_stage)
+
+                # Flag unpinned or mutable tags (ignoring multi-stage aliases and scratch)
+                if (":" not in image_ref and "@" not in image_ref 
+                        and not is_scratch 
+                        and image_ref.lower() not in known_aliases):
                     findings.append(ContainerFinding(
                         file_path=file_path,
                         line_number=idx,
@@ -85,6 +134,7 @@ class ContainerSecurityScanner:
                         description=f"Base image '{image_ref}' explicitly uses the mutable ':latest' tag.",
                         remediation=f"Pin '{image_ref}' to a specific immutable tag (e.g. 'python:3.11-slim-bookworm') for deterministic builds."
                     ))
+                continue
 
             # 2. Hardcoded Secrets in ENV / ARG
             if stripped.upper().startswith(("ENV ", "ARG ")):
@@ -106,6 +156,8 @@ class ContainerSecurityScanner:
             if stripped.upper().startswith("USER "):
                 user_spec = stripped.split()[1].strip().lower() if len(stripped.split()) > 1 else ""
                 if user_spec in ("root", "0"):
+                    if current_stage:
+                        current_stage["explicit_root"] = True
                     findings.append(ContainerFinding(
                         file_path=file_path,
                         line_number=idx,
@@ -116,8 +168,8 @@ class ContainerSecurityScanner:
                         remediation="Create and switch to a dedicated non-root user (e.g. 'RUN useradd -u 1001 appuser && USER appuser')."
                     ))
                 else:
-                    has_user = True
-                    user_line_idx = idx
+                    if current_stage:
+                        current_stage["has_user"] = True
 
             # 4. Insecure Piping into Shell
             if stripped.upper().startswith("RUN "):
@@ -134,31 +186,35 @@ class ContainerSecurityScanner:
 
             # 5. HEALTHCHECK directive
             if stripped.upper().startswith("HEALTHCHECK "):
-                has_healthcheck = True
+                if current_stage:
+                    current_stage["has_healthcheck"] = True
 
-        # Check if missing non-root USER instruction
-        if not has_user and last_from_idx > 0:
-            findings.append(ContainerFinding(
-                file_path=file_path,
-                line_number=last_from_idx,
-                severity="HIGH",
-                rule_id="DOCKER-MISSING-USER",
-                title="Missing Non-Root USER Directive (Runs as Root by Default)",
-                description="Dockerfile does not define a non-root USER directive; container will execute with root privileges by default.",
-                remediation="Add 'USER appuser' or a non-privileged UID before the final ENTRYPOINT/CMD instruction."
-            ))
+        # Multi-stage evaluation: only check the FINAL runtime stage for missing non-root USER
+        if stages:
+            final_stage = stages[-1]
+            if not final_stage["is_scratch"] and not final_stage["has_user"]:
+                findings.append(ContainerFinding(
+                    file_path=file_path,
+                    line_number=final_stage["from_line_num"],
+                    severity="HIGH",
+                    rule_id="DOCKER-MISSING-USER",
+                    title="Missing Non-Root USER Directive (Runs as Root by Default)",
+                    description="Final runtime container stage does not define a non-root USER directive; production container will execute with root privileges by default.",
+                    remediation="Add 'USER appuser' or a non-privileged UID before the final ENTRYPOINT/CMD instruction."
+                ))
 
-        # Check if missing HEALTHCHECK instruction
-        if not has_healthcheck and len(lines) > 5:
-            findings.append(ContainerFinding(
-                file_path=file_path,
-                line_number=len(lines),
-                severity="LOW",
-                rule_id="DOCKER-MISSING-HEALTHCHECK",
-                title="Missing Container HEALTHCHECK Instruction",
-                description="Container has no HEALTHCHECK instruction; container orchestrator cannot verify runtime process vitality.",
-                remediation="Add a HEALTHCHECK instruction (e.g. 'HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:8000/health || exit 1')."
-            ))
+            # HEALTHCHECK check: if no stage has HEALTHCHECK and file has substance
+            has_any_healthcheck = any(s["has_healthcheck"] for s in stages)
+            if not has_any_healthcheck and len(lines) > 5 and not final_stage["is_scratch"]:
+                findings.append(ContainerFinding(
+                    file_path=file_path,
+                    line_number=len(lines),
+                    severity="LOW",
+                    rule_id="DOCKER-MISSING-HEALTHCHECK",
+                    title="Missing Container HEALTHCHECK Instruction",
+                    description="Container has no HEALTHCHECK instruction; container orchestrator cannot verify runtime process vitality.",
+                    remediation="Add a HEALTHCHECK instruction (e.g. 'HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:8000/health || exit 1')."
+                ))
 
         return findings
 
@@ -203,22 +259,23 @@ class ContainerSecurityScanner:
                     remediation="Use a bridge or overlay docker network instead of 'network_mode: host'."
                 ))
 
-            # 3. Sensitive Ports Bound to 0.0.0.0
-            port_match = re.search(r'["\']?(?:0\.0\.0\.0:)?(\d{2,5}):(\d{2,5})["\']?', stripped)
-            if port_match:
-                host_port = port_match.group(1)
-                container_port = port_match.group(2)
-                for sensitive_p, service_name in self.SENSITIVE_PORTS.items():
-                    if host_port == sensitive_p or container_port == sensitive_p:
-                        findings.append(ContainerFinding(
-                            file_path=file_path,
-                            line_number=idx,
-                            severity="HIGH",
-                            rule_id="COMPOSE-EXPOSED-DATABASE-PORT",
-                            title=f"Internal {service_name} Port ({sensitive_p}) Exposed Publicly",
-                            description=f"Service '{current_service}' exposes {service_name} port {sensitive_p} directly to the public network interface.",
-                            remediation=f"Bind port to loopback only (e.g. '127.0.0.1:{host_port}:{container_port}') or access via internal Docker network."
-                        ))
+            # 3. Sensitive Ports Bound to 0.0.0.0 (Production Compose Files Only)
+            if is_production_compose(file_path):
+                port_match = re.search(r'["\']?(?:0\.0\.0\.0:)?(\d{2,5}):(\d{2,5})["\']?', stripped)
+                if port_match:
+                    host_port = port_match.group(1)
+                    container_port = port_match.group(2)
+                    for sensitive_p, service_name in self.SENSITIVE_PORTS.items():
+                        if host_port == sensitive_p or container_port == sensitive_p:
+                            findings.append(ContainerFinding(
+                                file_path=file_path,
+                                line_number=idx,
+                                severity="HIGH",
+                                rule_id="COMPOSE-EXPOSED-DATABASE-PORT",
+                                title=f"Internal {service_name} Port ({sensitive_p}) Exposed Publicly",
+                                description=f"Service '{current_service}' exposes {service_name} port {sensitive_p} directly to the public network interface in production compose.",
+                                remediation=f"Bind port to loopback only (e.g. '127.0.0.1:{host_port}:{container_port}') or access via internal Docker network."
+                            ))
 
             # 4. Hardcoded Passwords in Environment
             secret_match = self.SECRET_KEY_PATTERN.search(stripped)

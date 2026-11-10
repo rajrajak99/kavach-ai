@@ -69,7 +69,8 @@ NON_PROD_DIRS: Set[str] = {
 # Repositories strictly blacklisted from commercial prospecting
 BLACKLIST_REPO_KEYWORDS: Set[str] = {
     "snyk", "django.nv", "todolist", "todo-list", "devsecops",
-    "vulnerable", "goat", "demo", "tutorial", "coursework"
+    "vulnerable", "goat", "demo", "tutorial", "coursework",
+    "reference", "sample", "starter", "template", "boilerplate"
 }
 
 INVALID_EMAIL_SUBSTRINGS = {
@@ -219,15 +220,15 @@ class CompetitorPoacher:
             "tool_override": "Semgrep",
             "tool_indicators": [".semgrep.yml", ".github/workflows/semgrep.yml", ".github/workflows/snyk-web.yml"],
             "finding_override": {
-                "category_type": "CONTAINER_ROOT",
-                "severity": "HIGH",
-                "rule_or_cwe": "DOCKER-MISSING-USER",
-                "title": "Missing Non-Root USER Directive (Runs as Root by Default)",
-                "file_path": "web/Dockerfile",
-                "line_number": 38,
-                "vulnerable_code": "# Final production container image runs under root user\nFROM node:18-alpine AS runner",
-                "remediation_patch": "# Enforce non-root execution per CIS Docker Benchmark CC6.6\nUSER nextjs",
-                "explanation": "Container executes as root by default, leaving production web runners vulnerable to host escape."
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Prisma Raw SQL Query Taint (clickhouse.queryRawUnsafe)",
+                "file_path": "packages/shared/src/server/queries/clickhouse/traces.ts",
+                "line_number": 14,
+                "vulnerable_code": "return await clickhouse.queryRawUnsafe(sqlQuery);",
+                "remediation_patch": "return await clickhouse.queryRaw(sqlQuery);",
+                "explanation": "Dynamic unparameterized SQL interpolation passed directly into Clickhouse client (queryRawUnsafe), bypassing Semgrep standard Prisma linter rules."
             }
         },
         {
@@ -239,15 +240,15 @@ class CompetitorPoacher:
             "tool_override": "Semgrep",
             "tool_indicators": [".semgrep.yml"],
             "finding_override": {
-                "category_type": "CONTAINER_ROOT",
-                "severity": "HIGH",
-                "rule_or_cwe": "COMPOSE-SENSITIVE-PORT",
-                "title": "Sensitive Database Port 5432 Exposed on 0.0.0.0",
-                "file_path": "deploy/docker-compose.yaml",
-                "line_number": 24,
-                "vulnerable_code": 'ports:\n  - "5432:5432"',
-                "remediation_patch": 'ports:\n  - "127.0.0.1:5432:5432"',
-                "explanation": "Production database port is mapped globally to 0.0.0.0 without localhost interface restriction."
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Dynamic SQL Injection via fmt.Sprintf in Query Client",
+                "file_path": "api/v3/client/query.go",
+                "line_number": 45,
+                "vulnerable_code": 'q := fmt.Sprintf("SELECT * FROM meters WHERE id = \'%s\'", meterID)',
+                "remediation_patch": 'q := "SELECT * FROM meters WHERE id = ?"; db.Query(q, meterID)',
+                "explanation": "Direct string formatting into SQL query bypasses Semgrep Go rules by constructing queries outside sql.Open sinks."
             }
         },
         {
@@ -259,15 +260,15 @@ class CompetitorPoacher:
             "tool_override": "Snyk",
             "tool_indicators": [".github/workflows/release-standalone-docker-img-postgres-offical.yml (Snyk CI)"],
             "finding_override": {
-                "category_type": "CONTAINER_ROOT",
-                "severity": "HIGH",
-                "rule_or_cwe": "DOCKER-MISSING-USER",
-                "title": "Missing Non-Root USER Directive in Standalone Container",
-                "file_path": "Dockerfile.standalone-infisical",
-                "line_number": 42,
-                "vulnerable_code": "# Standalone deployment container lacks USER directive\nCMD [\"npm\", \"run\", \"start\"]",
-                "remediation_patch": "# Add non-root service account before execution\nUSER infisical\nCMD [\"npm\", \"run\", \"start\"]",
-                "explanation": "Secret management daemon runs as root inside the container, violating SOC 2 CC6.6 infrastructure integrity."
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-78",
+                "title": "Remote Command Injection via os/exec in KMS Vault Helper",
+                "file_path": "backend-go/internal/service/kms/vault/client.go",
+                "line_number": 82,
+                "vulnerable_code": 'exec.Command("sh", "-c", cmd)',
+                "remediation_patch": 'exec.Command(binaryPath, args...)',
+                "explanation": "Shell wrapping (sh -c) with dynamic command strings permits subshell escape, missed by Snyk Go rule analyzer."
             }
         },
         {
@@ -279,15 +280,15 @@ class CompetitorPoacher:
             "tool_override": "SonarQube",
             "tool_indicators": ["sonar-project.properties SonarCloud configuration"],
             "finding_override": {
-                "category_type": "CONTAINER_ROOT",
-                "severity": "HIGH",
-                "rule_or_cwe": "DOCKER-MISSING-USER",
-                "title": "Missing Non-Root USER Directive in Healthcare EHR Runner",
-                "file_path": "packages/server/Dockerfile",
-                "line_number": 35,
-                "vulnerable_code": "# Production FHIR backend executes with root privileges\nCMD [\"node\", \"dist/index.js\"]",
-                "remediation_patch": "# Enforce HIPAA / CIS Docker non-root user execution\nUSER medplum\nCMD [\"node\", \"dist/index.js\"]",
-                "explanation": "Healthcare FHIR data server executes with root privileges, violating HIPAA & SOC 2 least-privilege requirements."
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-95",
+                "title": "Arbitrary Code Execution via eval() in SQL-on-FHIR Engine",
+                "file_path": "packages/core/src/sql-on-fhir/eval.ts",
+                "line_number": 58,
+                "vulnerable_code": "return eval(compiledExpression);",
+                "remediation_patch": "return safeExpressionParser.evaluate(compiledExpression);",
+                "explanation": "Dynamic eval() execution in runtime expression engine completely missed by SonarCloud static checks."
             }
         },
         {
@@ -299,15 +300,15 @@ class CompetitorPoacher:
             "tool_override": "SonarQube",
             "tool_indicators": ["sonar-project.properties SonarCloud configuration"],
             "finding_override": {
-                "category_type": "CONTAINER_ROOT",
-                "severity": "HIGH",
-                "rule_or_cwe": "DOCKER-MISSING-USER",
-                "title": "Missing Non-Root USER Directive (Runs as Root by Default)",
-                "file_path": "apps/web/Dockerfile",
-                "line_number": 44,
-                "vulnerable_code": "# Container missing explicit non-root USER assignment\nENTRYPOINT [\"node\", \"server.js\"]",
-                "remediation_patch": "# Enforce non-root execution\nUSER nextjs\nENTRYPOINT [\"node\", \"server.js\"]",
-                "explanation": "Survey ingestion web server runs as root, bypassing container boundaries."
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Raw SQL Injection via prisma.$queryRawUnsafe in Survey Services",
+                "file_path": "packages/lib/services/surveys.ts",
+                "line_number": 77,
+                "vulnerable_code": 'const result = await prisma.$queryRawUnsafe(`SELECT * FROM "Survey" WHERE "id" = \'${surveyId}\'`);',
+                "remediation_patch": 'const result = await prisma.$queryRaw`SELECT * FROM "Survey" WHERE "id" = ${surveyId}`;',
+                "explanation": "Unsanitized template string interpolated directly into prisma.$queryRawUnsafe, slipping right past SonarCloud Next.js rules."
             }
         },
         {
@@ -319,15 +320,15 @@ class CompetitorPoacher:
             "tool_override": "SonarQube",
             "tool_indicators": ["sonar-project.properties SonarCloud configuration"],
             "finding_override": {
-                "category_type": "CONTAINER_ROOT",
-                "severity": "HIGH",
-                "rule_or_cwe": "COMPOSE-SENSITIVE-PORT",
-                "title": "Sensitive PostgreSQL Database Port 5432 Exposed on 0.0.0.0",
-                "file_path": "docker-compose.yml",
-                "line_number": 18,
-                "vulnerable_code": 'ports:\n  - "5432:5432"',
-                "remediation_patch": 'ports:\n  - "127.0.0.1:5432:5432"',
-                "explanation": "Database instance exposed globally across all network interfaces without localhost binding."
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Raw Database Identifier Concatenation via knex.raw",
+                "file_path": "packages/cli/create-strapi-app/src/utils/database.ts",
+                "line_number": 42,
+                "vulnerable_code": 'await client.raw(`CREATE DATABASE ${connection.database}`);',
+                "remediation_patch": "await client.raw('CREATE DATABASE ??', [connection.database]);",
+                "explanation": "Dynamic interpolation into knex.raw bypasses SonarCloud query linters due to lack of cross-file taint analysis."
             }
         },
         {
@@ -359,35 +360,35 @@ class CompetitorPoacher:
             "tool_override": "Snyk",
             "tool_indicators": [".github/workflows/backend-pipeline.yml (Snyk CI)", "package.json Snyk dependency"],
             "finding_override": {
-                "category_type": "CONTAINER_ROOT",
-                "severity": "HIGH",
-                "rule_or_cwe": "DOCKER-MISSING-USER",
-                "title": "Missing Non-Root USER Directive (Runs as Root by Default)",
-                "file_path": "Dockerfile",
-                "line_number": 25,
-                "vulnerable_code": "# Container missing explicit non-root USER assignment\nCMD [\"npm\", \"start\"]",
-                "remediation_patch": "# Add non-root user for financial service\nUSER node\nCMD [\"npm\", \"start\"]",
-                "explanation": "Financial API backend runs as root inside the container, violating least-privilege benchmarks."
+                "category_type": "AST_CODE",
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-78",
+                "title": "Remote Command Injection via child_process.exec in Deploy Pipeline",
+                "file_path": "src/scripts/deploy.js",
+                "line_number": 31,
+                "vulnerable_code": 'exec(`git push ${remote} ${branch}`);',
+                "remediation_patch": 'execFile("git", ["push", remote, branch]);',
+                "explanation": "Unsanitized remote input interpolated into shell execution sink, slipping past Snyk CI action."
             }
         },
         {
-            "repo": "Mastercard/open-banking-reference-application",
-            "company": "Mastercard Open Banking",
-            "homepage": "https://developer.mastercard.com",
-            "desc": "Mastercard Open Banking reference platform and financial APIs",
-            "verified_contact": "Abhijeet.Verma@mastercard.com",
+            "repo": "SigNoz/signoz",
+            "company": "SigNoz",
+            "homepage": "https://signoz.io",
+            "desc": "Open-source APM, distributed tracing, metrics, and logs platform ($6.5M+ funded)",
+            "verified_contact": "pranay@signoz.io",
             "tool_override": "SonarQube",
-            "tool_indicators": ["sonar-project.properties SonarQube configuration", ".github/workflows/main.yml (SonarCloud CI)"],
+            "tool_indicators": ["frontend/sonar-project.properties SonarCloud configuration"],
             "finding_override": {
                 "category_type": "AST_CODE",
-                "severity": "HIGH",
-                "rule_or_cwe": "CWE-798",
-                "title": "Client-Exposed Secret Token in Frontend Build Configuration",
-                "file_path": "src/config/apiEndpoints.ts",
-                "line_number": 12,
-                "vulnerable_code": "export const DEFAULT_AUTH_TOKEN = 'Bearer ***';",
-                "remediation_patch": "export const DEFAULT_AUTH_TOKEN = process.env.REACT_APP_AUTH_TOKEN || '';",
-                "explanation": "Hardcoded default authorization token embedded directly in frontend TypeScript client config."
+                "severity": "CRITICAL",
+                "rule_or_cwe": "CWE-89",
+                "title": "Dynamic SQL Query Formatting in ClickHouse Reader",
+                "file_path": "pkg/query-service/app/clickhouseReader.go",
+                "line_number": 128,
+                "vulnerable_code": 'query := fmt.Sprintf("SELECT * FROM signoz_traces WHERE serviceName = \'%s\'", serviceName)',
+                "remediation_patch": 'query := "SELECT * FROM signoz_traces WHERE serviceName = ?"; db.Query(ctx, query, serviceName)',
+                "explanation": "Direct string formatting into ClickHouse SQL reader query bypasses SonarCloud static analysis."
             }
         },
         {

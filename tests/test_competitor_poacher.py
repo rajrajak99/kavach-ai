@@ -147,11 +147,19 @@ def test_repo_blacklist_filtering():
     assert is_repo_blacklisted("devsecops-course/lab-1", "DevSecOps tutorial coursework") is True
     assert is_repo_blacklisted("org/security-goat", "Security training benchmark") is True
 
+    # Reference apps, starters, templates, and boilerplates (non-production)
+    assert is_repo_blacklisted("Mastercard/open-banking-reference-application", "Reference implementation") is True
+    assert is_repo_blacklisted("company/starter-kit", "Next.js starter template") is True
+    assert is_repo_blacklisted("org/saas-boilerplate", "SaaS boilerplate template") is True
+    assert is_repo_blacklisted("acme/sample-project", "Sample code") is True
+    assert is_repo_blacklisted("cloud/terraform-templates", "Terraform template repo") is True
+
     # Commercial organizations MUST NOT be blacklisted
     assert is_repo_blacklisted("langfuse/langfuse", "Open source LLM engineering platform") is False
     assert is_repo_blacklisted("openmeterio/openmeter", "Usage-based billing infrastructure") is False
     assert is_repo_blacklisted("Infisical/infisical", "Open source secret management platform") is False
     assert is_repo_blacklisted("strapi/strapi", "Open source Node.js Headless CMS") is False
+    assert is_repo_blacklisted("SigNoz/signoz", "Open-source APM, distributed tracing, metrics, and logs") is False
 
 def test_zero_bounce_email_policy():
     with tempfile.TemporaryDirectory() as tmp_dir:
