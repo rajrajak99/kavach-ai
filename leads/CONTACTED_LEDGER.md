@@ -180,3 +180,25 @@
 | 8 | Fiscalismia Cloud | fiscalismia/fiscalismia-backend | `hangrybear666+github@proton.me` | Snyk ($6,000/yr) | Remote Command Injection via `child_process.exec` (`CWE-78`) | 📤 Delivered |
 | 9 | SigNoz | SigNoz/signoz | `pranay@signoz.io` | SonarQube ($5,400/yr) | Dynamic SQL Query in ClickHouse Reader (`CWE-89`) | 📤 Delivered |
 | 10 | Moov Financial | moov-io/paygate | `adam@moov.io` | SonarQube ($5,400/yr) | Database Pool Leak on Context Cancel (`CWE-400`) | 📤 Delivered |
+
+---
+
+## 🎯 10 High-Conversion Competitor Displacement Leads — Batch #2 (via team.kavachai@gmail.com)
+**Date:** 2026-11-10 (17:45 IST)
+**Sender:** team.kavachai@gmail.com
+**Strategy:** Competitor Displacement (Semgrep $4.8k, Snyk $6k, SonarQube $5.4k -> Kavach AI $990/yr)
+**Status:** 10 Emails Successfully Delivered
+
+| # | Target Organization | Repo / Product | Email | Scanner Displaced | Pitch Focus & Missed Flaw | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | PostHog Inc. | posthog/posthog | `tim@posthog.com` | Semgrep ($4,800/yr) | ClickHouse SQL Parameter Concatenation (`CWE-89`) | 📤 Delivered |
+| 2 | LiteLLM (BerriAI) | BerriAI/litellm | `krrish@berri.ai` | Semgrep ($4,800/yr) | Subprocess Command Execution (`CWE-78`) | 📤 Delivered |
+| 3 | Temporal Technologies | temporalio/temporal | `maxim@temporal.io` | Snyk ($6,000/yr) | DB Transaction Pool Leak on Context Cancel (`CWE-400`) | 📤 Delivered |
+| 4 | Hasura | hasura/graphql-engine | `tanmai@hasura.io` | Snyk ($6,000/yr) | Dynamic SQL Clause Formatting (`CWE-89`) | 📤 Delivered |
+| 5 | n8n | n8n-io/n8n | `jan@n8n.io` | Snyk ($6,000/yr) | Child Process Remote Command Execution (`CWE-78`) | 📤 Delivered |
+| 6 | NetBird | netbirdio/netbird | `maykon@netbird.io` | SonarQube ($5,400/yr) | Dynamic SQL Clause in SQLite Store (`CWE-89`) | 📤 Delivered |
+| 7 | SuperTokens | supertokens/supertokens-core | `rishabh@supertokens.com` | SonarQube ($5,400/yr) | Raw SQL Statement Interpolation (`CWE-89`) | 📤 Delivered |
+| 8 | QuestDB | questdb/questdb | `nicolas@questdb.com` | SonarQube ($5,400/yr) | Query Compiler Resource Leak (`CWE-400`) | 📤 Delivered |
+| 9 | Ory Kratos | ory/kratos | `thomas@ory.sh` | Semgrep ($4,800/yr) | Raw SQL Identity Query via `fmt.Sprintf` (`CWE-89`) | 📤 Delivered |
+| 10 | OpenBB | OpenBB-finance/OpenBB | `didier.lopes@openbb.finance` | Snyk ($6,000/yr) | Subprocess Command Injection (`CWE-78`) | 📤 Delivered |
+
