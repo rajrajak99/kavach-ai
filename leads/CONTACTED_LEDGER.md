@@ -96,13 +96,66 @@
 | 6 | Chatwoot | chatwoot/chatwoot | sojan@chatwoot.com | HIPAA & SOC 2 Continuous Security Gate | 📤 Delivered |
 | 7 | Chaskiq | chaskiq/chaskiq | support@chaskiq.io | B2B Messaging Security Gate | 📤 Delivered |
 | 8 | Supabase | supabase/supabase | security@supabase.io | Sub-16ms Go, Python & Terraform AST Gate | 📤 Delivered |
-| 9 | Appwrite | ppwrite/appwrite | security@appwrite.io | Cloud BaaS Pre-Merge Security Gate | 📤 Delivered |
+| 9 | Appwrite | appwrite/appwrite | security@appwrite.io | Cloud BaaS Pre-Merge Security Gate | 📤 Delivered |
 | 10 | PocketBase | pocketbase/pocketbase | support@pocketbase.io | Go AST SQL Filter Verification Gate | 📤 Delivered |
 | 11 | Directus | directus/directus | security@directus.io | Dynamic SQL & REST API Security Gate | 📤 Delivered |
-| 12 | NocoDB | 
-ocodb/nocodb | support@nocodb.com | Smart Spreadsheet Dynamic SQL Gate | 📤 Delivered |
+| 12 | NocoDB | nocodb/nocodb | support@nocodb.com | Smart Spreadsheet Dynamic SQL Gate | 📤 Delivered |
 | 13 | Authentik | goauthentik/authentik | security@goauthentik.io | Enterprise SSO Zero-False-Positive AST Gate | 📤 Delivered |
 | 14 | Zitadel | zitadel/zitadel | eduardo.gomero@primer.io | Cloud-Native Identity Go AST Security Gate | 📤 Delivered |
 | 15 | Cerbos | cerbos/cerbos | dennis@cerbos.dev | Microservices Authorization AST Security Gate | 📤 Delivered |
 | 16 | Wazuh | wazuh/wazuh | security@wazuh.com | Enterprise SIEM API & Agent Security Gate | 📤 Delivered |
 | 17 | Faraday | infobyte/faraday | devops@faradaysec.com | Vulnerability Management AST Security Gate | 📤 Delivered |
+
+---
+
+## ⚡ 16 Enterprise Data, AI & Vector DB Powerhouses (via team.kavachai@gmail.com)
+**Date:** 2026-11-10 (14:10 IST)
+**Sender:** team.kavachai@gmail.com
+**Status:** 16 Emails Successfully Delivered
+
+| # | Target Organization | Repo / Product | Email | Pitch Focus | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Airbyte | airbytehq/airbyte | `tolikyatsuk@gmail.com` | Data Connectors Credential Leak & IaC Security Gate | 📤 Delivered |
+| 2 | Meltano | meltano/meltano | `ekalra@meltano.com` | DataOps Pipeline AST Security Gate | 📤 Delivered |
+| 3 | Mage AI | mage-ai/mage-ai | `security@mage.ai` | Python & SQL Block Execution Security Gate | 📤 Delivered |
+| 4 | Metabase | metabase/metabase | `security@metabase.com` | Continuous SOC 2 & ISO 27001 AST Security Gate | 📤 Delivered |
+| 5 | Lightdash | lightdash/lightdash | `security@lightdash.com` | Dynamic SQL Query AST Security Gate | 📤 Delivered |
+| 6 | Evidence | evidence-dev/evidence | `charles@evidence.dev` | SQL-as-Code & Template Security Gate | 📤 Delivered |
+| 7 | Cube | cube-js/cube | `security@cube.dev` | Semantic Layer Multi-Tenant AST Gate | 📤 Delivered |
+| 8 | Elementary Data | elementary-data/elementary | `haritamar@gmail.com` | Data Observability & dbt Macro Security Gate | 📤 Delivered |
+| 9 | Apache Superset | apache/superset | `security@superset.apache.org` | SQL Lab & Jinja Template Security Gate | 📤 Delivered |
+| 10 | Redash | getredash/redash | `security@redash.io` | Query Runner SSRF & SQL Taint Gate | 📤 Delivered |
+| 11 | Chroma | chroma-core/chroma | `dave@trychroma.com` | FastAPI AST Security Gate for Chroma Vector Database | 📤 Delivered |
+| 12 | Qdrant | qdrant/qdrant | `andrey@vasnetsov.com` | Vector Engine Cloud IaC & Go AST Gate | 📤 Delivered |
+| 13 | Weaviate | weaviate/weaviate | `abdelr1982@gmail.com` | Go AST Security Gate & Cloud Infrastructure Audit | 📤 Delivered |
+| 14 | Milvus (Zilliz) | milvus-io/milvus | `wenxing.zhu@zilliz.com` | Enterprise Cloud Compliance & Go AST Gate | 📤 Delivered |
+| 15 | Haystack (deepset) | deepset-ai/haystack | `opensource-security@deepset.ai` | LLM Pipeline Deserialization & AST Gate | 📤 Delivered |
+| 16 | BentoML | bentoml/BentoML | `security@bentoml.com` | Model Serving Container & API Security Gate | 📤 Delivered |
+
+---
+
+## ⚡ 18 Enterprise Cloud, MLOps, PaaS & ERPs (Targets 47–65 via team.kavachai@gmail.com)
+**Date:** 2026-11-10 (13:50–14:10 IST)
+**Sender:** team.kavachai@gmail.com
+**Status:** 18 Emails Successfully Sent
+
+| # | Target Organization | Repo / Product | Email | Pitch Focus | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | ZenML | zenml-io/zenml | `security@zenml.io` | MLOps Pipeline & Terraform Cloud Security Gate | 📤 Delivered |
+| 2 | ClearML | allegroai/clearml | `security@clearml.ai` | Enterprise MLOps Deserialization & Auth Gate | 📤 Delivered |
+| 3 | Label Studio | HumanSignal/label-studio | `ignacio@humansignal.com` | Continuous HIPAA & SOC 2 Security Gate | 📤 Delivered |
+| 4 | Open WebUI | open-webui/open-webui | `tim@openwebui.com` | 100% Offline Air-Gapped Security Gate | 📤 Delivered |
+| 5 | Coolify | coollabsio/coolify | `security@coollabs.io` | Command Execution (CWE-78) AST Gate | 📤 Delivered |
+| 6 | Dokploy | Dokploy/dokploy | `contact@dokploy.com` | Docker CLI & Subprocess Execution Security Gate | 📤 Delivered |
+| 7 | Plural | pluralsh/plural | `support@plural.sh` | Enterprise Cloud IaC & Terraform Gate | 📤 Delivered |
+| 8 | SkyPilot | skypilot-org/skypilot | `rayingecho@gmail.com` | Multi-Cloud GPU Provisioning AST Gate | 📤 Delivered |
+| 9 | Daytona | daytonaio/daytona | `toma.puljak@hotmail.com` | Enterprise Dev Environment Go AST Gate | 📤 Delivered |
+| 10 | Coder | coder/coder | `security@coder.com` | Enterprise Workspace Security & SOC 2 Gate | 📤 Delivered |
+| 11 | Windmill | windmill-labs/windmill | `hugo@casademont.ch` | Script Sandboxing & Workflow AST Gate | 📤 Delivered |
+| 12 | ToolJet | ToolJet/ToolJet | `security@tooljet.com` | Enterprise Database Connector AST Gate | 📤 Delivered |
+| 13 | Appsmith | appsmithorg/appsmith | `subrata@appsmith.com` | Low-Code Platform AST Security Gate | 📤 Delivered |
+| 14 | Twenty | twentyhq/twenty | `martmull@hotmail.fr` | Enterprise CRM AST Gate & SOC 2 Compliance | 📤 Delivered |
+| 15 | Erxes | erxes/erxes | `info@erxes.io` | GraphQL & Webhook Security Gate | 📤 Delivered |
+| 16 | ERPNext (Frappe) | frappe/erpnext | `kandoimihir@gmail.com` | Accounting & Inventory SQL Cursor Security Gate | 📤 Delivered |
+| 17 | Odoo | odoo/odoo | `roan@odoo.com` | Enterprise Python ERP AST Security Gate | 📤 Delivered |
+| 18 | InvenTree | inventree/InvenTree | `security@inventree.org` | Supply Chain ERP Security Gate | 📤 Delivered |
