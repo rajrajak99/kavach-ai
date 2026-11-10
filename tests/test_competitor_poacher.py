@@ -21,7 +21,9 @@ from scripts.competitor_poacher import (
     TargetAuditFinding,
     mask_secrets,
     is_deliverable_email,
-    is_non_production_path
+    is_non_production_path,
+    is_strict_non_prod_path,
+    is_repo_blacklisted
 )
 
 def test_competitor_footprint_detection_snyk():
@@ -116,16 +118,54 @@ def test_secret_masking_in_pitch():
     assert "AKIA1234567890ABCDEF" not in masked
     assert "sk_live_***" in masked
 
-def test_non_prod_directory_filtering():
+def test_strict_non_prod_directory_and_file_filtering():
+    # Strict blocking: *test*, *spec*, setupTests.*, mock*, fixtures/*, examples/*
+    assert is_strict_non_prod_path("tests/unit/test_auth.py") is True
+    assert is_strict_non_prod_path("src/setupTests.ts") is True
+    assert is_strict_non_prod_path("src/components/button.spec.tsx") is True
+    assert is_strict_non_prod_path("fixtures/mock_db.py") is True
+    assert is_strict_non_prod_path("examples/basic_demo.py") is True
+    assert is_strict_non_prod_path("demo/sample_app.py") is True
+    assert is_strict_non_prod_path("mocks/handlers.ts") is True
+    assert is_strict_non_prod_path("test/integration_test.go") is True
+
+    # Real production code paths MUST NOT be filtered
+    assert is_strict_non_prod_path("apps/api/controllers/auth.py") is False
+    assert is_strict_non_prod_path("src/core/database.ts") is False
+    assert is_strict_non_prod_path("web/Dockerfile") is False
+    assert is_strict_non_prod_path("deploy/docker-compose.yaml") is False
+
+    # Backward compatibility alias check
     assert is_non_production_path("tests/unit/test_auth.py") is True
-    assert is_non_production_path("fixtures/mock_db.py") is True
-    assert is_non_production_path("demo/sample_app.py") is True
-    assert is_non_production_path("apps/api/controllers/auth.py") is False
     assert is_non_production_path("src/core/database.ts") is False
+
+def test_repo_blacklist_filtering():
+    # Intentionally vulnerable, demo, tutorial, or coursework repos
+    assert is_repo_blacklisted("snyk/goof", "Vulnerable Node.js application") is True
+    assert is_repo_blacklisted("globomantics/django.nv", "Intentionally vulnerable Django application") is True
+    assert is_repo_blacklisted("sample-user/todolist-app", "Simple todo list demo") is True
+    assert is_repo_blacklisted("devsecops-course/lab-1", "DevSecOps tutorial coursework") is True
+    assert is_repo_blacklisted("org/security-goat", "Security training benchmark") is True
+
+    # Commercial organizations MUST NOT be blacklisted
+    assert is_repo_blacklisted("langfuse/langfuse", "Open source LLM engineering platform") is False
+    assert is_repo_blacklisted("openmeterio/openmeter", "Usage-based billing infrastructure") is False
+    assert is_repo_blacklisted("Infisical/infisical", "Open source secret management platform") is False
+    assert is_repo_blacklisted("strapi/strapi", "Open source Node.js Headless CMS") is False
+
+def test_zero_bounce_email_policy():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        root = Path(tmp_dir)
+        poacher = CompetitorPoacher()
+        # When an empty repo or unverified author is scanned, NEVER guess or fabricate security@<domain>
+        result = poacher.extract_founder_email(root, "unverified-corp/cloud-engine")
+        assert result is None, "Zero bounce policy violated: Guessed email was generated"
 
 def test_deliverable_email_validation():
     assert is_deliverable_email("founder@getacme.com") is True
     assert is_deliverable_email("cto@enterprise.io") is True
+    assert is_deliverable_email("Abhijeet.Verma@mastercard.com") is True
     assert is_deliverable_email("12345+bot@users.noreply.github.com") is False
     assert is_deliverable_email("dependabot[bot]@github.com") is False
     assert is_deliverable_email("invalid-email") is False
+
