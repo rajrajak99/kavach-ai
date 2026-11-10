@@ -118,6 +118,28 @@ class SCAScanner:
             "severity": "HIGH",
             "title": "Cross-Site Request Forgery via Insecure Header Handling",
             "fix": "axios>=1.6.0"
+        },
+        # Go dependencies
+        "github.com/gin-gonic/gin": {
+            "vulnerable_below": "1.9.1",
+            "cve": "CVE-2023-29401",
+            "severity": "HIGH",
+            "title": "Memory Exhaustion / Uncontrolled Resource Consumption in Form Multipart Parsing",
+            "fix": "github.com/gin-gonic/gin>=v1.9.1"
+        },
+        "golang.org/x/crypto": {
+            "vulnerable_below": "0.17.0",
+            "cve": "CVE-2023-48795",
+            "severity": "HIGH",
+            "title": "Terrapin Attack: Prefix Truncation in SSH Channel State Machine",
+            "fix": "golang.org/x/crypto>=v0.17.0"
+        },
+        "google.golang.org/grpc": {
+            "vulnerable_below": "1.53.0",
+            "cve": "CVE-2023-44487",
+            "severity": "CRITICAL",
+            "title": "HTTP/2 Rapid Reset Denial of Service (RST_STREAM Flooding)",
+            "fix": "google.golang.org/grpc>=v1.53.0"
         }
     }
 
@@ -183,9 +205,9 @@ class SCAScanner:
         codes = {}
         for fname, content in file_contents.items():
             lower = fname.lower()
-            if any(m in lower for m in ("requirements", "pyproject.toml", "package.json")):
+            if any(m in lower for m in ("requirements", "pyproject.toml", "package.json", "go.mod")):
                 manifests[fname] = content
-            if any(lower.endswith(ext) for ext in (".py", ".js", ".jsx", ".ts", ".tsx")):
+            if any(lower.endswith(ext) for ext in (".py", ".js", ".jsx", ".ts", ".tsx", ".go")):
                 codes[fname] = content
         return self.scan_dependencies_and_reachability(manifests, codes)
 
@@ -203,9 +225,9 @@ class SCAScanner:
                 try:
                     content = f.read_text(encoding="utf-8", errors="replace")
                     rel = str(f.relative_to(p)).replace("\\", "/")
-                    if any(m in lower for m in ("requirements", "pyproject.toml", "package.json")):
+                    if any(m in lower for m in ("requirements", "pyproject.toml", "package.json", "go.mod")):
                         manifests[rel] = content
-                    if any(lower.endswith(ext) for ext in (".py", ".js", ".jsx", ".ts", ".tsx")):
+                    if any(lower.endswith(ext) for ext in (".py", ".js", ".jsx", ".ts", ".tsx", ".go")):
                         codes[rel] = content
                 except Exception:
                     pass
@@ -213,7 +235,7 @@ class SCAScanner:
 
     def _parse_manifests(self, manifest_files: Dict[str, str]) -> Dict[str, str]:
         """
-        Extracts package name and version from requirements.txt, pyproject.toml, package.json.
+        Extracts package name and version from requirements.txt, pyproject.toml, package.json, go.mod.
         """
         declared: Dict[str, str] = {}
 
@@ -254,6 +276,29 @@ class SCAScanner:
                 except Exception:
                     pass
 
+            elif lower_name.endswith("go.mod"):
+                in_require = False
+                for line in content.splitlines():
+                    clean = line.strip().split("//")[0].strip()
+                    if clean.startswith("require ("):
+                        in_require = True
+                        continue
+                    if in_require and clean == ")":
+                        in_require = False
+                        continue
+                    if in_require:
+                        parts = clean.split()
+                        if len(parts) >= 2:
+                            pkg_name = parts[0].strip()
+                            pkg_ver = parts[1].strip().lstrip("v")
+                            declared[pkg_name] = pkg_ver
+                    elif clean.startswith("require "):
+                        parts = clean.replace("require ", "").strip().split()
+                        if len(parts) >= 2:
+                            pkg_name = parts[0].strip()
+                            pkg_ver = parts[1].strip().lstrip("v")
+                            declared[pkg_name] = pkg_ver
+
         return declared
 
     def _extract_ast_imports(self, code_files: Dict[str, str]) -> Dict[str, List[str]]:
@@ -270,6 +315,13 @@ class SCAScanner:
                 imported_map[root] = []
             if file_path not in imported_map[root]:
                 imported_map[root].append(file_path)
+
+            # Also record full import string (crucial for Go import paths like github.com/gin-gonic/gin)
+            full_norm = mod_name.lower().strip('"')
+            if full_norm not in imported_map:
+                imported_map[full_norm] = []
+            if file_path not in imported_map[full_norm]:
+                imported_map[full_norm].append(file_path)
 
         for fpath, code in code_files.items():
             if fpath.endswith(".py"):
@@ -289,8 +341,49 @@ class SCAScanner:
                     mod = match.group(1) or match.group(2)
                     if mod:
                         record(mod, fpath)
+            elif fpath.endswith(".go"):
+                for m_single in re.finditer(r'import\s+"([^"]+)"', code):
+                    record(m_single.group(1), fpath)
+                for m_block in re.finditer(r'import\s*\(\s*([^)]+)\s*\)', code):
+                    for line in m_block.group(1).splitlines():
+                        m_pkg = re.search(r'"([^"]+)"', line)
+                        if m_pkg:
+                            record(m_pkg.group(1), fpath)
 
         return imported_map
+
+    def query_osv_api(
+        self,
+        package_name: str,
+        version: str,
+        ecosystem: str = "PyPI"
+    ) -> List[Dict[str, Any]]:
+        """
+        Queries Google's public OSV API (https://api.osv.dev/v1/query) for real-time
+        CVE vulnerability records. Falls back safely to empty list on network timeout/offline.
+        """
+        import urllib.request
+        import urllib.error
+
+        url = "https://api.osv.dev/v1/query"
+        payload = {
+            "version": version,
+            "package": {
+                "name": package_name,
+                "ecosystem": ecosystem
+            }
+        }
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json", "User-Agent": "KavachAI-SCA/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=2.5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data.get("vulns", [])
+        except Exception:
+            return []
 
     def _is_version_vulnerable(self, installed_ver: str, safe_below: str) -> bool:
         """
