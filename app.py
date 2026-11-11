@@ -399,7 +399,7 @@ def logout_github():
 # ----------------- CALLBACKS & PAYWALL ENFORCEMENT -----------------
 def claim_free_trial(email: str, tier: str = "PRO"):
     """
-    Validates work email, generates a cryptographically signed 14-day trial key,
+    Validates work email, generates a cryptographically signed 30-day enterprise pilot key,
     activates it for the session, registers the user, and records the lead.
     """
     clean_email = email.strip().lower()
@@ -407,7 +407,7 @@ def claim_free_trial(email: str, tier: str = "PRO"):
         return False, "Please enter a valid work email address."
 
     # Generate authentic signed key
-    trial_key = generate_signed_license(clean_email, tier=tier, valid_days=14)
+    trial_key = generate_signed_license(clean_email, tier=tier, valid_days=30)
     v = verify_signed_license(trial_key)
     if not v.get("valid"):
         return False, "Could not issue trial license signature."
@@ -443,7 +443,7 @@ def claim_free_trial(email: str, tier: str = "PRO"):
             "tier": tier,
             "license_key": trial_key,
             "issued_at": datetime.datetime.now().isoformat(),
-            "expires_in_days": 14
+            "expires_in_days": 30
         })
         with open(leads_file, "w", encoding="utf-8") as f:
             json.dump(records, f, indent=2)
@@ -468,7 +468,7 @@ def select_plan(tier_val: str, plan_name: str):
 def render_paywall_card(feature_name: str, tier_needed: str = "PRO"):
     """
     Renders an enterprise-grade paywall card with license key entry
-    and frictionless 14-day VIP trial lead capture.
+    and frictionless 30-day enterprise pilot lead capture.
     """
     plan_title = "Kavach Pro ($29/mo)" if tier_needed == "PRO" else "Growth Team ($99/mo)"
     st.markdown(f"""
@@ -482,22 +482,22 @@ def render_paywall_card(feature_name: str, tier_needed: str = "PRO"):
             </span>
         </div>
         <div style="font-size: 12.5px; color: #94A3B8; line-height: 1.5; margin-bottom: 14px;">
-            Automated AST remediation, private repository CI gates, and executive compliance audits are reserved for licensed engineering teams. Enter a license key or claim a 14-day free VIP trial below.
+            Automated AST remediation, private repository CI gates, and executive compliance audits are reserved for licensed engineering teams. Enter a license key or claim a 30-day zero-risk enterprise pilot below.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     pw_id = re.sub(r'[^a-zA-Z0-9_]', '_', feature_name)
-    tab_trial, tab_key = st.tabs(["⚡ Claim Free 14-Day VIP Trial", "🔑 Enter License Key"])
+    tab_trial, tab_key = st.tabs(["⚡ Claim 30-Day Enterprise Pilot", "🔑 Enter License Key"])
     with tab_trial:
         t_col1, t_col2 = st.columns([2.2, 1.2], vertical_alignment="bottom")
         with t_col1:
             tr_email = st.text_input("Work Email:", placeholder="engineer@company.com", key=f"pw_trial_email_{pw_id}")
         with t_col2:
-            if st.button("Get Instant 14-Day Pass", key=f"btn_trial_{pw_id}", type="primary", use_container_width=True):
+            if st.button("Get Instant 30-Day Pilot Pass", key=f"btn_trial_{pw_id}", type="primary", use_container_width=True):
                 ok, res = claim_free_trial(tr_email, tier=tier_needed)
                 if ok:
-                    st.success(f"🎉 14-Day VIP Trial Activated! Key: {res[:20]}...")
+                    st.success(f"🎉 30-Day Enterprise Pilot Activated! Key: {res[:20]}...")
                     st.rerun()
                 else:
                     st.error(res)
