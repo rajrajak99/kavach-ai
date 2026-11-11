@@ -177,6 +177,8 @@ if "pending_activation" not in st.session_state:
     st.session_state.pending_activation = None
 if "user_code" not in st.session_state:
     st.session_state.user_code = DEFAULT_DEMO_CODE
+if "is_demo_code" not in st.session_state:
+    st.session_state.is_demo_code = True
 if "editor_version" not in st.session_state:
     st.session_state.editor_version = 0
 if "editor_lang" not in st.session_state:
@@ -561,10 +563,12 @@ def activate_custom_key():
 def load_code_sample(code: str, lang: str = "python"):
     st.session_state.user_code = code
     st.session_state.editor_lang = lang
+    st.session_state.is_demo_code = True
     st.session_state.editor_version = st.session_state.get("editor_version", 0) + 1
 
 def clear_code_box():
     st.session_state.user_code = ""
+    st.session_state.is_demo_code = False
     st.session_state.editor_version = st.session_state.get("editor_version", 0) + 1
 
 def apply_patch_to_editor(problem_code: str, fixed_code: str):
@@ -2219,6 +2223,28 @@ if active_tab == "Inspector":
             syntax_err = analysis.get('syntax_error')
             posture = compute_security_posture(analysis, current_code)
 
+            demo_signatures = [
+                SQL_SAMPLE.strip(),
+                SECRETS_SAMPLE.strip(),
+                NODE_SAMPLE.strip(),
+                CPP_SAMPLE.strip(),
+                DEFAULT_DEMO_CODE.strip()
+            ]
+            is_interactive_demo = (
+                st.session_state.get("is_demo_code", False) or
+                any(marker in current_code for marker in [
+                    "# Vulnerable SQL Injection (CWE-89)",
+                    "# Hardcoded sensitive tokens (CWE-798)",
+                    "// Command Injection (CWE-78)",
+                    "// Hardcoded Secret & Buffer Overflow (CWE-798 & CWE-119)",
+                    "sqlite3.connect(\"database.db\")",
+                    "ghp_A1b2C3d4E5f6G7h8I9j0K1L2M3N4O5P6Q7R8",
+                    "child_process.exec(`cat ${filename} > out.txt`)",
+                    "ghp_ProdAccessKey99887766554433221100"
+                ]) or
+                current_code.strip() in demo_signatures
+            )
+
             # Record scan into session audit history (only for complete syntax-valid scans)
             if analysis_status != "SYNTAX_ERROR":
                 code_hash = str(hash(current_code))
@@ -2244,6 +2270,7 @@ if active_tab == "Inspector":
             analysis_status = "IDLE"
             syntax_err = None
             posture = compute_security_posture({}, "")
+            is_interactive_demo = False
 
         # LEFT COLUMN: 60% CODE EDITOR
         with col_editor:
@@ -2488,6 +2515,15 @@ if active_tab == "Inspector":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+                    if is_interactive_demo and not st.session_state.is_pro_user:
+                        st.markdown(
+                            "<div style='margin-top:10px; padding:10px 14px; background:#171D27; border:1px solid rgba(34,197,94,0.3); border-radius:6px; margin-bottom:8px;'>"
+                            "<div style='color:#22C55E; font-weight:600; font-size:12px; margin-bottom:2px;'>🎉 Patch Applied Successfully!</div>"
+                            "<div style='color:#94A3B8; font-size:11.5px;'>Code is now verified 100% clean and ready for merge. Click below to reload the demo or paste your code.</div>"
+                            "</div>",
+                            unsafe_allow_html=True
+                        )
+                        st.button("🔄 Reload Vulnerable Demo", on_click=load_code_sample, args=(DEFAULT_DEMO_CODE, "python"), key="btn_reload_demo_clean", use_container_width=True)
                     if st.session_state.is_pro_user:
                         st.download_button(
                             "📑 Download SOC 2 & ISO-27001 Certification (.md)",
@@ -2568,15 +2604,23 @@ if active_tab == "Inspector":
                             diff_html_parts.append('</div>')
                             st.markdown("".join(diff_html_parts), unsafe_allow_html=True)
 
-                            if st.session_state.is_pro_user:
+                            if st.session_state.is_pro_user or is_interactive_demo:
+                                btn_label = f"⚡ 1-Click Surgical Patch #{i}" if not st.session_state.is_pro_user else f"🪄 Apply Patch #{i}"
                                 st.button(
-                                    f"🪄 Apply Patch #{i}",
+                                    btn_label,
                                     key=f"btn_apply_fix_{i}",
                                     type="primary",
                                     on_click=apply_patch_to_editor,
                                     args=(f.problem_code, f.fixed_code),
                                     use_container_width=True
                                 )
+                                if is_interactive_demo and not st.session_state.is_pro_user:
+                                    st.markdown(
+                                        "<div style='font-size:11.5px; color:#22C55E; margin-top:5px; text-align:center; font-family:Inter, sans-serif;'>"
+                                        "✨ <b>Interactive Demo:</b> 1-Click AST auto-remediation enabled for instant testing."
+                                        "</div>",
+                                        unsafe_allow_html=True
+                                    )
                             else:
                                 render_paywall_card(f"1-Click AST Auto-Patch #{i}", tier_needed="PRO")
 
