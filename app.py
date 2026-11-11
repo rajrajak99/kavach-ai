@@ -151,7 +151,18 @@ def create_demo_project_zip() -> bytes:
         ))
     return buf.getvalue()
 
-# ----------------- STATE INITIALIZATION -----------------
+# ----------------- DEFAULT DEMO CODE & STATE INITIALIZATION -----------------
+DEFAULT_DEMO_CODE = '''import sqlite3
+
+def find_user(username):
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    # Vulnerable SQL Injection (CWE-89)
+    query = f"SELECT * FROM users WHERE name = '{username}'"
+    cursor.execute(query)
+    return cursor.fetchall()
+'''
+
 if "is_pro_user" not in st.session_state:
     st.session_state.is_pro_user = False
 if "license_tier" not in st.session_state:
@@ -165,11 +176,12 @@ if "user_email" not in st.session_state:
 if "pending_activation" not in st.session_state:
     st.session_state.pending_activation = None
 if "user_code" not in st.session_state:
-    st.session_state.user_code = ""
+    st.session_state.user_code = DEFAULT_DEMO_CODE
 if "editor_version" not in st.session_state:
     st.session_state.editor_version = 0
 if "editor_lang" not in st.session_state:
     st.session_state.editor_lang = "python"
+
 if "scan_history" not in st.session_state:
     st.session_state.scan_history = []
 if "benchmark_result" not in st.session_state:
@@ -1621,6 +1633,12 @@ def get_enterprise_css() -> str:
         border-bottom: 2px solid #C6A76A !important;
         font-weight: 600 !important;
     }
+    section[data-testid="stSidebar"] div[data-testid="stTabs"] button {
+        padding: 6px 8px !important;
+        font-size: 11.5px !important;
+        min-width: 0 !important;
+    }
+
     details[data-testid="stExpander"] {
         background: #171D27 !important;
         border: 1px solid #252D38 !important;
@@ -1764,7 +1782,8 @@ with st.sidebar:
                     del st.query_params["session_token"]
                 st.rerun()
         else:
-            auth_t1, auth_t2, auth_t3 = st.tabs(["🔑 License", "🔐 Password", "📝 Register"])
+            auth_t1, auth_t2, auth_t3 = st.tabs(["🔑 Key", "🔐 Login", "📝 Sign Up"])
+
             with auth_t1:
                 side_lic = st.text_input("License Key:", placeholder="KAVACH-PRO-...", key="side_lic_in")
                 if st.button("Activate License", key="btn_side_lic_act", type="primary", use_container_width=True):
@@ -2004,16 +2023,8 @@ if st.session_state.get("pending_activation"):
                 st.session_state.toast_msg = "Account successfully claimed and logged in!"
                 st.rerun()
 
-SQL_SAMPLE = '''import sqlite3
+SQL_SAMPLE = DEFAULT_DEMO_CODE
 
-def find_user(username):
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-    # Vulnerable SQL Injection (CWE-89)
-    query = f"SELECT * FROM users WHERE name = '{username}'"
-    cursor.execute(query)
-    return cursor.fetchall()
-'''
 
 # Demo interactive snippets (base64 encoded to prevent false-alarm CI secret detection on demo strings)
 SECRETS_SAMPLE = base64.b64decode(
@@ -2300,17 +2311,24 @@ if active_tab == "Inspector":
         # LEFT COLUMN: 60% CODE EDITOR
         with col_editor:
             # IDE Header Bar
-            tb_col1, tb_col2 = st.columns([1.0, 2.2], gap="small", vertical_alignment="center")
+            tb_col1, tb_col2 = st.columns([0.7, 2.3], gap="small", vertical_alignment="center")
             with tb_col1:
-                st.markdown("""
+                cur_lang = st.session_state.get("editor_lang", "python")
+                file_map = {
+                    "python": "payment_service.py",
+                    "javascript": "auth_handler.js",
+                    "c_cpp": "buffer_alloc.cpp"
+                }
+                active_filename = file_map.get(cur_lang, "snippet.py")
+                st.markdown(f"""
                 <div class="ide-tab-label">
                     <span class="ide-dot"></span>
-                    <span style="font-weight:600; color:#F1F5F9;">snippet.py</span>
+                    <span style="font-weight:600; color:#F1F5F9;">{active_filename}</span>
                     <span class="ide-meta">• UTF-8</span>
                 </div>
                 """, unsafe_allow_html=True)
             with tb_col2:
-                c_lang, c_demo, c_clear, c_inspect = st.columns([0.85, 0.9, 0.65, 1.3], gap="small")
+                c_lang, c_demo, c_clear, c_inspect = st.columns([1.1, 0.95, 0.6, 1.35], gap="small")
                 with c_lang:
                     cur_lang = st.session_state.get("editor_lang", "python")
                     lang_opts = ["python", "javascript", "c_cpp"]
@@ -2326,8 +2344,9 @@ if active_tab == "Inspector":
                     if selected_lang != cur_lang:
                         st.session_state.editor_lang = selected_lang
                         st.session_state.editor_version += 1
+                        st.rerun()
                 with c_demo:
-                    with st.popover("⚡ Demos & Mode", use_container_width=True):
+                    with st.popover("⚡ Demos", use_container_width=True):
                         st.toggle("⚡ Real-Time Scan on Keystroke", key="live_lint_mode", value=False, help="Continuous scan on every keystroke. Keep OFF for 120 FPS typing speed and zero lag.")
                         st.markdown("<div style='margin:6px 0; border-top:1px solid #252D38;'></div>", unsafe_allow_html=True)
                         st.button("💉 SQL Injection (Py)", on_click=load_code_sample, args=(SQL_SAMPLE, "python"), key="demo_sqli", use_container_width=True)
@@ -2337,7 +2356,8 @@ if active_tab == "Inspector":
                 with c_clear:
                     st.button("Clear", on_click=clear_code_box, key="btn_clr", use_container_width=True)
                 with c_inspect:
-                    st.button("Inspect Code ⌘↵", key="btn_inspect_code", type="primary", use_container_width=True)
+                    st.button("⚡ Inspect Code", key="btn_inspect_code", type="primary", use_container_width=True)
+
 
             if HAS_ACE:
                 annotations = []
