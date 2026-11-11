@@ -3006,8 +3006,8 @@ elif active_tab == "Pricing":
             st.link_button(f"Contact Enterprise ({ent_price}/mo)", checkout_urls["enterprise"], type="secondary", use_container_width=True)
         else:
             st.link_button(
-                "Contact Enterprise",
-                BillingManager.get_invoice_request_url("Global Enterprise & Compliance", "Annual ($4,990/yr)"),
+                "Contact Enterprise (1-Click Gmail)",
+                BillingManager.get_gmail_invoice_url("Global Enterprise & Compliance", "Annual ($4,990/yr)"),
                 type="secondary",
                 use_container_width=True
             )

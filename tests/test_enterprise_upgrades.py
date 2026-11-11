@@ -170,6 +170,12 @@ def test_billing_invoice_mailto_generation():
     assert url.startswith("mailto:rajabhaiyarajak2008@gmail.com?")
     assert "Team+Enterprise" in url or "Team%20Enterprise" in url
 
+def test_billing_invoice_gmail_web_generation():
+    url = BillingManager.get_gmail_invoice_url("Global Enterprise & Compliance", "Annual ($4,990/yr)")
+    assert url.startswith("https://mail.google.com/mail/?view=cm&fs=1")
+    assert "to=rajabhaiyarajak2008%40gmail.com" in url
+    assert "Global+Enterprise" in url or "Global%20Enterprise" in url
+
 # ----------------- 5. SOC 2 COMPLIANCE REPORT GENERATOR TESTS -----------------
 def test_soc2_compliance_report_generation(analyzer, parser):
     from app import generate_soc2_compliance_report

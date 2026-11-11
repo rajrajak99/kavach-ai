@@ -56,9 +56,9 @@ class BillingManager:
         return urls
 
     @classmethod
-    def get_invoice_request_url(cls, tier_name: str, billing_period: str = "annual") -> str:
+    def get_invoice_request_url(cls, tier_name: str, billing_period: str = "annual", use_gmail_web: bool = False) -> str:
         """
-        Generates a direct mailto URI for manual enterprise invoicing or onboarding.
+        Generates a direct mailto URI or Gmail Web compose link for manual enterprise invoicing or onboarding.
         """
         subject = f"[Kavach AI] Invoice & Access Request — {tier_name} ({billing_period})"
         body = (
@@ -71,11 +71,23 @@ class BillingManager:
             f"Please share the direct payment link and invoice.\n\n"
             f"Best,\n"
         )
+        if use_gmail_web:
+            return (
+                f"https://mail.google.com/mail/?view=cm&fs=1"
+                f"&to={urllib.parse.quote(cls.DEFAULT_INVOICE_EMAIL)}"
+                f"&su={urllib.parse.quote(subject)}"
+                f"&body={urllib.parse.quote(body)}"
+            )
         params = {
             "subject": subject,
             "body": body
         }
         return f"mailto:{cls.DEFAULT_INVOICE_EMAIL}?{urllib.parse.urlencode(params)}"
+
+    @classmethod
+    def get_gmail_invoice_url(cls, tier_name: str, billing_period: str = "annual") -> str:
+        """Generates direct Gmail Web 1-click compose link for enterprise invoicing."""
+        return cls.get_invoice_request_url(tier_name, billing_period, use_gmail_web=True)
 
     @classmethod
     def generate_receipt_text(cls, email: str, tier: str, license_key: str, payment_id: Optional[str] = None) -> str:
