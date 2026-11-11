@@ -47,3 +47,17 @@ candidates.json
 leads_targets.json
 new_prs_submitted.json
 direct_submit_links.txt
+
+# Internal B2B Leads, Target Dossiers & Outreach Packs
+leads/
+
+# Internal Sales Weapons & Outreach Automation Scripts (Keep Local Only)
+scripts/competitor_poacher.py
+scripts/auto_b2b_hunter.py
+scripts/generate_outbound_pitch.py
+scripts/launch_outreach_workspace.py
+scripts/launch_priority_outreach.py
+scripts/launch_wave2_outreach.py
+scripts/check_leads.py
+tests/test_competitor_poacher.py
+
