@@ -727,73 +727,6 @@ if st.session_state.get("toast_msg"):
     st.session_state.toast_msg = None
 
 # ----------------- ENTERPRISE SAAS DESIGN SYSTEM (LINEAR / STRIPE / VERCEL) -----------------
-components.html('''
-<script>
-(function() {
-    // Singleton guard: prevent spawning duplicate intervals/observers across Streamlit reruns
-    if (window.parent && window.parent.__kavachDarkEditorLoaded) return;
-    if (window.parent) window.parent.__kavachDarkEditorLoaded = true;
-
-    function applyDarkEditor(iframe) {
-        try {
-            const idoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (!idoc) return;
-            if (idoc.body) {
-                idoc.body.style.backgroundColor = '#111419';
-                idoc.body.style.color = '#F1F5F9';
-            }
-            if (!idoc.getElementById('kavach-dark-editor-override')) {
-                const styleEl = idoc.createElement('style');
-                styleEl.id = 'kavach-dark-editor-override';
-                styleEl.textContent = [
-                    '.ace_editor, .ace_editor * { font-family: "JetBrains Mono", monospace !important; }',
-                    '.ace_editor { background-color: #111419 !important; color: #F1F5F9 !important; border: 1px solid #252D38 !important; border-radius: 8px !important; }',
-                    '.ace_gutter { background-color: #1A1D23 !important; color: #64748B !important; border-right: 1px solid #252D38 !important; }',
-                    '.ace_gutter-cell { color: #64748B !important; }',
-                    '.ace_gutter-active-line { background-color: rgba(255, 255, 255, 0.04) !important; color: #F1F5F9 !important; }',
-                    '.ace_scroller, .ace_content { background-color: #111419 !important; }',
-                    '.ace_cursor { border-left: 2px solid #C6A76A !important; }',
-                    '.ace_marker-layer .ace_active-line { background: rgba(255, 255, 255, 0.02) !important; }',
-                    '.ace_marker-layer .ace_selection { background: #252D38 !important; }',
-                    '.ace_text-layer { color: #F1F5F9 !important; }',
-                    '.ace_comment, .ace_comment.ace_line, .ace_comment.ace_block { color: #64748B !important; font-style: italic !important; }',
-                    '.ace_keyword, .ace_keyword.ace_operator, .ace_storage { color: #C6A76A !important; font-weight: 600 !important; }',
-                    '.ace_string, .ace_string.ace_regexp { color: #22C55E !important; }',
-                    '.ace_function, .ace_support.ace_function { color: #94A3B8 !important; }',
-                    '.ace_variable, .ace_identifier { color: #F1F5F9 !important; }',
-                    '.ace_constant.ace_numeric { color: #F59E0B !important; }'
-                ].join('\\n');
-                idoc.head.appendChild(styleEl);
-            }
-        } catch(e) {}
-    }
-
-    function scanAllIframes() {
-        try {
-            if (window.parent && window.parent.document) {
-                const iframes = window.parent.document.querySelectorAll('iframe');
-                iframes.forEach(applyDarkEditor);
-            }
-        } catch(e) {}
-    }
-
-    scanAllIframes();
-
-    // Use a lightweight MutationObserver on the body so styles apply reactively without CPU-hogging polling
-    try {
-        if (window.parent && window.parent.document && window.parent.document.body) {
-            const observer = new MutationObserver(function() {
-                scanAllIframes();
-            });
-            observer.observe(window.parent.document.body, { childList: true, subtree: true });
-        }
-    } catch(e) {
-        setInterval(scanAllIframes, 2000);
-    }
-})();
-</script>
-''', height=0, width=0)
-
 @st.cache_data
 def get_enterprise_css() -> str:
     return """
@@ -823,6 +756,9 @@ def get_enterprise_css() -> str:
         --error: #EF4444;
     }
 
+    html {
+        overflow-y: scroll !important;
+    }
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         color: #F1F5F9 !important;
@@ -857,11 +793,11 @@ def get_enterprise_css() -> str:
     /* 3. Main Content Spacing & Responsive Canvas */
     .block-container {
         padding-top: 1rem !important;
-        padding-bottom: 2.5rem !important;
+        padding-bottom: 2rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
-        max-width: 1320px !important;
-        margin: 0 auto !important;
+        max-width: 100% !important;
+        width: 100% !important;
     }
 
     /* 4. Elimination of Nested Double Borders and Generic Box Wrapping */
@@ -979,10 +915,11 @@ def get_enterprise_css() -> str:
         font-weight: 500 !important;
         border-radius: 6px !important;
         border: none !important;
-        padding: 0 12px !important;
+        padding: 0 10px !important;
         height: 28px !important;
         min-height: 28px !important;
         line-height: 28px !important;
+        white-space: nowrap !important;
         transition: all 0.15s ease !important;
     }
     div[data-testid="stSegmentedControl"] button:hover {
@@ -1885,7 +1822,7 @@ elif st.session_state.is_pro_user:
 else:
     badge_html = '<span class="plan-pill"><span class="status-dot-green"></span> Free Community</span>'
 
-nav_col1, nav_col2, nav_col3 = st.columns([0.85, 1.85, 1.05], gap="small", vertical_alignment="center")
+nav_col1, nav_col2, nav_col3 = st.columns([0.7, 2.3, 0.8], gap="small", vertical_alignment="center")
 
 with nav_col1:
     st.markdown(f"""
@@ -2344,7 +2281,6 @@ if active_tab == "Inspector":
                     if selected_lang != cur_lang:
                         st.session_state.editor_lang = selected_lang
                         st.session_state.editor_version += 1
-                        st.rerun()
                 with c_demo:
                     with st.popover("⚡ Demos", use_container_width=True):
                         st.toggle("⚡ Real-Time Scan on Keystroke", key="live_lint_mode", value=False, help="Continuous scan on every keystroke. Keep OFF for 120 FPS typing speed and zero lag.")
