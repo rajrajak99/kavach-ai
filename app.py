@@ -2863,8 +2863,8 @@ elif active_tab == "Pricing":
 
     checkout_urls = BillingManager.get_checkout_urls()
 
-    b_col1, b_col2, b_col3 = st.columns([1.5, 1.2, 1.5], gap="small", vertical_alignment="center")
-    with b_col2:
+    p_bill1, p_bill2, p_bill3 = st.columns([1.5, 1.2, 1.5], gap="small", vertical_alignment="center")
+    with p_bill2:
         billing_cycle = st.segmented_control(
             "Billing Cycle",
             ["Annual (Save 20%)", "Monthly"],
