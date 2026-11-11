@@ -735,9 +735,7 @@ if st.session_state.get("toast_msg"):
 def get_enterprise_css() -> str:
     return """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
-    /* 1. Global Reset & Enterprise Tokens */
+    /* 1. Global Reset & Enterprise Tokens (0ms Native Fast Fonts) */
     :root {
         --bg-main: #090B0F;
         --bg-sidebar: #0D1015;
@@ -764,7 +762,7 @@ def get_enterprise_css() -> str:
         overflow-y: scroll !important;
     }
     html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
         color: #F1F5F9 !important;
         background-color: #090B0F !important;
         -webkit-font-smoothing: antialiased;
@@ -924,7 +922,7 @@ def get_enterprise_css() -> str:
         min-height: 28px !important;
         line-height: 28px !important;
         white-space: nowrap !important;
-        transition: all 0.15s ease !important;
+        transition: background-color 0.08s ease, color 0.08s ease !important;
     }
     div[data-testid="stSegmentedControl"] button:hover {
         color: #F1F5F9 !important;
@@ -941,7 +939,7 @@ def get_enterprise_css() -> str:
     /* 8. Buttons & Controls Hierarchy */
     div[data-testid="stButton"] button {
         white-space: nowrap !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         border-radius: 8px !important;
         height: 34px !important;
         min-height: 34px !important;
@@ -954,7 +952,7 @@ def get_enterprise_css() -> str:
         padding: 0 16px !important;
         border: none !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
-        transition: all 0.15s ease !important;
+        transition: background-color 0.08s ease, box-shadow 0.08s ease !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
         background: #D8BB82 !important;
@@ -969,7 +967,7 @@ def get_enterprise_css() -> str:
         font-size: 12px !important;
         font-weight: 500 !important;
         padding: 0 12px !important;
-        transition: all 0.15s ease !important;
+        transition: background-color 0.08s ease, color 0.08s ease !important;
     }
     div[data-testid="stButton"] > button[kind="secondary"]:hover {
         background: #171D27 !important;
@@ -1813,11 +1811,10 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ----------------- COMPACT SINGLE-ROW TOP NAVBAR -----------------
-logo_b64 = get_logo_base64()
-if logo_b64:
-    logo_tag = f'<img src="data:image/png;base64,{logo_b64}" class="brand-logo-img" alt="Logo" />'
-else:
-    logo_tag = '<span style="font-size:16px;">🛡️</span>'
+logo_tag = '''<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:6px; background:#171D27; border:1px solid #252D38; padding:2px; box-sizing:border-box; vertical-align:middle;">
+  <path d="M12 2L4 5V11C4 16.55 7.42 21.74 12 23C16.58 21.74 20 16.55 20 11V5L12 2Z" fill="#C6A76A" fill-opacity="0.25" stroke="#C6A76A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9 12L11 14L15 10" stroke="#22C55E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>'''
 
 if st.session_state.license_tier == PlanTier.TEAM_ENTERPRISE.value:
     badge_html = '<span class="plan-pill plan-pill-team"><span class="status-dot-green"></span> Team ($99/mo)</span>'
@@ -2338,7 +2335,6 @@ if active_tab == "Inspector":
                     placeholder="// Paste your Python, JavaScript, or C++ code here to inspect for vulnerabilities...",
                     language=ace_lang,
                     theme="twilight",
-                    keybinding="vscode",
                     font_size=13,
                     tab_size=4,
                     show_gutter=True,
