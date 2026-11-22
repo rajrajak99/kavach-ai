@@ -3,48 +3,42 @@
 import React from "react";
 import { 
   ShieldCheck, 
-  AlertTriangle, 
   CheckCircle2, 
   FileText, 
-  Download, 
-  Lock, 
-  Zap, 
-  ArrowUpRight,
-  TrendingUp,
-  Cpu
+  Download
 } from "lucide-react";
 
 export default function PostureView() {
   const complianceFrameworks = [
-    { name: "SOC 2 Type II (Security & Confidentiality)", status: "COMPLIANT", score: 100, color: "text-kavachEmerald" },
-    { name: "ISO/IEC 27001:2022 (A.8.25 Secure Coding)", status: "COMPLIANT", score: 100, color: "text-kavachEmerald" },
-    { name: "PCI-DSS v4.0 (Req 6.2 - Vulnerability Testing)", status: "READY", score: 96, color: "text-kavachCyan" },
-    { name: "HIPAA Security Rule (Technical Safeguards)", status: "VERIFIED", score: 98, color: "text-kavachEmerald" },
-    { name: "OWASP Top 10 (2025 Release Gate)", status: "100% COVERED", score: 100, color: "text-kavachEmerald" },
+    { name: "SOC 2 Type II (Security & Confidentiality)", status: "COMPLIANT", score: 100, color: "text-emerald-400" },
+    { name: "ISO/IEC 27001:2022 (A.8.25 Secure Coding)", status: "COMPLIANT", score: 100, color: "text-emerald-400" },
+    { name: "PCI-DSS v4.0 (Req 6.2 - Vulnerability Testing)", status: "READY", score: 96, color: "text-cyan-400" },
+    { name: "HIPAA Security Rule (Technical Safeguards)", status: "VERIFIED", score: 98, color: "text-emerald-400" },
+    { name: "OWASP Top 10 (2025 Release Gate)", status: "100% COVERED", score: 100, color: "text-emerald-400" },
   ];
 
   const metrics = [
-    { label: "Security Health Score", val: "98/100", sub: "Grade A+ (Enterprise Certified)", color: "text-kavachEmerald" },
-    { label: "AST Scan Latency", val: "14.2 ms", sub: "Sub-16ms deterministic speed", color: "text-kavachCyan" },
-    { label: "False Alarm Ratio", val: "0.00%", sub: "Verified AST taint verification", color: "text-kavachEmerald" },
-    { label: "1-Click Auto-Healed", val: "100%", sub: "Zero manual intervention needed", color: "text-kavachEmerald" },
+    { label: "Security Health Score", val: "98/100", sub: "Grade A+ (Enterprise Certified)", color: "text-emerald-400" },
+    { label: "AST Scan Latency", val: "14.2 ms", sub: "Sub-16ms deterministic speed", color: "text-cyan-400" },
+    { label: "False Alarm Ratio", val: "0.00%", sub: "Verified AST taint verification", color: "text-emerald-400" },
+    { label: "1-Click Auto-Healed", val: "100%", sub: "Zero manual intervention needed", color: "text-emerald-400" },
   ];
 
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto space-y-6 max-w-6xl mx-auto">
       {/* View Title */}
-      <div className="flex items-center justify-between pb-4 border-b border-obsidian-700/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/[0.08] gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slateText-primary tracking-tight">
+          <h2 className="text-xl font-bold text-white tracking-tight font-sans">
             Enterprise Application Security Posture & Compliance Plane
           </h2>
-          <p className="text-xs text-slateText-muted mt-1">
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
             Real-time deterministic AST auditing, pre-audit compliance scoring, and continuous regression protection.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono px-2.5 py-1 rounded bg-kavachEmerald/15 text-kavachEmerald border border-kavachEmerald/30 font-semibold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-kavachEmerald animate-pulse"></span>
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"></span>
             Policy: Blocking Critical Exploits
           </span>
         </div>
@@ -53,43 +47,43 @@ export default function PostureView() {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((m, i) => (
-          <div key={i} className="p-4 rounded-xl bg-obsidian-850 border border-obsidian-700 shadow-sm relative overflow-hidden">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slateText-muted mb-1">
+          <div key={i} className="p-4 rounded-xl bg-[#111114] border border-white/[0.08] relative overflow-hidden card-top-shine">
+            <div className="text-[10.5px] font-mono font-medium uppercase tracking-wider text-zinc-500 mb-1">
               {m.label}
             </div>
-            <div className={`text-2xl font-bold font-mono ${m.color} mb-1`}>
+            <div className={`text-2xl font-bold font-mono tabular-nums ${m.color} mb-1`}>
               {m.val}
             </div>
-            <div className="text-xs text-slateText-secondary">{m.sub}</div>
+            <div className="text-xs text-zinc-400">{m.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Compliance Frameworks Table */}
-      <div className="rounded-xl bg-obsidian-850 border border-obsidian-700 overflow-hidden shadow-sm">
-        <div className="p-4 bg-obsidian-800 border-b border-obsidian-700 flex items-center justify-between">
+      <div className="rounded-xl bg-[#111114] border border-white/[0.08] overflow-hidden card-top-shine">
+        <div className="p-4 bg-white/[0.02] border-b border-white/[0.08] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-kavachEmerald" />
-            <h3 className="text-sm font-bold text-slateText-primary">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-white">
               Pre-Audit Regulatory Readiness Scorecards
             </h3>
           </div>
-          <span className="text-xs font-mono text-slateText-muted">Auto-generated via AST taint graphs</span>
+          <span className="text-[11px] font-mono text-zinc-500">Auto-generated via AST taint graphs</span>
         </div>
 
-        <div className="divide-y divide-obsidian-700/60">
+        <div className="divide-y divide-white/[0.04]">
           {complianceFrameworks.map((cf, i) => (
-            <div key={i} className="p-4 flex items-center justify-between hover:bg-obsidian-800/40 transition-colors">
+            <div key={i} className="p-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-4 h-4 text-kavachEmerald shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <div>
-                  <div className="text-xs font-semibold text-slateText-primary">{cf.name}</div>
-                  <div className="text-[11px] text-slateText-muted">Deterministic validation against latest AST security matrix</div>
+                  <div className="text-xs font-medium text-white">{cf.name}</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">Deterministic validation against latest AST security matrix</div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className={`text-xs font-bold font-mono ${cf.color}`}>{cf.status}</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-obsidian-900 border border-obsidian-700 text-slateText-primary font-semibold">
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-semibold font-mono ${cf.color}`}>{cf.status}</span>
+                <span className="text-xs font-mono tabular-nums px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-zinc-200 font-semibold">
                   {cf.score}%
                 </span>
               </div>
@@ -99,13 +93,13 @@ export default function PostureView() {
       </div>
 
       {/* Executive Report Download Actions */}
-      <div className="p-5 rounded-xl bg-gradient-to-r from-obsidian-850 via-obsidian-900 to-obsidian-850 border border-obsidian-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="p-5 rounded-xl bg-[#111114] border border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 card-top-shine">
         <div>
-          <h4 className="text-sm font-bold text-slateText-primary flex items-center gap-2">
-            <FileText className="w-4 h-4 text-kavachCyan" />
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-white flex items-center gap-2">
+            <FileText className="w-4 h-4 text-emerald-400" />
             <span>Generate Executive SOC 2 & ISO-27001 Audit Pack (.md / .json)</span>
           </h4>
-          <p className="text-xs text-slateText-muted mt-1">
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
             Export cryptographic audit trails signed with zero-retention SHA-256 verification hashes for compliance officers.
           </p>
         </div>
@@ -145,9 +139,9 @@ This automated report verifies that code analyzed under Kavach AI contains zero 
             a.click();
             URL.revokeObjectURL(url);
           }}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 font-bold text-xs shadow-[0_0_15px_rgba(16,185,129,0.35)] hover:opacity-95 transition-all flex items-center gap-2 shrink-0"
+          className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs shadow-sm transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98]"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-3.5 h-3.5" />
           <span>Export Audit Dossier (.md)</span>
         </button>
       </div>

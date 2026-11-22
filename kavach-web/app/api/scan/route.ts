@@ -8,6 +8,24 @@ export async function POST(req: NextRequest) {
     const code = body.code || "";
     const filename = body.filename || "payment_service.py";
 
+    // Return clean result immediately if code is empty or whitespace
+    if (!code || !code.trim()) {
+      return NextResponse.json({
+        status: "PASSED",
+        metrics: { critical: 0, security: 0, performance: 0, total: 0 },
+        findings: [],
+        syntax_error: null,
+        posture: {
+          score: 100,
+          grade: "A",
+          grade_label: "Deterministic AST Verified",
+          badge_class: "grade-a",
+          color: "#10B981",
+          cvss_max: 0.0,
+        },
+      });
+    }
+
     // Path to the Python AST bridge relative to project root
     const scriptPath = path.resolve(process.cwd(), "..", "core", "api_bridge.py");
     const cwd = path.resolve(process.cwd(), "..");

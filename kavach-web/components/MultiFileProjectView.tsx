@@ -5,15 +5,8 @@ import {
   Package, 
   Upload, 
   Play, 
-  ShieldAlert, 
-  ShieldCheck, 
-  CheckCircle2, 
-  AlertTriangle, 
   ArrowRight, 
-  Download, 
-  FileCode, 
-  Layers, 
-  Sparkles 
+  Download
 } from "lucide-react";
 
 interface CrossFileFinding {
@@ -97,7 +90,6 @@ export default function MultiFileProjectView() {
     if (file) {
       setProjectName(file.name);
       setIsAnalyzing(true);
-      // Reset input value to allow re-uploading the same file
       e.target.value = "";
       setTimeout(() => {
         setIsAnalyzing(false);
@@ -146,17 +138,17 @@ ${scaLines || "No vulnerable third-party dependencies detected."}
   };
 
   return (
-    <div className="flex-1 p-5 lg:p-6 overflow-y-auto space-y-5 max-w-6xl mx-auto">
+    <div className="flex-1 p-5 lg:p-6 overflow-y-auto space-y-5 max-w-6xl mx-auto font-sans">
       {/* Banner */}
-      <div className="p-4 rounded-xl bg-obsidian-850 border border-obsidian-700 shadow-sm flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg bg-kavachEmerald/10 border border-kavachEmerald/25 flex items-center justify-center shrink-0 mt-0.5">
-          <Package className="w-5 h-5 text-kavachEmerald" />
+      <div className="p-4 rounded-xl bg-[#111114] border border-white/[0.08] flex items-start gap-3 card-top-shine">
+        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+          <Package className="w-4 h-4 text-emerald-400" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-slateText-primary">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-white">
             Multi-File Project & Supply-Chain (SCA) Reachability Analyzer
           </h3>
-          <p className="text-xs text-slateText-muted mt-1 leading-relaxed">
+          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
             Performs inter-procedural AST taint tracing across route handlers and database sinks, correlates manifest CVEs with AST imports to eliminate false alarms, and generates SOC 2 compliance reports.
           </p>
         </div>
@@ -165,31 +157,31 @@ ${scaLines || "No vulnerable third-party dependencies detected."}
       {/* Upload & Demo Trigger Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* ZIP Dropzone (2 cols) */}
-        <div className="md:col-span-2 p-5 rounded-xl bg-obsidian-900 border-2 border-dashed border-obsidian-700 hover:border-kavachEmerald/50 transition-colors flex flex-col items-center justify-center text-center cursor-pointer relative group">
+        <div className="md:col-span-2 p-5 rounded-xl bg-[#09090B] border border-dashed border-white/[0.12] hover:border-emerald-500/40 transition-colors flex flex-col items-center justify-center text-center cursor-pointer relative group">
           <input
             type="file"
             accept=".zip"
             onChange={handleFileUpload}
             className="absolute inset-0 opacity-0 cursor-pointer"
           />
-          <div className="w-10 h-10 rounded-full bg-obsidian-800 text-kavachEmerald flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <Upload className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-full bg-white/[0.04] border border-white/[0.08] text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+            <Upload className="w-4 h-4" />
           </div>
-          <span className="text-xs font-semibold text-slateText-primary mb-1">
+          <span className="text-xs font-medium text-white mb-1">
             Upload Project ZIP archive (.zip)
           </span>
-          <span className="text-[11px] text-slateText-muted">
+          <span className="text-[11px] text-zinc-500">
             Drag & drop up to 200MB • Scans Python, JS/TS, Go, C++, requirements.txt & package.json
           </span>
         </div>
 
         {/* Demo trigger button (1 col) */}
-        <div className="p-5 rounded-xl bg-obsidian-850 border border-obsidian-700 flex flex-col justify-between space-y-3">
+        <div className="p-5 rounded-xl bg-[#111114] border border-white/[0.08] flex flex-col justify-between space-y-3 card-top-shine">
           <div>
-            <span className="text-xs text-slateText-secondary font-medium block mb-1">
-              Or test instant benchmark project:
+            <span className="text-xs text-zinc-300 font-medium block mb-1">
+              Instant benchmark project:
             </span>
-            <span className="text-[11px] text-slateText-muted leading-relaxed block">
+            <span className="text-[11px] text-zinc-500 leading-relaxed block">
               Pre-loaded multi-file microservice with inter-module taint flow.
             </span>
           </div>
@@ -197,10 +189,10 @@ ${scaLines || "No vulnerable third-party dependencies detected."}
           <button
             onClick={handleRunDemo}
             disabled={isAnalyzing}
-            className="w-full py-2.5 rounded-lg bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 font-bold text-xs shadow-[0_0_15px_rgba(16,185,129,0.35)] hover:opacity-95 transition-all flex items-center justify-center gap-2 active:scale-95"
+            className="w-full py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
           >
-            <Play className="w-4 h-4 fill-obsidian-950" />
-            <span>{isAnalyzing ? "Tracing Taint Graphs..." : "⚡ Run Multi-File Demo Project"}</span>
+            <Play className="w-3.5 h-3.5 fill-zinc-950" />
+            <span>{isAnalyzing ? "Tracing Taint Graphs..." : "Run Multi-File Demo"}</span>
           </button>
         </div>
       </div>
@@ -210,71 +202,71 @@ ${scaLines || "No vulnerable third-party dependencies detected."}
         <div className="space-y-5 animate-in fade-in duration-300">
           {/* 4 KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-xl bg-obsidian-850 border border-obsidian-700">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slateText-muted block mb-1">Files Analyzed</span>
-              <span className="text-2xl font-bold font-mono text-slateText-primary block">14</span>
-              <span className="text-[11px] text-slateText-muted">Multi-module AST bundle</span>
+            <div className="p-3.5 rounded-xl bg-[#111114] border border-white/[0.08] card-top-shine">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block mb-1">Files Analyzed</span>
+              <span className="text-xl font-bold font-mono tabular-nums text-white block">14</span>
+              <span className="text-[11px] text-zinc-500">Multi-module AST bundle</span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-obsidian-850 border border-obsidian-700">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slateText-muted block mb-1">Cross-File Taint Traces</span>
-              <span className="text-2xl font-bold font-mono text-kavachCrimson block">1</span>
-              <span className="text-[11px] text-slateText-muted">Inter-procedural flows</span>
+            <div className="p-3.5 rounded-xl bg-[#111114] border border-white/[0.08] card-top-shine">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block mb-1">Cross-File Traces</span>
+              <span className="text-xl font-bold font-mono tabular-nums text-red-400 block">1</span>
+              <span className="text-[11px] text-zinc-500">Inter-procedural flows</span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-obsidian-850 border border-obsidian-700">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slateText-muted block mb-1">Reachable CVEs</span>
-              <span className="text-2xl font-bold font-mono text-kavachCrimson block">1</span>
-              <span className="text-[11px] text-kavachEmerald font-semibold">1 dormant CVE filtered</span>
+            <div className="p-3.5 rounded-xl bg-[#111114] border border-white/[0.08] card-top-shine">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block mb-1">Reachable CVEs</span>
+              <span className="text-xl font-bold font-mono tabular-nums text-red-400 block">1</span>
+              <span className="text-[11px] text-emerald-400 font-medium">1 dormant filtered</span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-obsidian-850 border border-obsidian-700">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slateText-muted block mb-1">CI Gate Verdict</span>
-              <span className="text-2xl font-bold font-mono text-kavachCrimson block">BLOCKED</span>
-              <span className="text-[11px] text-slateText-muted">Pre-merge policy</span>
+            <div className="p-3.5 rounded-xl bg-[#111114] border border-white/[0.08] card-top-shine">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block mb-1">CI Gate Verdict</span>
+              <span className="text-xl font-bold font-mono text-red-400 block">BLOCKED</span>
+              <span className="text-[11px] text-zinc-500">Pre-merge policy</span>
             </div>
           </div>
 
           {/* Inter-Procedural Taint Traces */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slateText-primary flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                <span>🚨 Inter-Procedural Cross-File Taint Traces</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-white flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                <span>Inter-Procedural Cross-File Taint Traces</span>
               </span>
-              <span className="text-[11px] font-mono text-slateText-muted">Project: {projectName}</span>
+              <span className="text-[11px] font-mono text-zinc-500">Project: {projectName}</span>
             </div>
 
             {crossFileFindings.map((cf, i) => (
-              <div key={i} className="p-4 rounded-xl bg-obsidian-850 border border-obsidian-700 border-l-4 border-l-red-500 space-y-3">
+              <div key={i} className="p-4 rounded-xl bg-[#111114] border border-white/[0.08] border-l-2 border-l-red-500 space-y-3 card-top-shine">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30">
+                  <span className="text-[10.5px] font-mono font-semibold px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
                     CRITICAL • {cf.cwe_id}
                   </span>
-                  <span className="text-xs font-mono text-slateText-muted">Trace #01</span>
+                  <span className="text-[10.5px] font-mono text-zinc-500">Trace #01</span>
                 </div>
 
                 <div>
-                  <div className="text-xs font-bold text-slateText-primary mb-1">{cf.category}</div>
-                  <p className="text-xs text-slateText-secondary leading-relaxed">{cf.explanation}</p>
+                  <div className="text-xs font-medium text-white mb-1">{cf.category}</div>
+                  <p className="text-xs text-zinc-400 leading-relaxed">{cf.explanation}</p>
                 </div>
 
                 {/* Origin -> Sink Visualizer */}
-                <div className="p-3 rounded-lg bg-obsidian-950 border border-obsidian-700/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs font-mono">
+                <div className="p-3 rounded-lg bg-[#09090B] border border-white/[0.08] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs font-mono">
                   <div className="flex-1 space-y-1">
-                    <span className="text-slateText-muted block text-[10.5px]">Caller Origin:</span>
-                    <span className="text-kavachCyan font-semibold block">{cf.source_file}:{cf.source_line}</span>
-                    <code className="text-slate-200 block text-[11px] bg-obsidian-900 px-2 py-1 rounded border border-obsidian-700/50">
+                    <span className="text-zinc-500 block text-[10.5px]">Caller Origin:</span>
+                    <span className="text-cyan-400 font-semibold block">{cf.source_file}:{cf.source_line}</span>
+                    <code className="text-zinc-200 block text-[11px] bg-[#111114] px-2 py-1 rounded border border-white/[0.06]">
                       {cf.source_snippet}
                     </code>
                   </div>
 
-                  <ArrowRight className="w-4 h-4 text-slateText-muted shrink-0 hidden md:block" />
+                  <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0 hidden md:block" />
 
                   <div className="flex-1 space-y-1">
                     <span className="text-red-400 block text-[10.5px]">Sink Execution ({cf.sink_function}):</span>
                     <span className="text-red-400 font-semibold block">{cf.sink_file}:{cf.sink_line}</span>
-                    <code className="text-red-200 block text-[11px] bg-red-950/30 px-2 py-1 rounded border border-red-500/30">
+                    <code className="text-red-200 block text-[11px] bg-red-500/10 px-2 py-1 rounded border border-red-500/20">
                       {cf.sink_snippet}
                     </code>
                   </div>
@@ -285,35 +277,35 @@ ${scaLines || "No vulnerable third-party dependencies detected."}
 
           {/* Software Composition Analysis (SCA Reachability) */}
           <div className="space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slateText-primary block">
-              📦 Software Composition Analysis (SCA) & AST Reachability
+            <span className="text-xs font-semibold uppercase tracking-wider text-white block">
+              Software Composition Analysis (SCA) & AST Reachability
             </span>
 
             <div className="space-y-2">
               {scaFindings.map((s, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl bg-obsidian-850 border border-obsidian-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div key={idx} className="p-3.5 rounded-xl bg-[#111114] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 card-top-shine">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slateText-primary">{s.package_name}</span>
-                      <span className="text-[10.5px] font-mono text-slateText-muted">
+                      <span className="text-xs font-medium text-white">{s.package_name}</span>
+                      <span className="text-[10.5px] font-mono text-zinc-500">
                         Installed: <code>{s.installed_version}</code> • Safe: <code>{s.fixed_version}</code>
                       </span>
                     </div>
-                    <div className="text-xs text-slateText-secondary mt-1">
-                      <b className="text-slateText-primary">{s.cve_id}</b>: {s.advisory_title}
+                    <div className="text-xs text-zinc-400 mt-1">
+                      <b className="text-zinc-200 font-mono font-normal">{s.cve_id}</b>: {s.advisory_title}
                     </div>
-                    <div className="text-[11px] text-slateText-muted mt-0.5">
+                    <div className="text-[11px] text-zinc-500 mt-0.5">
                       Callers in codebase: {s.imported_files.length ? s.imported_files.join(", ") : "None (Unimported Library)"}
                     </div>
                   </div>
 
                   <div>
                     {s.is_reachable ? (
-                      <span className="px-2.5 py-1 rounded bg-red-500/15 text-red-400 border border-red-500/30 font-bold text-[11px] font-mono whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-semibold text-[10.5px] font-mono whitespace-nowrap">
                         REACHABLE (Critical)
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded bg-emerald-500/15 text-kavachEmerald border border-emerald-500/30 font-bold text-[11px] font-mono whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold text-[10.5px] font-mono whitespace-nowrap">
                         ✓ DORMANT (Filtered)
                       </span>
                     )}
@@ -327,10 +319,10 @@ ${scaLines || "No vulnerable third-party dependencies detected."}
           <div className="flex justify-end pt-2">
             <button
               onClick={handleExportAudit}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 font-bold text-xs shadow-[0_0_15px_rgba(16,185,129,0.35)] hover:opacity-95 transition-all flex items-center gap-2"
+              className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs shadow-sm transition-all flex items-center gap-1.5 active:scale-[0.98]"
             >
-              <Download className="w-4 h-4" />
-              <span>Download Full Project Pre-Audit Report (.md)</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Pre-Audit Report (.md)</span>
             </button>
           </div>
         </div>

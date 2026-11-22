@@ -101,7 +101,28 @@ export default function Home() {
     github: "CI/CD & GitHub Gate",
   };
 
+  const CLEAN_POSTURE = {
+    score: 100,
+    grade: "A",
+    gradeLabel: "Deterministic AST Verified",
+    color: "#10B981",
+    cvssMax: 0,
+  };
+
+  const CLEAN_SCAN_RESULT = {
+    status: "PASSED",
+    metrics: { critical: 0, security: 0, performance: 0, total: 0 },
+    findings: [],
+    posture: CLEAN_POSTURE,
+  };
+
   const runScan = useCallback(async (codeToScan: string, currentFile: string) => {
+    if (!codeToScan || !codeToScan.trim()) {
+      setScanResult(CLEAN_SCAN_RESULT);
+      setAppliedPatches({});
+      setIsScanning(false);
+      return;
+    }
     setIsScanning(true);
     try {
       const res = await fetch("/api/scan", {
@@ -117,6 +138,12 @@ export default function Home() {
       setIsScanning(false);
     }
   }, []);
+
+  const handleClear = () => {
+    setCode("");
+    setAppliedPatches({});
+    setScanResult(CLEAN_SCAN_RESULT);
+  };
 
   // Initial scan on page load
   useEffect(() => {
@@ -371,7 +398,7 @@ ${f.fixed_code}
                       </select>
 
                       <button
-                        onClick={() => setCode("")}
+                        onClick={handleClear}
                         className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 text-xs font-medium transition-colors border border-white/[0.08]"
                       >
                         Clear
@@ -396,7 +423,14 @@ ${f.fixed_code}
                       language={language}
                       value={code}
                       beforeMount={handleEditorWillMount}
-                      onChange={(newVal) => setCode(newVal || "")}
+                      onChange={(newVal) => {
+                        const val = newVal || "";
+                        setCode(val);
+                        if (!val.trim()) {
+                          setScanResult(CLEAN_SCAN_RESULT);
+                          setAppliedPatches({});
+                        }
+                      }}
                       options={{
                         fontSize: 13,
                         fontFamily: "var(--font-mono), 'JetBrains Mono', monospace",
@@ -422,6 +456,7 @@ ${f.fixed_code}
                     cvssMax={posture.cvssMax}
                     criticalCount={metrics.critical}
                     warningCount={metrics.security}
+                    isEmpty={!code.trim()}
                     onDownloadReport={handleDownloadReport}
                   />
 
@@ -436,7 +471,39 @@ ${f.fixed_code}
                       </span>
                     </div>
 
-                    {findings.length === 0 ? (
+                    {!code.trim() ? (
+                      <div className="rounded-xl border border-white/[0.08] bg-[#111114] p-6 text-center card-top-shine">
+                        <div className="w-9 h-9 rounded-full bg-white/[0.04] text-zinc-400 flex items-center justify-center mx-auto mb-2 border border-white/[0.08]">
+                          <Code2 className="w-4 h-4" />
+                        </div>
+                        <h4 className="font-semibold text-xs text-white mb-1">
+                          Editor is Empty
+                        </h4>
+                        <p className="text-[11px] text-zinc-400 max-w-sm mx-auto leading-relaxed mb-3">
+                          Paste your source code or select a demo sample from above to run instant AST inspection.
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleLoadSample("fastapi_sqli")}
+                            className="text-[10.5px] font-mono px-2.5 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-300 transition-colors"
+                          >
+                            ⚡ FastAPI SQLi
+                          </button>
+                          <button
+                            onClick={() => handleLoadSample("secrets_leak")}
+                            className="text-[10.5px] font-mono px-2.5 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-300 transition-colors"
+                          >
+                            🔑 Secret Leaks
+                          </button>
+                          <button
+                            onClick={() => handleLoadSample("node_cmd_inj")}
+                            className="text-[10.5px] font-mono px-2.5 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-300 transition-colors"
+                          >
+                            ⚡ Command Inj
+                          </button>
+                        </div>
+                      </div>
+                    ) : findings.length === 0 ? (
                       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-6 text-center card-top-shine">
                         <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-2 border border-emerald-500/20">
                           <Sparkles className="w-4 h-4" />

@@ -11,6 +11,7 @@ interface ScorecardProps {
   cvssMax?: number;
   criticalCount?: number;
   warningCount?: number;
+  isEmpty?: boolean;
   onDownloadReport: (type: "soc2" | "json" | "summary") => void;
 }
 
@@ -22,6 +23,7 @@ export default function Scorecard({
   cvssMax = 0,
   criticalCount = 0,
   warningCount = 0,
+  isEmpty = false,
   onDownloadReport,
 }: ScorecardProps) {
   const clampedScore = Math.min(100, Math.max(0, score));
@@ -36,31 +38,42 @@ export default function Scorecard({
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg font-mono tracking-tight"
             style={{
-              backgroundColor: `${color}14`,
-              color: color,
-              border: `1px solid ${color}30`,
+              backgroundColor: isEmpty ? "rgba(255, 255, 255, 0.04)" : `${color}14`,
+              color: isEmpty ? "#A1A1AA" : color,
+              border: isEmpty ? "1px solid rgba(255, 255, 255, 0.08)" : `1px solid ${color}30`,
             }}
           >
-            {grade}
+            {isEmpty ? "—" : grade}
           </div>
           <div>
             <div className="text-xs font-medium text-white flex items-center gap-2">
-              <span className="font-mono tabular-nums">Security Health: {clampedScore}/100</span>
+              <span className="font-mono tabular-nums">
+                {isEmpty ? "Security Health: Ready" : `Security Health: ${clampedScore}/100`}
+              </span>
               <span
                 className="text-[10px] px-1.5 py-0.2 rounded font-mono font-semibold"
-                style={{ backgroundColor: `${color}14`, color: color, border: `1px solid ${color}25` }}
+                style={{
+                  backgroundColor: isEmpty ? "rgba(255, 255, 255, 0.04)" : `${color}14`,
+                  color: isEmpty ? "#A1A1AA" : color,
+                  border: isEmpty ? "1px solid rgba(255, 255, 255, 0.08)" : `1px solid ${color}25`,
+                }}
               >
-                {isPassed ? (warningCount > 0 ? "WARNING" : "PASS") : "BLOCKED"}
+                {isEmpty ? "STANDBY" : isPassed ? (warningCount > 0 ? "WARNING" : "PASS") : "BLOCKED"}
               </span>
             </div>
-            <p className="text-[11px] text-zinc-400 mt-0.5">{gradeLabel}</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              {isEmpty ? "No code loaded in editor" : gradeLabel}
+            </p>
           </div>
         </div>
 
         <div className="text-right">
           <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono block">CVSS v3.1</span>
-          <span className="text-xs font-mono font-bold tabular-nums" style={{ color }}>
-            MAX {safeCvss.toFixed(1)}
+          <span
+            className="text-xs font-mono font-bold tabular-nums"
+            style={{ color: isEmpty ? "#71717A" : color }}
+          >
+            {isEmpty ? "—" : `MAX ${safeCvss.toFixed(1)}`}
           </span>
         </div>
       </div>
@@ -69,37 +82,47 @@ export default function Scorecard({
       <div className="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden mb-3">
         <div
           className="h-full transition-all duration-500 rounded-full"
-          style={{ width: `${Math.max(4, Math.min(100, clampedScore))}%`, backgroundColor: color }}
+          style={{
+            width: isEmpty ? "0%" : `${Math.max(4, Math.min(100, clampedScore))}%`,
+            backgroundColor: isEmpty ? "rgba(255, 255, 255, 0.2)" : color,
+          }}
         />
       </div>
 
       {/* Status Alert Banner */}
-      <div
-        className={`px-3 py-2 rounded-lg mb-3 flex items-center gap-2 text-xs font-medium ${
-          !isPassed
-            ? "bg-red-500/10 border border-red-500/20 text-red-400"
-            : warningCount > 0
-            ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-            : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-        }`}
-      >
-        {!isPassed ? (
-          <>
-            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-            <span>MERGE BLOCKED — {criticalCount} Critical Exploit(s) Detected</span>
-          </>
-        ) : warningCount > 0 ? (
-          <>
-            <AlertOctagon className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>PASSED WITH ADVISORY — 0 Critical, {warningCount} Non-blocking Issue(s)</span>
-          </>
-        ) : (
-          <>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>ALL CHECKS PASSED — 100% Zero-Noise AST Verified</span>
-          </>
-        )}
-      </div>
+      {isEmpty ? (
+        <div className="px-3 py-2 rounded-lg mb-3 flex items-center gap-2 text-xs font-medium bg-white/[0.04] border border-white/[0.08] text-zinc-400">
+          <CheckCircle2 className="w-4 h-4 text-zinc-500 shrink-0" />
+          <span>AWAITING CODE — Editor is clear. Load a demo or paste code to inspect.</span>
+        </div>
+      ) : (
+        <div
+          className={`px-3 py-2 rounded-lg mb-3 flex items-center gap-2 text-xs font-medium ${
+            !isPassed
+              ? "bg-red-500/10 border border-red-500/20 text-red-400"
+              : warningCount > 0
+              ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+              : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+          }`}
+        >
+          {!isPassed ? (
+            <>
+              <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+              <span>MERGE BLOCKED — {criticalCount} Critical Exploit(s) Detected</span>
+            </>
+          ) : warningCount > 0 ? (
+            <>
+              <AlertOctagon className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>PASSED WITH ADVISORY — 0 Critical, {warningCount} Non-blocking Issue(s)</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>ALL CHECKS PASSED — 100% Zero-Noise AST Verified</span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Compact Export Action Bar */}
       <div className="grid grid-cols-3 gap-2">
