@@ -906,15 +906,40 @@ def get_enterprise_css() -> str:
         color: #FFFFFF !important;
     }
 
-    /* Sidebar Collapse Button styling */
-    button[data-testid="baseButton-headerNoPadding"],
-    button[data-testid="stSidebarCollapseButton"] {
-        color: #929BA8 !important;
+    /* Permanently Pinned Enterprise Sidebar (Linear / VS Code Standard) */
+    @media (min-width: 900px) {
+        section[data-testid="stSidebar"] {
+            transform: none !important;
+            margin-left: 0 !important;
+            min-width: 290px !important;
+            max-width: 290px !important;
+            width: 290px !important;
+            display: block !important;
+            visibility: visible !important;
+            z-index: 99 !important;
+        }
+        button[data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
     }
-    button[data-testid="baseButton-headerNoPadding"]:hover,
-    button[data-testid="stSidebarCollapseButton"]:hover {
-        color: #F1F3F5 !important;
-        background: #171C24 !important;
+
+    /* Fallback Un-collapse Trigger if ever collapsed */
+    [data-testid="collapsedControl"],
+    div[data-testid="stSidebarCollapsedControl"],
+    button[data-testid="stSidebarCollapseButton"] {
+        display: flex !important;
+        visibility: visible !important;
+        color: #10B981 !important;
+    }
+    div[data-testid="stSidebarCollapsedControl"] {
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 999999 !important;
+        background: #0F131C !important;
+        border: 1px solid #1E293B !important;
+        border-radius: 6px !important;
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.25) !important;
     }
 
     /* =========================================================================

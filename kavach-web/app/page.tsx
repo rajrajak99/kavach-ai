@@ -10,6 +10,7 @@ import PostureView from "@/components/PostureView";
 import BenchmarkView from "@/components/BenchmarkView";
 import PricingView from "@/components/PricingView";
 import GitHubView from "@/components/GitHubView";
+import MultiFileProjectView from "@/components/MultiFileProjectView";
 import { Play, RotateCcw, Sparkles, Code2, AlertTriangle, ChevronDown } from "lucide-react";
 
 // Dynamically import Monaco Editor to avoid SSR window issues
@@ -84,6 +85,7 @@ void authenticate(const char* input_key) {
 
 export default function Home() {
   const [activeView, setActiveView] = useState<ViewType>("inspector");
+  const [inspectorMode, setInspectorMode] = useState<"snippet" | "project">("snippet");
   const [code, setCode] = useState(DEFAULT_ENTERPRISE_CODE);
   const [filename, setFilename] = useState("payment_service.py");
   const [language, setLanguage] = useState("python");
