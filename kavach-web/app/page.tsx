@@ -5,6 +5,11 @@ import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import Scorecard from "@/components/Scorecard";
 import DiffViewer from "@/components/DiffViewer";
+import Sidebar, { ViewType } from "@/components/Sidebar";
+import PostureView from "@/components/PostureView";
+import BenchmarkView from "@/components/BenchmarkView";
+import PricingView from "@/components/PricingView";
+import GitHubView from "@/components/GitHubView";
 import { Play, RotateCcw, Sparkles, Code2, AlertTriangle, ChevronDown } from "lucide-react";
 
 // Dynamically import Monaco Editor to avoid SSR window issues
@@ -78,12 +83,21 @@ void authenticate(const char* input_key) {
 };
 
 export default function Home() {
+  const [activeView, setActiveView] = useState<ViewType>("inspector");
   const [code, setCode] = useState(DEFAULT_ENTERPRISE_CODE);
   const [filename, setFilename] = useState("payment_service.py");
   const [language, setLanguage] = useState("python");
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<any>(null);
   const [appliedPatches, setAppliedPatches] = useState<Record<number, boolean>>({});
+
+  const VIEW_TITLES: Record<ViewType, string> = {
+    inspector: "Code Inspector",
+    posture: "Posture Dashboard",
+    benchmark: "Live Benchmark",
+    pricing: "Plans & Pricing",
+    github: "CI/CD & GitHub Gate",
+  };
 
   const runScan = useCallback(async (codeToScan: string, currentFile: string) => {
     setIsScanning(true);
@@ -188,11 +202,16 @@ ${f.fixed_code}
   const findings = scanResult?.findings || [];
 
   return (
-    <div className="min-h-screen flex flex-col bg-obsidian-950 select-none">
-      <Header />
+    <div className="h-screen flex flex-row bg-obsidian-950 select-none overflow-hidden">
+      {/* Sidebar Navigation */}
+      <Sidebar activeView={activeView} onSelectView={setActiveView} />
 
-      {/* Main Workspace Layout */}
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      {/* Main Content Workspace */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <Header activeViewTitle={VIEW_TITLES[activeView]} />
+
+        {activeView === "inspector" && (
+          <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left 60%: Monaco Editor Panel */}
         <section className="w-full lg:w-[60%] border-r border-obsidian-700/80 flex flex-col bg-obsidian-950">
           {/* Editor Header Bar */}
@@ -338,6 +357,13 @@ ${f.fixed_code}
           </div>
         </section>
       </main>
-    </div>
+    )}
+
+    {activeView === "posture" && <PostureView />}
+    {activeView === "benchmark" && <BenchmarkView />}
+    {activeView === "pricing" && <PricingView />}
+    {activeView === "github" && <GitHubView />}
+  </div>
+</div>
   );
 }

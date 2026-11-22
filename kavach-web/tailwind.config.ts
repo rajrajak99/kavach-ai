@@ -10,33 +10,35 @@ const config: Config = {
     extend: {
       colors: {
         obsidian: {
-          950: "#090B0F",
-          900: "#0D1015",
-          850: "#11151B",
-          800: "#171C24",
-          700: "#252B35",
-          600: "#363E4D",
+          950: "#080A0E",
+          900: "#0B0E14",
+          850: "#0F131C",
+          800: "#151A26",
+          700: "#1E293B",
+          600: "#334155",
         },
         slateText: {
-          primary: "#F1F3F5",
-          secondary: "#929BA8",
-          muted: "#667080",
+          primary: "#F8FAFC",
+          secondary: "#94A3B8",
+          muted: "#64748B",
         },
         kavachEmerald: {
-          DEFAULT: "#22C58B",
-          glow: "rgba(34, 197, 139, 0.15)",
+          DEFAULT: "#10B981",
+          hover: "#059669",
+          light: "#34D399",
+          glow: "rgba(16, 185, 129, 0.25)",
+        },
+        kavachCyan: {
+          DEFAULT: "#38BDF8",
+          glow: "rgba(56, 189, 248, 0.20)",
         },
         kavachAmber: {
-          DEFAULT: "#E9A23B",
-          glow: "rgba(233, 162, 59, 0.15)",
+          DEFAULT: "#F59E0B",
+          glow: "rgba(245, 158, 11, 0.15)",
         },
         kavachCrimson: {
-          DEFAULT: "#F05252",
-          glow: "rgba(240, 82, 82, 0.15)",
-        },
-        kavachGold: {
-          DEFAULT: "#C9A96E",
-          hover: "#D9B77B",
+          DEFAULT: "#EF4444",
+          glow: "rgba(239, 68, 68, 0.15)",
         },
       },
       fontFamily: {
