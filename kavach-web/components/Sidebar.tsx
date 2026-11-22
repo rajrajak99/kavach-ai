@@ -8,13 +8,10 @@ import {
   BarChart3, 
   CreditCard, 
   GitBranch, 
-  Key, 
-  Sparkles, 
   Lock, 
   User, 
-  Check, 
   Copy,
-  ExternalLink
+  Check
 } from "lucide-react";
 
 export type ViewType = "inspector" | "posture" | "benchmark" | "pricing" | "github";
@@ -34,7 +31,7 @@ export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE"
   const [keySuccess, setKeySuccess] = useState(false);
   const [keyError, setKeyError] = useState("");
   const [tier, setTier] = useState(licenseTier);
-
+  const [copiedCli, setCopiedCli] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
@@ -55,7 +52,7 @@ export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE"
     const cleanEmail = pilotEmail.trim().toLowerCase();
     const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
     if (!emailRegex.test(cleanEmail)) {
-      setKeyError("Please enter a valid enterprise corporate email.");
+      setKeyError("Please enter a valid corporate email.");
       return;
     }
     setIsVerifying(true);
@@ -119,41 +116,48 @@ export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE"
     }
   };
 
+  const handleCopyCli = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText("kavach --login <KEY>");
+      setCopiedCli(true);
+      setTimeout(() => setCopiedCli(false), 2000);
+    }
+  };
+
   const navItems = [
     { id: "inspector" as ViewType, label: "Code Inspector", icon: Code2, badge: "AST Core" },
     { id: "posture" as ViewType, label: "Posture Dashboard", icon: Activity, badge: "Live" },
     { id: "benchmark" as ViewType, label: "Live Benchmark", icon: BarChart3, badge: "<16ms" },
-    { id: "pricing" as ViewType, label: "Plans & Pricing", icon: CreditCard, badge: "Zero Seat Tax" },
+    { id: "pricing" as ViewType, label: "Plans & Pricing", icon: CreditCard, badge: "Zero Tax" },
     { id: "github" as ViewType, label: "CI/CD & GitHub", icon: GitBranch, badge: "v1 Gate" },
   ];
 
   return (
-    <aside className="w-64 border-r border-obsidian-700 bg-obsidian-900 flex flex-col justify-between shrink-0 h-screen select-none overflow-y-auto">
+    <aside className="w-[240px] border-r border-white/[0.08] bg-[#111114] flex flex-col justify-between shrink-0 h-screen select-none overflow-y-auto">
       <div>
         {/* Brand Header */}
-        <div className="p-4 border-b border-obsidian-700/80 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-kavachEmerald/10 border border-kavachEmerald/30 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-            <Shield className="w-5 h-5 text-kavachEmerald fill-kavachEmerald/20" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-slateText-primary tracking-tight font-mono">
+        <div className="h-[52px] px-4 border-b border-white/[0.08] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-xs text-[#FAFAFA] tracking-tight font-mono">
                 Kavach AI
               </span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-kavachEmerald/15 text-kavachEmerald border border-kavachEmerald/30">
+              <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white/[0.06] text-zinc-400 border border-white/[0.08]">
                 v1.5.0
               </span>
             </div>
-            <p className="text-[10.5px] text-slateText-muted">Deterministic AST Security</p>
           </div>
         </div>
 
         {/* Platform Navigation */}
-        <div className="px-3 py-3">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slateText-muted px-2 mb-1.5">
-            Platform Navigation
+        <div className="p-3">
+          <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-zinc-500 px-2 mb-1.5">
+            Navigation
           </div>
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
@@ -161,21 +165,21 @@ export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE"
                 <button
                   key={item.id}
                   onClick={() => onSelectView(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                  className={`relative w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors ${
                     isActive
-                      ? "bg-gradient-to-r from-kavachEmerald/15 to-obsidian-800 text-slateText-primary border-l-2 border-kavachEmerald shadow-[0_2px_10px_rgba(16,185,129,0.12)] font-semibold"
-                      : "text-slateText-secondary hover:text-slateText-primary hover:bg-obsidian-850"
+                      ? "bg-white/[0.06] text-white font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-emerald-500 before:rounded-r"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03]"
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 ${isActive ? "text-kavachEmerald" : "text-slateText-muted"}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-400" : "text-zinc-500"}`} />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
                     <span className={`text-[9.5px] px-1.5 py-0.5 rounded font-mono ${
                       isActive 
-                        ? "bg-kavachEmerald/20 text-kavachEmerald border border-kavachEmerald/30" 
-                        : "bg-obsidian-800 text-slateText-muted"
+                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" 
+                        : "bg-white/[0.04] text-zinc-500 border border-white/[0.04]"
                     }`}>
                       {item.badge}
                     </span>
@@ -186,123 +190,131 @@ export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE"
           </nav>
         </div>
 
-        {/* Account & Security Widget */}
-        <div className="px-3 py-2 mx-3 mt-1 rounded-lg bg-obsidian-850 border border-obsidian-700/80">
-          <div className="flex items-center justify-between pb-2 border-b border-obsidian-700/60 mb-2.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slateText-primary">
-              <Lock className="w-3.5 h-3.5 text-kavachEmerald" />
-              <span>Account & License</span>
+        {/* Account & Security Card */}
+        <div className="px-3 pb-3">
+          <div className="p-3 rounded-lg bg-[#09090B] border border-white/[0.08]">
+            <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] mb-2.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-300">
+                <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                <span>License Key</span>
+              </div>
+              <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                {tier}
+              </span>
             </div>
-            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-kavachEmerald border border-emerald-500/30 font-bold">
-              {tier}
-            </span>
-          </div>
 
-          {/* Widget Tabs */}
-          <div className="flex items-center gap-1 p-0.5 rounded bg-obsidian-900 border border-obsidian-700/60 mb-2.5 text-[11px]">
-            <button
-              onClick={() => setAuthTab("pilot")}
-              className={`flex-1 py-1 rounded text-center font-medium transition-colors ${
-                authTab === "pilot" ? "bg-obsidian-800 text-kavachEmerald font-semibold" : "text-slateText-muted hover:text-slateText-secondary"
-              }`}
-            >
-              ⚡ Pilot
-            </button>
-            <button
-              onClick={() => setAuthTab("key")}
-              className={`flex-1 py-1 rounded text-center font-medium transition-colors ${
-                authTab === "key" ? "bg-obsidian-800 text-kavachEmerald font-semibold" : "text-slateText-muted hover:text-slateText-secondary"
-              }`}
-            >
-              🔑 Key
-            </button>
-            <button
-              onClick={() => setAuthTab("signin")}
-              className={`flex-1 py-1 rounded text-center font-medium transition-colors ${
-                authTab === "signin" ? "bg-obsidian-800 text-kavachEmerald font-semibold" : "text-slateText-muted hover:text-slateText-secondary"
-              }`}
-            >
-              👤 Sign In
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          {authTab === "pilot" && (
-            <form onSubmit={handleClaimPilot} className="space-y-2">
-              <p className="text-[10.5px] text-slateText-muted leading-relaxed">
-                Claim an instant 30-day VIP enterprise pilot pass:
-              </p>
-              <input
-                type="email"
-                required
-                value={pilotEmail}
-                onChange={(e) => setPilotEmail(e.target.value)}
-                placeholder="engineer@company.com"
-                className="w-full bg-obsidian-900 border border-obsidian-700 rounded px-2.5 py-1 text-xs text-slateText-primary placeholder-slateText-muted outline-none focus:border-kavachEmerald"
-              />
+            {/* Widget Tabs */}
+            <div className="flex items-center gap-1 p-0.5 rounded bg-[#111114] border border-white/[0.06] mb-2.5 text-[11px]">
               <button
-                type="submit"
-                className="w-full py-1.5 rounded bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 font-bold text-xs shadow-[0_0_12px_rgba(16,185,129,0.3)] hover:opacity-95 transition-opacity"
+                onClick={() => setAuthTab("pilot")}
+                className={`flex-1 py-1 rounded text-center text-[10.5px] font-medium transition-colors ${
+                  authTab === "pilot" ? "bg-white/[0.08] text-white font-semibold" : "text-zinc-500 hover:text-zinc-300"
+                }`}
               >
-                {pilotSuccess ? "✓ 30-Day VIP Activated!" : "Claim 30-Day VIP Pilot"}
+                Pilot
               </button>
-            </form>
-          )}
-
-          {authTab === "key" && (
-            <form onSubmit={handleActivateKey} className="space-y-2">
-              <p className="text-[10.5px] text-slateText-muted">Enter license key to unlock features:</p>
-              <input
-                type="text"
-                required
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                placeholder="KAVACH-PRO-..."
-                className="w-full bg-obsidian-900 border border-obsidian-700 rounded px-2.5 py-1 text-xs text-slateText-primary font-mono placeholder-slateText-muted outline-none focus:border-kavachEmerald"
-              />
-              {keyError && (
-                <p className="text-[10px] text-red-400 font-medium">{keyError}</p>
-              )}
               <button
-                type="submit"
-                className="w-full py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 text-kavachEmerald border border-kavachEmerald/40 font-semibold text-xs transition-colors"
+                onClick={() => setAuthTab("key")}
+                className={`flex-1 py-1 rounded text-center text-[10.5px] font-medium transition-colors ${
+                  authTab === "key" ? "bg-white/[0.08] text-white font-semibold" : "text-zinc-500 hover:text-zinc-300"
+                }`}
               >
-                {keySuccess ? "✓ License Active!" : "Activate License"}
+                Key
               </button>
-            </form>
-          )}
-
-          {authTab === "signin" && (
-            <div className="space-y-2 text-[11px]">
-              <p className="text-slateText-muted leading-relaxed">
-                Connect your GitHub account for pre-merge PR inspection:
-              </p>
               <button
-                type="button"
-                onClick={() => alert("GitHub OAuth Integration active via @rajrajak99/kavach-ai@v1")}
-                className="w-full py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 text-slateText-primary border border-obsidian-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                onClick={() => setAuthTab("signin")}
+                className={`flex-1 py-1 rounded text-center text-[10.5px] font-medium transition-colors ${
+                  authTab === "signin" ? "bg-white/[0.08] text-white font-semibold" : "text-zinc-500 hover:text-zinc-300"
+                }`}
               >
-                <User className="w-3.5 h-3.5" />
-                <span>Connect GitHub</span>
+                Sign In
               </button>
             </div>
-          )}
+
+            {/* Tab Content */}
+            {authTab === "pilot" && (
+              <form onSubmit={handleClaimPilot} className="space-y-2">
+                <p className="text-[10.5px] text-zinc-400 leading-relaxed">
+                  Claim an instant 30-day VIP enterprise pilot pass:
+                </p>
+                <input
+                  type="email"
+                  required
+                  value={pilotEmail}
+                  onChange={(e) => setPilotEmail(e.target.value)}
+                  placeholder="engineer@company.com"
+                  className="w-full bg-[#111114] border border-white/[0.08] rounded px-2.5 py-1 text-xs text-white placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={isVerifying}
+                  className="w-full py-1.5 rounded bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs shadow-sm transition-all active:scale-[0.98]"
+                >
+                  {isVerifying ? "Verifying..." : pilotSuccess ? "✓ 30-Day VIP Activated" : "Claim VIP Pilot"}
+                </button>
+              </form>
+            )}
+
+            {authTab === "key" && (
+              <form onSubmit={handleActivateKey} className="space-y-2">
+                <p className="text-[10.5px] text-zinc-400">Enter cryptographic license key:</p>
+                <input
+                  type="text"
+                  required
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder="KAVACH-PRO-..."
+                  className="w-full bg-[#111114] border border-white/[0.08] rounded px-2.5 py-1 text-xs text-white font-mono placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-colors"
+                />
+                {keyError && (
+                  <p className="text-[10px] text-red-400 font-medium">{keyError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={isVerifying}
+                  className="w-full py-1.5 rounded bg-white/[0.06] hover:bg-white/[0.1] text-emerald-400 border border-emerald-500/20 font-semibold text-xs transition-colors"
+                >
+                  {isVerifying ? "Checking..." : keySuccess ? "✓ License Active" : "Activate License"}
+                </button>
+              </form>
+            )}
+
+            {authTab === "signin" && (
+              <div className="space-y-2 text-[11px]">
+                <p className="text-zinc-400 leading-relaxed">
+                  Connect GitHub account for pre-merge PR inspection:
+                </p>
+                <button
+                  type="button"
+                  onClick={() => alert("GitHub OAuth Integration active via @rajrajak99/kavach-ai@v1")}
+                  className="w-full py-1.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-zinc-200 border border-white/[0.08] font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <User className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Connect GitHub</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Telemetry Footer */}
-      <div className="p-3.5 border-t border-obsidian-700/80 bg-obsidian-950/60 font-mono text-[10.5px] text-slateText-muted space-y-1.5">
+      <div className="p-3 border-t border-white/[0.08] bg-[#09090B]/60 font-mono text-[11px] text-zinc-500 space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-kavachEmerald animate-pulse"></span>
-          <span className="text-slateText-secondary font-medium">100% Offline AST Engine</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>
+          <span className="text-zinc-300 font-medium">100% Offline Engine</span>
         </div>
-        <p className="text-[10px]">Zero Code Retention • Air-Gapped</p>
-        <div className="p-1.5 rounded bg-obsidian-900 border border-obsidian-700 text-slateText-muted flex items-center justify-between">
+        <p className="text-[10px] text-zinc-500">Zero Code Retention • Air-Gapped</p>
+        <div className="p-1.5 rounded bg-[#111114] border border-white/[0.08] text-zinc-400 flex items-center justify-between text-[10.5px]">
           <code>kavach --login &lt;KEY&gt;</code>
-          <Copy 
-            className="w-3 h-3 hover:text-slateText-primary cursor-pointer" 
-            onClick={() => navigator.clipboard.writeText("kavach --login <KEY>")}
-          />
+          <button 
+            type="button" 
+            onClick={handleCopyCli}
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            title="Copy command"
+          >
+            {copiedCli ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          </button>
         </div>
       </div>
     </aside>

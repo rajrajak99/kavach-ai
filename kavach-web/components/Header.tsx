@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Shield, ExternalLink, Sparkles, CheckCircle2 } from "lucide-react";
+import { ExternalLink, Zap } from "lucide-react";
 
 interface HeaderProps {
   activeViewTitle?: string;
@@ -9,42 +9,46 @@ interface HeaderProps {
 
 export default function Header({ activeViewTitle = "Code Inspector" }: HeaderProps) {
   return (
-    <header className="border-b border-obsidian-700 bg-obsidian-900/90 backdrop-blur-md px-6 py-2.5 flex items-center justify-between select-none shrink-0 z-10">
+    <header className="h-[52px] border-b border-white/[0.08] bg-[#09090B]/80 backdrop-blur-md px-5 flex items-center justify-between select-none shrink-0 z-20">
+      {/* Breadcrumb & Environment Status */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-slateText-muted">Kavach AI</span>
-          <span className="text-obsidian-600">/</span>
-          <span className="text-xs font-bold text-slateText-primary">{activeViewTitle}</span>
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-obsidian-850 border border-obsidian-700 text-[10.5px] text-slateText-secondary font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-kavachEmerald"></span>
-            Air-Gapped Sandbox
-          </span>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono text-zinc-500 hover:text-zinc-400 transition-colors">Kavach AI</span>
+          <span className="text-zinc-600">/</span>
+          <span className="font-medium text-[#FAFAFA] tracking-tight">{activeViewTitle}</span>
+        </div>
+
+        <div className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[10.5px] text-zinc-400 font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"></span>
+          <span>Air-Gapped Sandbox</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Sub-16ms Pill */}
-        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-kavachEmerald/10 border border-kavachEmerald/25 text-[11px] text-kavachEmerald font-mono font-semibold">
-          <span>⚡ Sub-16ms AST</span>
+      {/* Right Actions */}
+      <div className="flex items-center gap-2.5">
+        {/* Latency Pill */}
+        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-400 font-mono font-medium">
+          <Zap className="w-3 h-3 fill-emerald-400 text-emerald-400" />
+          <span>&lt; 16ms AST</span>
         </div>
 
-        {/* GitHub link */}
+        {/* GitHub Star */}
         <a
           href="https://github.com/rajrajak99/kavach-ai"
           target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-1.5 text-xs font-medium text-slateText-secondary hover:text-slateText-primary px-2.5 py-1 rounded-md bg-obsidian-850 hover:bg-obsidian-800 border border-obsidian-700 transition-colors"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-white px-2.5 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all"
         >
-          <span>★ Star on GitHub</span>
-          <ExternalLink className="w-3 h-3 text-slateText-muted" />
+          <span>Star on GitHub</span>
+          <ExternalLink className="w-3 h-3 text-zinc-500" />
         </a>
 
-        {/* Enterprise Portal */}
+        {/* Enterprise Portal CTA */}
         <a
           href="https://github.com/rajrajak99/kavach-ai#enterprise"
           target="_blank"
-          rel="noreferrer"
-          className="text-xs font-bold px-3 py-1.5 rounded-md bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 hover:opacity-95 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all active:scale-95 inline-flex items-center gap-1"
+          rel="noopener noreferrer"
+          className="text-xs font-semibold px-3 py-1.5 rounded-md bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-sm transition-all active:scale-[0.98] inline-flex items-center gap-1"
         >
           Enterprise Portal
         </a>

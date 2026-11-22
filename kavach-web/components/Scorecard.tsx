@@ -18,7 +18,7 @@ export default function Scorecard({
   score = 100,
   grade = "A",
   gradeLabel = "Deterministic AST Verified",
-  color = "#22C58B",
+  color = "#10B981",
   cvssMax = 0,
   criticalCount = 0,
   warningCount = 0,
@@ -29,55 +29,58 @@ export default function Scorecard({
   const safeCvss = Number(cvssMax) || 0;
 
   return (
-    <div className="bg-obsidian-850 border border-obsidian-700 rounded-lg p-4 mb-4 shadow-md">
+    <div className="bg-[#111114] border border-white/[0.08] rounded-xl p-4 mb-4 relative overflow-hidden card-top-shine">
       {/* Top Score Row */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-3.5">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg font-mono"
+            className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg font-mono tracking-tight"
             style={{
-              backgroundColor: `${color}15`,
+              backgroundColor: `${color}14`,
               color: color,
-              border: `1px solid ${color}40`,
+              border: `1px solid ${color}30`,
             }}
           >
             {grade}
           </div>
           <div>
-            <div className="text-sm font-semibold text-slateText-primary flex items-center gap-2">
-              <span>Security Health: {clampedScore}/100</span>
-              <span className="text-[11px] px-2 py-0.5 rounded font-mono font-medium" style={{ backgroundColor: `${color}15`, color: color }}>
+            <div className="text-xs font-medium text-white flex items-center gap-2">
+              <span className="font-mono tabular-nums">Security Health: {clampedScore}/100</span>
+              <span
+                className="text-[10px] px-1.5 py-0.2 rounded font-mono font-semibold"
+                style={{ backgroundColor: `${color}14`, color: color, border: `1px solid ${color}25` }}
+              >
                 {isPassed ? (warningCount > 0 ? "WARNING" : "PASS") : "BLOCKED"}
               </span>
             </div>
-            <p className="text-[11.5px] text-slateText-secondary">{gradeLabel}</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">{gradeLabel}</p>
           </div>
         </div>
 
         <div className="text-right">
-          <span className="text-[10px] text-slateText-muted uppercase tracking-wider block">CVSS v3.1</span>
-          <span className="text-xs font-mono font-bold" style={{ color }}>
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono block">CVSS v3.1</span>
+          <span className="text-xs font-mono font-bold tabular-nums" style={{ color }}>
             MAX {safeCvss.toFixed(1)}
           </span>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full h-1.5 rounded-full bg-obsidian-700 overflow-hidden mb-3.5">
+      <div className="w-full h-1 rounded-full bg-white/[0.06] overflow-hidden mb-3">
         <div
           className="h-full transition-all duration-500 rounded-full"
-          style={{ width: `${Math.max(5, Math.min(100, clampedScore))}%`, backgroundColor: color }}
+          style={{ width: `${Math.max(4, Math.min(100, clampedScore))}%`, backgroundColor: color }}
         />
       </div>
 
       {/* Status Alert Banner */}
       <div
-        className={`px-3 py-2 rounded-md mb-3 flex items-center gap-2 text-xs font-medium ${
+        className={`px-3 py-2 rounded-lg mb-3 flex items-center gap-2 text-xs font-medium ${
           !isPassed
-            ? "bg-red-950/25 border border-red-500/30 text-red-400"
+            ? "bg-red-500/10 border border-red-500/20 text-red-400"
             : warningCount > 0
-            ? "bg-amber-950/25 border border-amber-500/30 text-amber-400"
-            : "bg-emerald-950/25 border border-emerald-500/30 text-emerald-400"
+            ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+            : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
         }`}
       >
         {!isPassed ? (
@@ -88,7 +91,7 @@ export default function Scorecard({
         ) : warningCount > 0 ? (
           <>
             <AlertOctagon className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>PASSED WITH WARNINGS — 0 Critical, {warningCount} Non-blocking Issue(s)</span>
+            <span>PASSED WITH ADVISORY — 0 Critical, {warningCount} Non-blocking Issue(s)</span>
           </>
         ) : (
           <>
@@ -102,25 +105,25 @@ export default function Scorecard({
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => onDownloadReport("soc2")}
-          className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 border border-obsidian-700 text-[11px] font-medium text-slateText-secondary hover:text-slateText-primary transition-colors"
+          className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-[11px] font-medium text-zinc-300 hover:text-white transition-all"
         >
-          <FileText className="w-3.5 h-3.5 text-kavachGold" />
+          <FileText className="w-3 h-3 text-amber-400" />
           <span>SOC 2 Report</span>
         </button>
 
         <button
           onClick={() => onDownloadReport("json")}
-          className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 border border-obsidian-700 text-[11px] font-medium text-slateText-secondary hover:text-slateText-primary transition-colors"
+          className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-[11px] font-medium text-zinc-300 hover:text-white transition-all"
         >
-          <Download className="w-3.5 h-3.5 text-kavachEmerald" />
+          <Download className="w-3 h-3 text-emerald-400" />
           <span>JSON Audit</span>
         </button>
 
         <button
           onClick={() => onDownloadReport("summary")}
-          className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 border border-obsidian-700 text-[11px] font-medium text-slateText-secondary hover:text-slateText-primary transition-colors"
+          className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-[11px] font-medium text-zinc-300 hover:text-white transition-all"
         >
-          <FileText className="w-3.5 h-3.5 text-blue-400" />
+          <FileText className="w-3 h-3 text-sky-400" />
           <span>Summary (.md)</span>
         </button>
       </div>
