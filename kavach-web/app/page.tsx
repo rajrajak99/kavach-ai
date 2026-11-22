@@ -129,6 +129,25 @@ export default function Home() {
     runScan(updatedCode, filename);
   };
 
+  const LANGUAGES = [
+    { id: "python", name: "Python", ext: "py" },
+    { id: "javascript", name: "JavaScript", ext: "js" },
+    { id: "typescript", name: "TypeScript", ext: "ts" },
+    { id: "cpp", name: "C / C++", ext: "cpp" },
+    { id: "go", name: "Go", ext: "go" },
+    { id: "rust", name: "Rust", ext: "rs" },
+    { id: "java", name: "Java", ext: "java" },
+  ];
+
+  const handleLanguageChange = (newLang: string) => {
+    setLanguage(newLang);
+    const matched = LANGUAGES.find((l) => l.id === newLang);
+    if (matched) {
+      const baseName = filename.split(".")[0] || "snippet";
+      setFilename(`${baseName}.${matched.ext}`);
+    }
+  };
+
   const handleLoadSample = (sampleKey: string) => {
     const s = SAMPLES[sampleKey];
     if (s) {
@@ -217,29 +236,54 @@ ${f.fixed_code}
           {/* Editor Header Bar */}
           <div className="h-11 bg-obsidian-900 border-b border-obsidian-700/80 px-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span className="font-mono text-xs font-semibold text-slateText-primary">
-                {filename}
-              </span>
+              <span className="w-2.5 h-2.5 rounded-full bg-kavachEmerald"></span>
+              <input
+                type="text"
+                value={filename}
+                onChange={(e) => setFilename(e.target.value)}
+                className="bg-transparent border-b border-transparent hover:border-obsidian-700 focus:border-kavachEmerald outline-none font-mono text-xs font-semibold text-slateText-primary px-1 py-0.5 rounded transition-all w-44"
+                title="Click to edit filename"
+              />
               <span className="text-[10px] text-slateText-muted font-mono">• UTF-8</span>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Sample Selector */}
+              {/* Language Selector Dropdown */}
+              <div className="flex items-center gap-1.5 bg-obsidian-850 border border-obsidian-700 rounded px-2 py-1">
+                <span className="text-[10.5px] font-semibold text-slateText-muted uppercase">Lang:</span>
+                <select
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  className="bg-transparent text-slateText-primary text-xs font-medium cursor-pointer outline-none"
+                >
+                  <option value="python" className="bg-obsidian-900 text-slateText-primary">🐍 Python</option>
+                  <option value="javascript" className="bg-obsidian-900 text-slateText-primary">⚡ JavaScript</option>
+                  <option value="typescript" className="bg-obsidian-900 text-slateText-primary">🔷 TypeScript</option>
+                  <option value="cpp" className="bg-obsidian-900 text-slateText-primary">⚙️ C / C++</option>
+                  <option value="go" className="bg-obsidian-900 text-slateText-primary">🐹 Go</option>
+                  <option value="rust" className="bg-obsidian-900 text-slateText-primary">🦀 Rust</option>
+                  <option value="java" className="bg-obsidian-900 text-slateText-primary">☕ Java</option>
+                </select>
+              </div>
+
+              {/* Sample / Demo Selector */}
               <select
-                onChange={(e) => handleLoadSample(e.target.value)}
-                className="bg-obsidian-800 border border-obsidian-700 text-slateText-secondary hover:text-slateText-primary rounded px-2.5 py-1 text-xs font-medium cursor-pointer outline-none focus:border-obsidian-600"
-                defaultValue="fastapi_sqli"
+                onChange={(e) => {
+                  if (e.target.value) handleLoadSample(e.target.value);
+                }}
+                className="bg-obsidian-850 border border-obsidian-700 text-slateText-secondary hover:text-slateText-primary rounded px-2.5 py-1 text-xs font-medium cursor-pointer outline-none focus:border-kavachEmerald transition-colors"
+                defaultValue=""
               >
-                <option value="fastapi_sqli">💉 FastAPI SQLi (Py)</option>
-                <option value="secrets_leak">🔑 Secret Leaks (Py)</option>
-                <option value="node_cmd_inj">⚡ Command Inj (JS)</option>
-                <option value="cpp_buffer">🛡️ Buffer Overflow (C++)</option>
+                <option value="" disabled>⚡ Demos / Samples ▾</option>
+                <option value="fastapi_sqli" className="bg-obsidian-900">💉 FastAPI SQLi (Py)</option>
+                <option value="secrets_leak" className="bg-obsidian-900">🔑 Secret Leaks (Py)</option>
+                <option value="node_cmd_inj" className="bg-obsidian-900">⚡ Command Inj (JS)</option>
+                <option value="cpp_buffer" className="bg-obsidian-900">🛡️ Buffer Overflow (C++)</option>
               </select>
 
               <button
                 onClick={() => setCode("")}
-                className="px-2.5 py-1 rounded bg-obsidian-800 hover:bg-obsidian-700 text-slateText-muted hover:text-slateText-primary text-xs font-medium transition-colors"
+                className="px-2.5 py-1 rounded bg-obsidian-850 hover:bg-obsidian-800 text-slateText-muted hover:text-slateText-primary text-xs font-medium transition-colors border border-obsidian-700"
               >
                 Clear
               </button>
@@ -247,7 +291,7 @@ ${f.fixed_code}
               <button
                 onClick={() => runScan(code, filename)}
                 disabled={isScanning}
-                className="flex items-center gap-1.5 px-3 py-1 rounded bg-kavachEmerald text-obsidian-950 hover:bg-emerald-400 text-xs font-semibold shadow-sm transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1 rounded bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 font-bold text-xs shadow-[0_0_12px_rgba(16,185,129,0.3)] hover:opacity-95 transition-all active:scale-95"
               >
                 <Play className="w-3.5 h-3.5 fill-obsidian-950" />
                 <span>{isScanning ? "Scanning..." : "⚡ Inspect Code"}</span>
