@@ -35,17 +35,19 @@ export default function Header({ activeViewTitle = "Code Inspector" }: HeaderPro
           rel="noreferrer"
           className="flex items-center gap-1.5 text-xs font-medium text-slateText-secondary hover:text-slateText-primary px-2.5 py-1 rounded-md bg-obsidian-850 hover:bg-obsidian-800 border border-obsidian-700 transition-colors"
         >
-          <span>★ Star 56</span>
+          <span>★ Star on GitHub</span>
           <ExternalLink className="w-3 h-3 text-slateText-muted" />
         </a>
 
         {/* Enterprise Portal */}
-        <button
-          onClick={() => alert("Enterprise CISO Console active in demo mode.")}
-          className="text-xs font-bold px-3 py-1.5 rounded-md bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 hover:opacity-95 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+        <a
+          href="https://github.com/rajrajak99/kavach-ai#enterprise"
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs font-bold px-3 py-1.5 rounded-md bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 hover:opacity-95 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all active:scale-95 inline-flex items-center gap-1"
         >
           Enterprise Portal
-        </button>
+        </a>
       </div>
     </header>
   );

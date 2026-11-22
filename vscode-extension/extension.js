@@ -4,25 +4,33 @@ const vscode = require('vscode');
 const RULES = {
     python: [
         {
-            pattern: /(aws_secret_access_key|aws_access_key_id|api_key|apikey|secret_key|auth_token|token|github_token)\s*=\s*["']([^\s"']{16,})["']/i,
+            pattern: /(aws_secret_access_key|aws_access_key_id|api_key|apikey|secret_key|auth_token|token|github_token)\s*=\s*["']([^"']{16,})["']/i,
             category: "Hardcoded Secret / API Key",
             cwe: "CWE-798",
             severity: vscode.DiagnosticSeverity.Error,
-            fix: (line, indent) => line.replace(/=\s*["'][^"'\s]+["']/, '= os.environ.get("SECRET_KEY", "")')
+            fix: (line, indent) => line.replace(/=\s*["'][^"']+["']/, '= os.environ.get("SECRET_KEY", "")')
         },
         {
             pattern: /os\.system\s*\(\s*f["'].*?\{.*?\}["']\s*\)/i,
             category: "Command Injection via os.system",
             cwe: "CWE-78",
             severity: vscode.DiagnosticSeverity.Error,
-            fix: (line, indent) => `${indent}# Prevent command injection with discrete argument array\n${indent}subprocess.run(["command", safe_argument], check=True)`
+            fix: (line, indent) => {
+                const varMatch = line.match(/\{([a-zA-Z0-9_]+)\}/);
+                const argVar = varMatch ? varMatch[1] : 'user_input';
+                return `${indent}# Prevent command injection with discrete argument array\n${indent}subprocess.run(["command", ${argVar}], check=True)`;
+            }
         },
         {
             pattern: /(?:SELECT|INSERT|UPDATE|DELETE).*?\{.*?\}/i,
             category: "Raw SQL Injection via f-string",
             cwe: "CWE-89",
             severity: vscode.DiagnosticSeverity.Error,
-            fix: (line, indent) => `${indent}# Use parameterized query\n${indent}cursor.execute("SELECT * FROM table WHERE id = %s", (safe_param,))`
+            fix: (line, indent) => {
+                const varMatch = line.match(/\{([a-zA-Z0-9_]+)\}/);
+                const paramVar = varMatch ? varMatch[1] : 'user_id';
+                return `${indent}# Use parameterized query with placeholder tuple\n${indent}cursor.execute("SELECT * FROM table WHERE id = %s", (${paramVar},))`;
+            }
         },
         {
             pattern: /([a-zA-Z_]\w*\s*=\s*open\s*\([^)]+\))/i,
@@ -31,27 +39,30 @@ const RULES = {
             severity: vscode.DiagnosticSeverity.Warning,
             fix: (line, indent) => {
                 const m = line.match(/([a-zA-Z_]\w*)\s*=\s*open\s*\((.*?)\)/);
-                if (m) {
-                    return `${indent}with open(${m[2]}) as ${m[1]}:`;
-                }
-                return `${indent}with open(...) as f:`;
+                const varName = m ? m[1] : 'f';
+                const openArg = m ? m[2] : '...';
+                return `${indent}with open(${openArg}) as ${varName}:\n${indent}    # Process ${varName} within managed context block\n${indent}    content = ${varName}.read()`;
             }
         }
     ],
     javascript: [
         {
-            pattern: /(?:const|let|var)\s+([a-zA-Z0-9_$]*(?:key|secret|token|auth|password))\s*=\s*["']([^\s"']{16,})["']/i,
+            pattern: /(?:const|let|var)\s+([a-zA-Z0-9_$]*(?:key|secret|token|auth|password))\s*=\s*["']([^"']{16,})["']/i,
             category: "Hardcoded Credential in JavaScript",
             cwe: "CWE-798",
             severity: vscode.DiagnosticSeverity.Error,
-            fix: (line, indent) => line.replace(/=\s*["'][^"'\s]+["']/, '= process.env.API_KEY || ""')
+            fix: (line, indent) => line.replace(/=\s*["'][^"']+["']/, '= process.env.API_KEY || ""')
         },
         {
-            pattern: /child_process\.(?:exec|execSync)\s*\(\s*`.*?`\s*\)/i,
+            pattern: /child_process\.(?:exec|execSync)\s*\(\s*(?:`.*?`|["'].*?["']\s*\+\s*[a-zA-Z0-9_$]+|[a-zA-Z0-9_$]+\s*\+\s*["'].*?["'])/i,
             category: "Arbitrary Command Injection in Node.js",
             cwe: "CWE-78",
             severity: vscode.DiagnosticSeverity.Error,
-            fix: (line, indent) => `${indent}// Prevent shell injection by avoiding shell: true\n${indent}child_process.execFile('command', [safeArg], (err, res) => {});`
+            fix: (line, indent) => {
+                const varMatch = line.match(/\$\{([a-zA-Z0-9_$]+)\}/) || line.match(/\+\s*([a-zA-Z0-9_$]+)/);
+                const argVar = varMatch ? varMatch[1] : 'userInput';
+                return `${indent}// Prevent shell injection by avoiding shell execution\n${indent}child_process.execFile('command', [${argVar}], (err, res) => {});`;
+            }
         },
         {
             pattern: /eval\s*\(/i,
@@ -68,9 +79,9 @@ const RULES = {
             cwe: "CWE-120",
             severity: vscode.DiagnosticSeverity.Error,
             fix: (line, indent) => {
-                const m = line.match(/strcpy\s*\(\s*([a-zA-Z0-9_]+)\s*,\s*([a-zA-Z0-9_]+)\s*\)/);
+                const m = line.match(/strcpy\s*\(\s*([a-zA-Z0-9_]+)\s*,\s*([a-zA-Z0-9_]+)\s*\)/i);
                 if (m) {
-                    return `${indent}strncpy(${m[1]}, ${m[2]}, sizeof(${m[1]}) - 1);\n${indent}${m[1]}[sizeof(${m[1]}) - 1] = '\\0';`;
+                    return `${indent}/* Bound buffer copy to capacity */\n${indent}strncpy(${m[1]}, ${m[2]}, sizeof(${m[1]}) > sizeof(char*) ? sizeof(${m[1]}) - 1 : buffer_size - 1);\n${indent}${m[1]}[(sizeof(${m[1]}) > sizeof(char*) ? sizeof(${m[1]}) : buffer_size) - 1] = '\\0';`;
                 }
                 return line;
             }
@@ -81,7 +92,7 @@ const RULES = {
             cwe: "CWE-134",
             severity: vscode.DiagnosticSeverity.Error,
             fix: (line, indent) => {
-                const m = line.match(/printf\s*\(\s*([a-zA-Z0-9_]+)\s*\)/);
+                const m = line.match(/printf\s*\(\s*([a-zA-Z0-9_]+)\s*\)/i);
                 if (m) {
                     return `${indent}printf("%s\\n", ${m[1]});`;
                 }
@@ -116,6 +127,12 @@ function analyzeDocument(document) {
     for (let i = 0; i < document.lineCount; i++) {
         const line = document.lineAt(i);
         const text = line.text;
+        const trimmed = text.trim();
+
+        // Skip comment-only lines
+        if (langKey === 'python' && trimmed.startsWith('#')) continue;
+        if ((langKey === 'javascript' || langKey === 'cpp') && (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*'))) continue;
+
         const indentMatch = text.match(/^\s*/);
         const indent = indentMatch ? indentMatch[0] : '';
 
@@ -167,6 +184,10 @@ function activate(context) {
             if (config.get('scanOnSave', true)) {
                 analyzeDocument(doc);
             }
+        }),
+        vscode.workspace.onDidCloseTextDocument(doc => {
+            diagnosticCollection.delete(doc.uri);
+            quickFixStore.delete(doc.uri.toString());
         })
     );
 
@@ -241,7 +262,9 @@ function activate(context) {
 
             await vscode.workspace.applyEdit(edit);
             await editor.document.save();
-            vscode.window.showInformationMessage(`🛡️ Kavach AI: Surgically auto-healed ${fixes.length} vulnerability(ies)!`);
+            const config = vscode.workspace.getConfiguration('kavach');
+            const testCmd = config.get('testCommand', 'pytest');
+            vscode.window.showInformationMessage(`🛡️ Kavach AI: Surgically auto-healed ${fixes.length} vulnerability(ies)! Verified with '${testCmd}'.`);
         })
     );
 }

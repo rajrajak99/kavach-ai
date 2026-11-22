@@ -15,11 +15,23 @@ import {
 export default function BenchmarkView() {
   const [isRunningTest, setIsRunningTest] = useState(false);
   const [benchTime, setBenchTime] = useState<number | null>(14.6);
+  const benchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (benchTimerRef.current) {
+        clearTimeout(benchTimerRef.current);
+      }
+    };
+  }, []);
 
   const runLiveBench = () => {
     setIsRunningTest(true);
     setBenchTime(null);
-    setTimeout(() => {
+    if (benchTimerRef.current) {
+      clearTimeout(benchTimerRef.current);
+    }
+    benchTimerRef.current = setTimeout(() => {
       setBenchTime(Number((12 + Math.random() * 3.5).toFixed(1)));
       setIsRunningTest(false);
     }, 700);

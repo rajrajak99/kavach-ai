@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 from pathlib import Path
 import pytest
@@ -28,7 +29,7 @@ def test_self_healing_success(tmp_path):
     result = runner.heal_file(
         str(target),
         findings,
-        test_command="python -c \"import ast; ast.parse(open('app_secret.py').read())\"",
+        test_command=f'"{sys.executable}" -c "import ast, os; ast.parse(open(\'app_secret.py\').read())"',
         working_dir=str(tmp_path)
     )
 
@@ -56,7 +57,7 @@ def test_self_healing_rollback_on_test_failure(tmp_path):
     result = runner.heal_file(
         str(target),
         findings,
-        test_command="python -c \"import sys; sys.exit(2)\"",
+        test_command=f'"{sys.executable}" -c "import sys; sys.exit(2)"',
         working_dir=str(tmp_path)
     )
 
@@ -88,7 +89,7 @@ def test_self_healing_syntax_guard(tmp_path):
     result = runner.heal_file(
         str(target),
         [broken_finding],
-        test_command="python -c \"exit(0)\"",
+        test_command=f'"{sys.executable}" -c "import sys; sys.exit(0)"',
         working_dir=str(tmp_path)
     )
 

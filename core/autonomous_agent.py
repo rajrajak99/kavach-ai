@@ -5,6 +5,7 @@ and triggers automatic GitHub auto-merge (gh pr merge --auto) upon 100% test pas
 """
 
 import os
+import ast
 import subprocess
 import tempfile
 import shutil
@@ -44,7 +45,30 @@ class AutonomousSecurityAgent:
         Safely applies patch in-memory or on working tree, tests for regressions,
         and determines auto-merge eligibility.
         """
-        full_target = self.repo_dir / target_file
+        try:
+            resolved_repo = self.repo_dir.resolve()
+            full_target = (resolved_repo / target_file).resolve()
+            if not full_target.is_relative_to(resolved_repo):
+                return RemediationResult(
+                    success=False,
+                    branch_name="",
+                    patch_applied=False,
+                    tests_passed=False,
+                    auto_merge_eligible=False,
+                    output_log="",
+                    error=f"Security violation: path traversal detected for {target_file}"
+                )
+        except Exception as e:
+            return RemediationResult(
+                success=False,
+                branch_name="",
+                patch_applied=False,
+                tests_passed=False,
+                auto_merge_eligible=False,
+                output_log="",
+                error=f"Invalid target file path {target_file}: {e}"
+            )
+
         if not full_target.exists():
             return RemediationResult(
                 success=False,
@@ -107,6 +131,16 @@ class AutonomousSecurityAgent:
                 except Exception as e:
                     tests_passed = False
                     test_log = f"Test execution failed: {e}"
+            else:
+                # Genuinely verify syntax integrity when test command is omitted
+                if full_target.suffix == ".py":
+                    try:
+                        ast.parse(modified_code)
+                        test_log = "Syntax integrity verified via AST parser."
+                        tests_passed = True
+                    except SyntaxError as se:
+                        tests_passed = False
+                        test_log = f"Syntax verification failed: {se}"
         finally:
             # Revert changes to guarantee workspace stays clean
             try:

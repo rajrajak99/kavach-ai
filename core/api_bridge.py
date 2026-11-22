@@ -6,7 +6,13 @@ High-speed CLI bridge connecting Next.js / external frontends to SurgicalAnalyze
 import sys
 import json
 import argparse
+import re
+import ast
 from typing import Dict, Any
+from pathlib import Path
+_REPO_ROOT = str(Path(__file__).resolve().parent.parent)
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 from core.surgical_analyzer import SurgicalAnalyzer
 from core.diff_parser import DiffParser
@@ -16,11 +22,19 @@ def scan_snippet(code: str, filename: str = "payment_service.py") -> Dict[str, A
     parser = DiffParser()
     analyzer = SurgicalAnalyzer()
 
-    # Determine filename heuristic based on language markers if generic
-    if filename in ("snippet.py", "payment_service.py") and ("function " in code or "const " in code or "require(" in code):
-        filename = "auth_handler.js"
-    elif filename in ("snippet.py", "payment_service.py") and ("#include" in code or "std::" in code):
-        filename = "buffer_alloc.cpp"
+    # Determine filename heuristic based on robust AST-first language detection
+    if filename in ("snippet.py", "payment_service.py"):
+        if "#include" in code or "std::" in code:
+            filename = "buffer_alloc.cpp"
+        elif re.search(r'^\s*package\s+[a-zA-Z0-9_]+', code, re.MULTILINE):
+            filename = "service.go"
+        else:
+            try:
+                ast.parse(code)
+                # Valid Python syntax - retain Python filename
+            except SyntaxError:
+                if re.search(r'\b(const|let|var|function)\s+[a-zA-Z0-9_$]+', code) or "require(" in code or "export " in code:
+                    filename = "auth_handler.js"
 
     diffs = [parser.parse_raw_snippet(filename, code)]
     res = analyzer.generate_pull_request_review(diffs)

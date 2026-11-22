@@ -107,14 +107,24 @@ class ProjectASTScanner:
                 f.write(zip_bytes)
             
             try:
+                MAX_FILE_SIZE = 15 * 1024 * 1024     # 15 MB per file
+                MAX_TOTAL_SIZE = 100 * 1024 * 1024  # 100 MB total uncompressed
+                total_uncompressed = 0
+
                 with zipfile.ZipFile(zip_path, 'r') as z:
-                    for filename in z.namelist():
-                        norm_name = filename.replace("\\", "/")
+                    for info in z.infolist():
+                        if info.file_size > MAX_FILE_SIZE:
+                            raise ValueError(f"Zip entry '{info.filename}' exceeds maximum allowed size (15MB).")
+                        total_uncompressed += info.file_size
+                        if total_uncompressed > MAX_TOTAL_SIZE:
+                            raise ValueError("Total uncompressed zip archive exceeds maximum allowed size (100MB).")
+
+                        norm_name = info.filename.replace("\\", "/")
                         ext = Path(norm_name).suffix.lower()
                         is_manifest = any(m in norm_name.lower() for m in ("requirements", "pyproject.toml", "package.json"))
                         if (ext in self.SUPPORTED_EXTS or is_manifest) and not self.diff_parser.is_noise_file(norm_name):
                             try:
-                                content = z.read(filename).decode('utf-8', errors='ignore')
+                                content = z.read(info.filename).decode('utf-8', errors='ignore')
                                 file_contents[norm_name] = content
                             except Exception:
                                 pass
@@ -270,38 +280,47 @@ class ProjectASTScanner:
                             if sig.file_path == fpath:
                                 continue
 
-                            # Check if caller passes dynamic/tainted arguments
-                            if node.args:
-                                arg0 = node.args[0]
-                                is_tainted = self._is_argument_tainted(arg0)
-                                if is_tainted:
-                                    call_line = node.lineno
-                                    call_snippet = lines[call_line - 1].strip() if 0 < call_line <= len(lines) else f"{callee_name}(...)"
+                            # Check if caller passes dynamic/tainted arguments (positional or keywords)
+                            is_tainted = False
+                            for arg in node.args:
+                                if self._is_argument_tainted(arg):
+                                    is_tainted = True
+                                    break
+                            if not is_tainted:
+                                for kw in node.keywords:
+                                    if self._is_argument_tainted(kw.value):
+                                        is_tainted = True
+                                        break
 
-                                    finding = CrossFileTaintFinding(
-                                        severity="CRITICAL",
-                                        category=f"Cross-File Inter-Procedural {sig.sink_type} Injection (Taint Trace)",
-                                        source_file=fpath,
-                                        source_line=call_line,
-                                        call_file=fpath,
-                                        call_line=call_line,
-                                        sink_file=sig.file_path,
-                                        sink_line=sig.sink_line,
-                                        sink_function=sig.func_name,
-                                        tainted_param=sig.sink_param,
-                                        cwe_id=sig.cwe_id,
-                                        explanation=(
-                                            f"Untrusted input originating in '{fpath}' at line {call_line} is passed into imported "
-                                            f"function '{sig.func_name}()' and reaches an unparameterized {sig.sink_type} sink in '{sig.file_path}' at line {sig.sink_line}."
-                                        ),
-                                        source_snippet=call_snippet,
-                                        sink_snippet=sig.sink_snippet,
-                                        remediation_patch=(
-                                            f"// In {fpath}: Pass clean bound parameters instead of raw tainted string\n"
-                                            f"// In {sig.file_path}: Parameterize query sink with placeholders (? or %s)"
-                                        )
+                            if is_tainted:
+                                call_line = node.lineno
+                                call_snippet = lines[call_line - 1].strip() if 0 < call_line <= len(lines) else f"{callee_name}(...)"
+                                comment_pfx = "//" if fpath.endswith((".js", ".ts", ".go", ".cpp", ".c", ".h")) else "#"
+
+                                finding = CrossFileTaintFinding(
+                                    severity="CRITICAL",
+                                    category=f"Cross-File Inter-Procedural {sig.sink_type} Injection (Taint Trace)",
+                                    source_file=fpath,
+                                    source_line=call_line,
+                                    call_file=fpath,
+                                    call_line=call_line,
+                                    sink_file=sig.file_path,
+                                    sink_line=sig.sink_line,
+                                    sink_function=sig.func_name,
+                                    tainted_param=sig.sink_param,
+                                    cwe_id=sig.cwe_id,
+                                    explanation=(
+                                        f"Untrusted input originating in '{fpath}' at line {call_line} is passed into imported "
+                                        f"function '{sig.func_name}()' and reaches an unparameterized {sig.sink_type} sink in '{sig.file_path}' at line {sig.sink_line}."
+                                    ),
+                                    source_snippet=call_snippet,
+                                    sink_snippet=sig.sink_snippet,
+                                    remediation_patch=(
+                                        f"{comment_pfx} In {fpath}: Pass clean bound parameters instead of raw tainted string\n"
+                                        f"{comment_pfx} In {sig.file_path}: Parameterize query sink with placeholders (? or %s)"
                                     )
-                                    cross_file_findings.append(finding)
+                                )
+                                cross_file_findings.append(finding)
 
         total_crit += len(cross_file_findings)
         total_issues = total_crit + total_sec + total_perf

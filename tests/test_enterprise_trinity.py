@@ -65,10 +65,14 @@ func main() {
 
 
 def test_sca_osv_api_offline_fallback():
+    from unittest.mock import patch
+    import urllib.error
     scanner = SCAScanner()
-    # Query with short timeout — should return empty list gracefully without throwing an exception
-    vulns = scanner.query_osv_api("requests", "2.28.0", ecosystem="PyPI")
-    assert isinstance(vulns, list)
+    # Mock network timeout/offline — should return empty list gracefully without throwing an exception
+    with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Connection refused")):
+        vulns = scanner.query_osv_api("requests", "2.28.0", ecosystem="PyPI")
+        assert vulns == []
+
 
 
 # ==========================================
@@ -250,7 +254,8 @@ def test_enterprise_slack_payload_formatting():
     assert "blocks" in payload
     assert len(payload["blocks"]) >= 4
     header = payload["blocks"][0]["text"]["text"]
-    assert "CRITICAL" in payload["blocks"][1]["text"]["text"] or "Kavach AI" in header
+    assert "Kavach AI" in header
+    assert "CRITICAL" in payload["blocks"][1]["text"]["text"]
 
 
 def test_enterprise_jira_and_linear_payloads():

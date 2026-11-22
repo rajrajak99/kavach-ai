@@ -102,7 +102,7 @@ export default function PricingView() {
               isAnnual ? "bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.3)]" : "text-slateText-muted hover:text-slateText-secondary"
             }`}
           >
-            <span>Annual (20% OFF)</span>
+            <span>Annual (2 Months Free)</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-obsidian-950/40 text-emerald-200">Save $198+</span>
           </button>
         </div>
@@ -148,9 +148,9 @@ export default function PricingView() {
                 if (p.name.includes("Free")) {
                   alert("You are on the Free Community tier.");
                 } else if (p.name.includes("Enterprise")) {
-                  window.open("mailto:team.kavachai@gmail.com?subject=Enterprise%20Plan%20Inquiry", "_blank");
+                  window.open("mailto:team.kavachai@gmail.com?subject=Enterprise%20Plan%20Inquiry", "_blank", "noopener,noreferrer");
                 } else {
-                  window.open("https://buy.stripe.com/test_placeholder", "_blank");
+                  window.open("https://github.com/rajrajak99/kavach-ai#pricing", "_blank", "noopener,noreferrer");
                 }
               }}
               className={`w-full py-2 rounded-lg text-xs font-bold transition-all ${

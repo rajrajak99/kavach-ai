@@ -7,7 +7,7 @@ unpinned base images, privileged mode escapes, exposed databases, and hardcoded 
 import re
 from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set, Tuple
 
 @dataclass
 class ContainerFinding:
@@ -18,6 +18,16 @@ class ContainerFinding:
     title: str
     description: str
     remediation: str
+
+def is_compose_file(file_path: str) -> bool:
+    """Checks if a file is a Docker Compose manifest."""
+    norm = file_path.replace("\\", "/").lower()
+    filename = norm.split("/")[-1]
+    if "docker-compose" in filename and filename.endswith((".yml", ".yaml")):
+        return True
+    if filename.startswith("compose") and filename.endswith((".yml", ".yaml")):
+        return True
+    return False
 
 def is_production_compose(file_path: str) -> bool:
     """
@@ -73,14 +83,30 @@ class ContainerSecurityScanner:
         Intermediate build stages (AS builder, AS base, AS installer) are never flagged.
         """
         findings: List[ContainerFinding] = []
-        lines = content.splitlines()
+        raw_lines = content.splitlines()
+
+        # Pre-process instructions to join lines ending with backslash \
+        instructions: List[Tuple[int, str]] = []
+        buf: List[str] = []
+        start_line = 1
+        for line_no, raw_line in enumerate(raw_lines, start=1):
+            if not buf:
+                start_line = line_no
+            buf.append(raw_line)
+            stripped_line = raw_line.strip()
+            if not stripped_line.endswith("\\"):
+                joined_text = " ".join(p.strip().rstrip("\\").strip() for p in buf)
+                instructions.append((start_line, joined_text))
+                buf = []
+        if buf:
+            joined_text = " ".join(p.strip().rstrip("\\").strip() for p in buf)
+            instructions.append((start_line, joined_text))
 
         stages: List[Dict[str, Any]] = []
         known_aliases: Set[str] = set()
         current_stage: Optional[Dict[str, Any]] = None
 
-        for idx, line in enumerate(lines, start=1):
-            stripped = line.strip()
+        for idx, stripped in instructions:
             if not stripped or stripped.startswith("#"):
                 continue
 
@@ -205,10 +231,10 @@ class ContainerSecurityScanner:
 
             # HEALTHCHECK check: if no stage has HEALTHCHECK and file has substance
             has_any_healthcheck = any(s["has_healthcheck"] for s in stages)
-            if not has_any_healthcheck and len(lines) > 5 and not final_stage["is_scratch"]:
+            if not has_any_healthcheck and len(raw_lines) > 5 and not final_stage["is_scratch"]:
                 findings.append(ContainerFinding(
                     file_path=file_path,
-                    line_number=len(lines),
+                    line_number=len(raw_lines),
                     severity="LOW",
                     rule_id="DOCKER-MISSING-HEALTHCHECK",
                     title="Missing Container HEALTHCHECK Instruction",
@@ -259,10 +285,11 @@ class ContainerSecurityScanner:
                     remediation="Use a bridge or overlay docker network instead of 'network_mode: host'."
                 ))
 
-            # 3. Sensitive Ports Bound to 0.0.0.0 (Production Compose Files Only)
+            # 3. Sensitive Ports Bound to 0.0.0.0 or [::] (Production Compose Files Only)
             if is_production_compose(file_path):
-                if "127.0.0.1" not in stripped and "localhost" not in stripped:
-                    port_match = re.search(r'["\']?(?:0\.0\.0\.0:)?(\d{2,5}):(\d{2,5})["\']?', stripped)
+                if not any(lh in stripped for lh in ("127.0.0.1", "localhost", "[::1]", "::1")):
+                    # Match standard host:container or IPv6 [::]:host:container or ::host:container
+                    port_match = re.search(r'["\']?(?:(?:0\.0\.0\.0|\[::\]|::|\[::0\]):)?(\d{2,5}):(\d{2,5})["\']?', stripped)
                     if port_match:
                         host_port = port_match.group(1)
                         container_port = port_match.group(2)
@@ -277,6 +304,22 @@ class ContainerSecurityScanner:
                                     description=f"Service '{current_service}' exposes {service_name} port {sensitive_p} directly to the public network interface in production compose.",
                                     remediation=f"Bind port to loopback only (e.g. '127.0.0.1:{host_port}:{container_port}') or access via internal Docker network."
                                 ))
+
+                    # Match long-form published: port syntax
+                    pub_match = re.search(r'published:\s*["\']?(\d{2,5})["\']?', stripped)
+                    if pub_match:
+                        pub_port = pub_match.group(1)
+                        if pub_port in self.SENSITIVE_PORTS:
+                            service_name = self.SENSITIVE_PORTS[pub_port]
+                            findings.append(ContainerFinding(
+                                file_path=file_path,
+                                line_number=idx,
+                                severity="HIGH",
+                                rule_id="COMPOSE-EXPOSED-DATABASE-PORT",
+                                title=f"Internal {service_name} Port ({pub_port}) Exposed Publicly",
+                                description=f"Service '{current_service}' exposes {service_name} port {pub_port} directly via published port configuration in production compose.",
+                                remediation=f"Do not publish port {pub_port} directly on host in production. Access via internal Docker network."
+                            ))
 
             # 4. Hardcoded Passwords in Environment
             secret_match = self.SECRET_KEY_PATTERN.search(stripped)
@@ -304,7 +347,7 @@ class ContainerSecurityScanner:
             lower = fpath.lower()
             if "dockerfile" in lower:
                 findings.extend(self.scan_dockerfile(content, file_path=fpath))
-            elif any(c in lower for c in ("docker-compose", "compose.yml", "compose.yaml")):
+            elif is_compose_file(fpath):
                 findings.extend(self.scan_docker_compose(content, file_path=fpath))
         return findings
 
@@ -317,14 +360,17 @@ class ContainerSecurityScanner:
         for f in p.rglob("*"):
             if f.is_file() and not any(part.startswith(".") or part in ("node_modules", "venv", ".venv") for part in f.parts):
                 lower = f.name.lower()
-                if "dockerfile" in lower or any(c in lower for c in ("docker-compose", "compose.yml", "compose.yaml")):
+                rel = str(f.relative_to(p)).replace("\\", "/")
+                if "dockerfile" in lower:
                     try:
                         content = f.read_text(encoding="utf-8", errors="replace")
-                        rel = str(f.relative_to(p)).replace("\\", "/")
-                        if "dockerfile" in lower:
-                            findings.extend(self.scan_dockerfile(content, file_path=rel))
-                        else:
-                            findings.extend(self.scan_docker_compose(content, file_path=rel))
+                        findings.extend(self.scan_dockerfile(content, file_path=rel))
+                    except Exception:
+                        pass
+                elif is_compose_file(f.name):
+                    try:
+                        content = f.read_text(encoding="utf-8", errors="replace")
+                        findings.extend(self.scan_docker_compose(content, file_path=rel))
                     except Exception:
                         pass
         return findings

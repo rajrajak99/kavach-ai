@@ -37,11 +37,15 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install requests cryptography
+        if [ -f "${{ github.action_path }}/requirements.txt" ]; then
+          pip install -r "${{ github.action_path }}/requirements.txt"
+        else
+          pip install requests cryptography pyyaml
+        fi
     - name: Run Kavach AI CI Gate
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
         KAVACH_LICENSE_KEY: ${{ inputs.license-key }}
         INPUT_SCAN_PATH: ${{ inputs.scan-path }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}

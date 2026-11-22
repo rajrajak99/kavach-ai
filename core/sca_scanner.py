@@ -143,6 +143,23 @@ class SCAScanner:
         }
     }
 
+    PACKAGE_IMPORT_MAPPING: Dict[str, List[str]] = {
+        "pillow": ["pil"],
+        "pyyaml": ["yaml"],
+        "beautifulsoup4": ["bs4"],
+        "psycopg2-binary": ["psycopg2"],
+        "psycopg2": ["psycopg2"],
+        "scikit-learn": ["sklearn"],
+        "opencv-python": ["cv2"],
+        "python-dateutil": ["dateutil"],
+        "python-dotenv": ["dotenv"],
+        "python-jose": ["jose"],
+        "attrs": ["attr", "attrs"],
+        "pydantic-settings": ["pydantic_settings"],
+        "protobuf": ["google.protobuf", "google"],
+        "setuptools": ["setuptools", "pkg_resources"],
+    }
+
     def scan_dependencies_and_reachability(
         self,
         manifest_files: Dict[str, str],
@@ -172,6 +189,14 @@ class SCAScanner:
                         # Also check without underscores
                         if not imported_locations:
                             imported_locations = imported_map.get(adv_pkg, [])
+
+                        # Also check known package-to-import aliases (e.g. pillow -> PIL, pyyaml -> yaml)
+                        if not imported_locations:
+                            aliases = self.PACKAGE_IMPORT_MAPPING.get(pkg_lower, []) or self.PACKAGE_IMPORT_MAPPING.get(adv_pkg.lower(), [])
+                            for alias in aliases:
+                                if alias.lower() in imported_map:
+                                    imported_locations = imported_map[alias.lower()]
+                                    break
 
                         is_reachable = len(imported_locations) > 0
                         status_str = (
@@ -214,28 +239,54 @@ class SCAScanner:
     def scan_directory(self, dir_path: str) -> List[SCAReachabilityFinding]:
         """
         Walks a directory, identifies manifest files and code files, and performs
-        SCA reachability analysis.
+        SCA reachability analysis. Excludes virtual environments, node_modules,
+        build directories, and symlinks to prevent traversal attacks and DoS.
         """
-        p = Path(dir_path)
+        import os
+        p = Path(dir_path).resolve()
         manifests = {}
         codes = {}
-        for f in p.rglob("*"):
-            if f.is_file() and not any(part.startswith(".") or part in ("node_modules", "venv", ".venv", "dist", "build", "__pycache__") for part in f.parts):
-                lower = f.name.lower()
+        ignored_dirs = {
+            "node_modules", "venv", ".venv", "env", ".env", "dist",
+            "build", "__pycache__", ".git", ".tox", ".mypy_cache"
+        }
+
+        for root, dirs, files in os.walk(p, followlinks=False):
+            # Prune ignored directories and symlink directories in-place
+            dirs[:] = [
+                d for d in dirs
+                if not d.startswith(".")
+                and d not in ignored_dirs
+                and not os.path.islink(os.path.join(root, d))
+            ]
+
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                if os.path.islink(fpath):
+                    continue
+                lower = fname.lower()
+                is_manifest = any(m in lower for m in ("requirements", "pyproject.toml", "package.json", "go.mod"))
+                is_code = any(lower.endswith(ext) for ext in (".py", ".js", ".jsx", ".ts", ".tsx", ".go"))
+                if not (is_manifest or is_code):
+                    continue
+
                 try:
-                    content = f.read_text(encoding="utf-8", errors="replace")
-                    rel = str(f.relative_to(p)).replace("\\", "/")
-                    if any(m in lower for m in ("requirements", "pyproject.toml", "package.json", "go.mod")):
+                    rel = str(Path(fpath).relative_to(p)).replace("\\", "/")
+                    with open(fpath, "r", encoding="utf-8", errors="replace") as fh:
+                        content = fh.read()
+                    if is_manifest:
                         manifests[rel] = content
-                    if any(lower.endswith(ext) for ext in (".py", ".js", ".jsx", ".ts", ".tsx", ".go")):
+                    if is_code:
                         codes[rel] = content
                 except Exception:
                     pass
+
         return self.scan_dependencies_and_reachability(manifests, codes)
 
     def _parse_manifests(self, manifest_files: Dict[str, str]) -> Dict[str, str]:
         """
         Extracts package name and version from requirements.txt, pyproject.toml, package.json, go.mod.
+        Strips [extras] and parses compound version specifiers cleanly.
         """
         declared: Dict[str, str] = {}
 
@@ -245,10 +296,16 @@ class SCAScanner:
                 for line in content.splitlines():
                     clean = line.strip().split("#")[0].strip()
                     if clean and not clean.startswith("-"):
-                        m = re.match(r'^([a-zA-Z0-9_\-\.]+)\s*(?:[=><~^!]+\s*([0-9a-zA-Z_\-\.]+))?', clean)
+                        clean_no_extras = re.sub(r'\[[^\]]*\]', '', clean).strip()
+                        m = re.match(r'^([a-zA-Z0-9_\-\.]+)\s*(.*)$', clean_no_extras)
                         if m:
                             pkg_name = m.group(1).strip()
-                            pkg_ver = m.group(2).strip() if m.group(2) else ""
+                            spec_part = m.group(2).strip()
+                            m_exact = re.match(r'^==\s*([0-9a-zA-Z_\-\.]+)$', spec_part)
+                            if m_exact:
+                                pkg_ver = m_exact.group(1).strip()
+                            else:
+                                pkg_ver = spec_part
                             declared[pkg_name] = pkg_ver
 
             elif lower_name.endswith("pyproject.toml"):
@@ -261,9 +318,17 @@ class SCAScanner:
                     if in_deps and line.startswith("]"):
                         in_deps = False
                     if in_deps:
-                        m = re.search(r'[\"\']([a-zA-Z0-9_\-\.]+)\s*(?:[=><~^!]+\s*([0-9a-zA-Z_\-\.]+))?[\"\']', line)
+                        clean_line = re.sub(r'\[[^\]]*\]', '', line)
+                        m = re.search(r'[\"\']([a-zA-Z0-9_\-\.]+)\s*(.*?)[\"\']', clean_line)
                         if m:
-                            declared[m.group(1).strip()] = m.group(2).strip() if m.group(2) else ""
+                            pkg_name = m.group(1).strip()
+                            spec_part = m.group(2).strip()
+                            m_exact = re.match(r'^==\s*([0-9a-zA-Z_\-\.]+)$', spec_part)
+                            if m_exact:
+                                pkg_ver = m_exact.group(1).strip()
+                            else:
+                                pkg_ver = spec_part
+                            declared[pkg_name] = pkg_ver
 
             elif lower_name.endswith("package.json"):
                 try:
@@ -389,11 +454,13 @@ class SCAScanner:
         """
         Checks whether installed_ver < safe_below using semantic comparison.
         If version is unspecified, conservatively treats as vulnerable.
+        Handles compound version specifiers like '>=2.31.0,<3.0.0', '>=2.28.0,<3.0.0',
+        exact versions like '2.28.0', and comparison operators (==, >=, <=, <, >, ~=).
         """
         if not installed_ver:
             return True
 
-        def to_tuple(v_str: str):
+        def to_tuple(v_str: str) -> tuple:
             parts = re.split(r'[\.\-]', re.sub(r'[^0-9\.]', '', v_str))
             nums = []
             for p in parts:
@@ -401,12 +468,58 @@ class SCAScanner:
                     nums.append(int(p))
             return tuple(nums) or (0,)
 
-        try:
-            t_inst = to_tuple(installed_ver)
-            t_safe = to_tuple(safe_below)
-            max_len = max(len(t_inst), len(t_safe))
-            t_inst_padded = t_inst + (0,) * (max_len - len(t_inst))
-            t_safe_padded = t_safe + (0,) * (max_len - len(t_safe))
-            return t_inst_padded < t_safe_padded
-        except Exception:
+        t_safe = to_tuple(safe_below)
+
+        # Check if version has operators or compound specifiers
+        clauses = re.findall(r'(==|<=|>=|<|>|~=|=)\s*([0-9a-zA-Z_\-\.]+)', installed_ver)
+        if not clauses:
+            # Plain version string
+            try:
+                t_inst = to_tuple(installed_ver)
+                max_len = max(len(t_inst), len(t_safe))
+                t_inst_padded = t_inst + (0,) * (max_len - len(t_inst))
+                t_safe_padded = t_safe + (0,) * (max_len - len(t_safe))
+                return t_inst_padded < t_safe_padded
+            except Exception:
+                return True
+
+        # Process clauses
+        min_ver = None
+        max_ver = None
+        exact_ver = None
+        for op, ver in clauses:
+            t = to_tuple(ver)
+            if op in (">=", "~=", ">"):
+                if min_ver is None or t > min_ver:
+                    min_ver = t
+            elif op in ("<=", "<"):
+                if max_ver is None or t < max_ver:
+                    max_ver = t
+            elif op in ("==", "="):
+                exact_ver = t
+
+        max_len = max(
+            len(t_safe),
+            len(min_ver) if min_ver else 0,
+            len(max_ver) if max_ver else 0,
+            len(exact_ver) if exact_ver else 0
+        )
+        t_safe_padded = t_safe + (0,) * (max_len - len(t_safe))
+
+        if exact_ver is not None:
+            exact_padded = exact_ver + (0,) * (max_len - len(exact_ver))
+            return exact_padded < t_safe_padded
+
+        if min_ver is not None:
+            min_padded = min_ver + (0,) * (max_len - len(min_ver))
+            # If minimum required is already >= safe_below, it cannot install a vulnerable version
+            if min_padded >= t_safe_padded:
+                return False
+            # If minimum required is < safe_below, vulnerable version can be installed
             return True
+
+        if max_ver is not None:
+            max_padded = max_ver + (0,) * (max_len - len(max_ver))
+            return max_padded <= t_safe_padded
+
+        return True

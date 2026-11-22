@@ -69,7 +69,11 @@ IGNORE_DIRS = {
     '.pytest_cache', 'dist', 'build', '.idea', '.vscode'
 }
 
-SUPPORTED_EXTS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.c'}
+SUPPORTED_EXTS = {
+    '.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs',
+    '.cpp', '.cc', '.cxx', '.h', '.hpp', '.c',
+    '.go', '.tf', '.tfvars'
+}
 
 def safe_str(text: str) -> str:
     """Strip characters incompatible with Windows console encoding."""

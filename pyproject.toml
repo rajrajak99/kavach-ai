@@ -27,11 +27,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ui = ["streamlit>=1.35.0", "pandas>=2.0.0"]
+ui = ["streamlit>=1.35.0", "pandas>=2.0.0", "streamlit-ace>=0.1.1"]
 dev = ["pytest>=8.0.0"]
 
 [project.urls]
-Homepage = "https://kavach-ai.streamlit.app"
+Homepage = "https://kavach-security.vercel.app"
 Repository = "https://github.com/rajrajak99/kavach-ai"
 "Bug Tracker" = "https://github.com/rajrajak99/kavach-ai/issues"
 
@@ -43,7 +43,7 @@ autopatch-ci = "ci_bot:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["core*"]
+include = ["core*", "samples*"]
 
 [tool.setuptools]
 py-modules = ["cli", "ci_bot", "kavach_license"]

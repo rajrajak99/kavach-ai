@@ -23,39 +23,100 @@ interface SidebarProps {
   activeView: ViewType;
   onSelectView: (v: ViewType) => void;
   licenseTier?: string;
+  onTierChange?: (tier: string) => void;
 }
 
-export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE" }: SidebarProps) {
+export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE", onTierChange }: SidebarProps) {
   const [authTab, setAuthTab] = useState<"pilot" | "key" | "signin">("pilot");
   const [pilotEmail, setPilotEmail] = useState("");
   const [keyInput, setKeyInput] = useState("");
   const [pilotSuccess, setPilotSuccess] = useState(false);
   const [keySuccess, setKeySuccess] = useState(false);
+  const [keyError, setKeyError] = useState("");
   const [tier, setTier] = useState(licenseTier);
 
-  useEffect(() => {
-    const savedKey = localStorage.getItem("kavach_license_key");
-    if (savedKey) {
-      setTier("PRO");
-    }
-  }, []);
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  const handleClaimPilot = (e: React.FormEvent) => {
+  useEffect(() => {
+    try {
+      const savedKey = localStorage.getItem("kavach_license_key");
+      const savedTier = localStorage.getItem("kavach_license_tier");
+      if (savedKey && savedTier) {
+        setTier(savedTier);
+        onTierChange?.(savedTier);
+      }
+    } catch (e) {
+      // Storage unavailable or disabled in sandboxed iframe
+    }
+  }, [onTierChange]);
+
+  const handleClaimPilot = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pilotEmail.includes("@")) return;
-    localStorage.setItem("kavach_license_key", `KAVACH-VIP-PILOT-${Date.now().toString(36).toUpperCase()}`);
-    setPilotSuccess(true);
-    setTier("VIP PILOT");
-    setTimeout(() => setPilotSuccess(false), 4000);
+    const cleanEmail = pilotEmail.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      setKeyError("Please enter a valid enterprise corporate email.");
+      return;
+    }
+    setIsVerifying(true);
+    setKeyError("");
+    try {
+      const res = await fetch("/api/license", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "claim_pilot", email: cleanEmail }),
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        try {
+          localStorage.setItem("kavach_license_key", data.key);
+          localStorage.setItem("kavach_license_tier", data.tier);
+        } catch (_) {}
+        setPilotSuccess(true);
+        setTier(data.tier);
+        onTierChange?.(data.tier);
+        setTimeout(() => setPilotSuccess(false), 4000);
+      } else {
+        setKeyError(data.error || "Failed to provision VIP pilot license.");
+      }
+    } catch (err) {
+      setKeyError("Network error validating pilot license.");
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
-  const handleActivateKey = (e: React.FormEvent) => {
+  const handleActivateKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!keyInput.trim()) return;
-    localStorage.setItem("kavach_license_key", keyInput.trim());
-    setKeySuccess(true);
-    setTier(keyInput.includes("TEAM") ? "TEAM" : "PRO");
-    setTimeout(() => setKeySuccess(false), 4000);
+    const cleanKey = keyInput.trim();
+    if (!cleanKey) return;
+
+    setIsVerifying(true);
+    setKeyError("");
+    try {
+      const res = await fetch("/api/license", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "activate", key: cleanKey }),
+      });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        try {
+          localStorage.setItem("kavach_license_key", cleanKey);
+          localStorage.setItem("kavach_license_tier", data.tier);
+        } catch (_) {}
+        setKeySuccess(true);
+        setTier(data.tier);
+        onTierChange?.(data.tier);
+        setTimeout(() => setKeySuccess(false), 4000);
+      } else {
+        setKeyError(data.message || data.error || "Invalid cryptographic signature or expired key.");
+      }
+    } catch (err) {
+      setKeyError("Verification service unavailable.");
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const navItems = [
@@ -199,6 +260,9 @@ export default function Sidebar({ activeView, onSelectView, licenseTier = "FREE"
                 placeholder="KAVACH-PRO-..."
                 className="w-full bg-obsidian-900 border border-obsidian-700 rounded px-2.5 py-1 text-xs text-slateText-primary font-mono placeholder-slateText-muted outline-none focus:border-kavachEmerald"
               />
+              {keyError && (
+                <p className="text-[10px] text-red-400 font-medium">{keyError}</p>
+              )}
               <button
                 type="submit"
                 className="w-full py-1.5 rounded bg-obsidian-800 hover:bg-obsidian-700 text-kavachEmerald border border-kavachEmerald/40 font-semibold text-xs transition-colors"

@@ -46,10 +46,8 @@ class SelfHealingTestRunner:
             fixed_lines = clean_fixed.splitlines()
             if fixed_lines:
                 indented_fixed = []
-                for idx, fl in enumerate(fixed_lines):
-                    if idx > 0 and not fl.startswith(" ") and orig_indent:
-                        indented_fixed.append(orig_indent + fl)
-                    elif idx == 0 and not fl.startswith(" ") and orig_indent:
+                for fl in fixed_lines:
+                    if not fl.startswith((" ", "\t")) and orig_indent:
                         indented_fixed.append(orig_indent + fl)
                     else:
                         indented_fixed.append(fl)

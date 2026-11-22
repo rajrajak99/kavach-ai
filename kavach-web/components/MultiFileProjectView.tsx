@@ -30,7 +30,7 @@ interface CrossFileFinding {
   sink_snippet: string;
 }
 
-interface SCAF態 {
+interface SCAFinding {
   package_name: string;
   installed_version: string;
   fixed_version: string;
@@ -62,7 +62,7 @@ export default function MultiFileProjectView() {
     },
   ];
 
-  const scaFindings: SCAF態[] = [
+  const scaFindings: SCAFinding[] = [
     {
       package_name: "psycopg2-binary",
       installed_version: "2.8.6",
@@ -97,6 +97,8 @@ export default function MultiFileProjectView() {
     if (file) {
       setProjectName(file.name);
       setIsAnalyzing(true);
+      // Reset input value to allow re-uploading the same file
+      e.target.value = "";
       setTimeout(() => {
         setIsAnalyzing(false);
         setHasResults(true);
@@ -105,22 +107,34 @@ export default function MultiFileProjectView() {
   };
 
   const handleExportAudit = () => {
+    const reachableList = scaFindings.filter(f => f.is_reachable);
+    const dormantList = scaFindings.filter(f => !f.is_reachable);
+
+    const taintLines = crossFileFindings.map(f => 
+      `- **${f.cwe_id}:** ${f.category}\n  - **Source:** ${f.source_file}:${f.source_line}\n  - **Sink:** ${f.sink_file}:${f.sink_line}\n  - **Explanation:** ${f.explanation}`
+    ).join("\n\n");
+
+    const scaLines = scaFindings.map(f =>
+      `- **${f.package_name} (${f.installed_version})** -> Fixed in ${f.fixed_version}\n  - **CVE:** ${f.cve_id} — ${f.advisory_title}\n  - **Status:** ${f.is_reachable ? "🚨 Active Exploit Path (Imported in " + f.imported_files.join(", ") + ")" : "🛡️ Dormant (Zero-Noise Filtered)"}`
+    ).join("\n");
+
     const content = `# 🛡️ KAVACH AI — MULTI-FILE PROJECT & SCA AUDIT DOSSIER
 **Project Name:** ${projectName}
 **Audit Date:** ${new Date().toISOString()}
 **Engine:** Deterministic Inter-Procedural AST Taint Graph v1.5.0
-**Gate Verdict:** BLOCKED (1 Critical Cross-File Exploit)
+**Gate Verdict:** ${crossFileFindings.length > 0 || reachableList.length > 0 ? "BLOCKED" : "PASSED"}
 
 ---
-## 🚨 Inter-Procedural Taint Traces
-- **CWE-89:** ${crossFileFindings[0].category}
-  - **Source:** ${crossFileFindings[0].source_file}:${crossFileFindings[0].source_line}
-  - **Sink:** ${crossFileFindings[0].sink_file}:${crossFileFindings[0].sink_line}
+## 🚨 Inter-Procedural Taint Traces (${crossFileFindings.length} Total)
+${taintLines || "No cross-file taint vulnerabilities detected."}
 
 ---
 ## 📦 Software Composition Analysis (SCA Reachability)
-- **Reachable CVEs (Active Danger):** 1 (psycopg2-binary 2.8.6)
-- **Dormant CVEs (Zero-Noise Filtered):** 1 (urllib3 1.26.4 - Unimported in AST)
+- **Reachable CVEs (Active Danger):** ${reachableList.length}
+- **Dormant CVEs (Zero-Noise Filtered):** ${dormantList.length}
+
+### Findings Breakdown
+${scaLines || "No vulnerable third-party dependencies detected."}
 `;
     const blob = new Blob([content], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);

@@ -1,3 +1,4 @@
+import sys
 import pytest
 from pathlib import Path
 from core.autonomous_agent import AutonomousSecurityAgent
@@ -28,9 +29,12 @@ def test_autonomous_agent_failed_tests(tmp_path):
         target_file="app.py",
         target_content="x = 10",
         replacement_content="x = 20",
-        test_command="python -c \"import sys; sys.exit(1)\"",
+        test_command=f'"{sys.executable}" -c "import sys; sys.exit(1)"',
         vuln_id="TEST-FAIL"
     )
     assert res.success is False
     assert res.tests_passed is False
     assert res.auto_merge_eligible is False
+    # Assert file rollback: file content must be reverted to original
+    assert target.read_text(encoding="utf-8") == "x = 10\n"
+

@@ -153,3 +153,88 @@ def test_autonomous_agent_safe_execution(tmp_path):
     )
     assert result.success is True
     assert test_file.read_text(encoding="utf-8") == "x = 1\n"
+
+def test_container_multiline_run_and_ipv6_ports():
+    from core.container_scanner import ContainerSecurityScanner, is_compose_file
+    scanner = ContainerSecurityScanner()
+    
+    # 1. Multiline RUN with curl | bash
+    dockerfile = """
+FROM python:3.11-slim
+RUN apt-get update && \\
+    curl -fsSL https://get.docker.com | \\
+    sh
+USER appuser
+HEALTHCHECK --interval=30s CMD curl -f http://localhost:8000 || exit 1
+"""
+    df_findings = scanner.scan_dockerfile(dockerfile)
+    pipe_findings = [f for f in df_findings if f.rule_id == "DOCKER-INSECURE-PIPE"]
+    assert len(pipe_findings) == 1
+    assert pipe_findings[0].line_number == 3
+
+    # 2. IPv6 database port in prod compose
+    compose_ipv6 = """
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    ports:
+      - "[::]:5432:5432"
+"""
+    c_findings = scanner.scan_docker_compose(compose_ipv6, file_path="docker-compose.prod.yml")
+    port_findings = [f for f in c_findings if f.rule_id == "COMPOSE-EXPOSED-DATABASE-PORT"]
+    assert len(port_findings) == 1
+
+    # 3. Long-form published port in prod compose
+    compose_long_form = """
+version: '3.8'
+services:
+  redis:
+    image: redis:7
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+"""
+    c_findings2 = scanner.scan_docker_compose(compose_long_form, file_path="compose.prod.yaml")
+    port_findings2 = [f for f in c_findings2 if f.rule_id == "COMPOSE-EXPOSED-DATABASE-PORT"]
+    assert len(port_findings2) == 1
+
+    # 4. is_compose_file tests
+    assert is_compose_file("docker-compose.dev.yml") is True
+    assert is_compose_file("compose.yaml") is True
+    assert is_compose_file("compose.dev.yaml") is True
+    assert is_compose_file("sub/docker-compose.prod.yml") is True
+    assert is_compose_file("app.py") is False
+
+def test_patch_validator_preserves_indentation_and_rejects_empty():
+    from core.patch_validator import PatchValidator
+    
+    # 1. Reject empty
+    valid, msg = PatchValidator.validate_python_syntax("")
+    assert valid is False
+    assert "Empty" in msg
+
+    valid_ws, msg_ws = PatchValidator.validate_python_syntax("   \n\t  ")
+    assert valid_ws is False
+
+    # 2. Preserve indentation in multiline markdown block
+    fenced = """```python
+    def calculate_total(items):
+        total = 0
+        for item in items:
+            total += item.price
+        return total
+```"""
+    cleaned = PatchValidator.clean_suggestion_block(fenced)
+    assert cleaned.startswith("    def calculate_total")
+    assert "        total = 0" in cleaned
+
+    # 3. Clean suggestion block with ```py or ```suggestion
+    sugg = """```suggestion
+    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+```"""
+    cleaned_sugg = PatchValidator.clean_suggestion_block(sugg)
+    assert cleaned_sugg.startswith("    cursor.execute")
+
+

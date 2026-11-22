@@ -1,11 +1,11 @@
 """
-AutoPatch AI - PyPI Release Automation Script
+Kavach AI - PyPI Release Automation Script
 Usage:
   python publish_pypi.py --test      (Uploads to test.pypi.org)
   python publish_pypi.py --prod      (Uploads to official pypi.org)
 """
-import os
 import sys
+import glob
 import subprocess
 from pathlib import Path
 
@@ -17,23 +17,40 @@ def main():
         sys.exit(1)
 
     mode = sys.argv[1]
+
+    if mode == "--prod":
+        confirm = input("⚠️  Are you SURE you want to upload a LIVE production release to pypi.org? [y/N]: ").strip().lower()
+        if confirm not in ("y", "yes"):
+            print("Aborted.")
+            sys.exit(0)
+
     dist_dir = Path("dist")
-    if not dist_dir.exists() or not list(dist_dir.glob("*.whl")):
-        print("[*] Building package artifacts...")
-        subprocess.run([sys.executable, "-m", "build"], check=True)
+    if dist_dir.exists():
+        import shutil
+        print("[*] Cleaning stale dist/ directory...")
+        shutil.rmtree(dist_dir, ignore_errors=True)
+
+    print("[*] Building fresh package artifacts with build...")
+    subprocess.run([sys.executable, "-m", "build"], check=True)
+
+    dist_files = glob.glob(str(dist_dir / "*"))
+    if not dist_files:
+        print("Error: No artifacts found in dist/ to upload.", file=sys.stderr)
+        sys.exit(1)
 
     print("[*] Verifying package distribution with twine...")
-    subprocess.run(["twine", "check", "dist/*"], check=True)
+    subprocess.run([sys.executable, "-m", "twine", "check"] + dist_files, check=True)
 
     if mode == "--test":
         print("\n[+] Uploading to TestPyPI...")
-        cmd = ["twine", "upload", "--repository", "testpypi", "dist/*"]
+        cmd = [sys.executable, "-m", "twine", "upload", "--repository", "testpypi"] + dist_files
     else:
         print("\n[+] Uploading to Official PyPI (pypi.org)...")
-        cmd = ["twine", "upload", "dist/*"]
+        cmd = [sys.executable, "-m", "twine", "upload"] + dist_files
 
     print(f"Executing: {' '.join(cmd)}")
-    subprocess.run(cmd)
+    subprocess.run(cmd, check=True)
+    print("\n[✓] Release uploaded successfully!")
 
 if __name__ == "__main__":
     main()

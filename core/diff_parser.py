@@ -71,23 +71,37 @@ class DiffParser:
             # Extract filenames
             fn_old = "unknown"
             fn_new = "unknown"
-            for line in lines[:8]:
-                if line.startswith('--- a/'):
-                    fn_old = line[6:].strip()
-                elif line.startswith('--- /dev/null'):
-                    fn_old = "/dev/null"
-                elif line.startswith('+++ b/'):
-                    fn_new = line[6:].strip()
-                elif line.startswith('+++ /dev/null'):
-                    fn_new = "/dev/null"
+            for line in lines:
+                if line.startswith('@@'):
+                    break
+                if line.startswith('--- '):
+                    raw_fn = line[4:].strip()
+                    if raw_fn == "/dev/null":
+                        fn_old = "/dev/null"
+                    elif raw_fn.startswith('a/'):
+                        fn_old = raw_fn[2:].strip().strip('"')
+                    elif raw_fn.startswith('"a/'):
+                        fn_old = raw_fn[3:].rstrip('"').strip()
+                    else:
+                        fn_old = raw_fn.strip('"')
+                elif line.startswith('+++ '):
+                    raw_fn = line[4:].strip()
+                    if raw_fn == "/dev/null":
+                        fn_new = "/dev/null"
+                    elif raw_fn.startswith('b/'):
+                        fn_new = raw_fn[2:].strip().strip('"')
+                    elif raw_fn.startswith('"b/'):
+                        fn_new = raw_fn[3:].rstrip('"').strip()
+                    else:
+                        fn_new = raw_fn.strip('"')
 
             if fn_old == "unknown" or fn_new == "unknown":
-                match_header = re.match(r'^(?:"?a/)?(.*?)"?\s+"?b/(.*?)"?$', header_line.strip())
+                match_header = re.match(r'^(?:\"?a/)?(.*?)\"?\s+(?:\"?b/)?(.*?)\"?$', header_line.strip())
                 if match_header:
                     if fn_old == "unknown":
-                        fn_old = match_header.group(1).strip('"')
+                        fn_old = match_header.group(1).strip().strip('"')
                     if fn_new == "unknown":
-                        fn_new = match_header.group(2).strip('"')
+                        fn_new = match_header.group(2).strip().strip('"')
 
             is_noise = cls.is_noise_file(fn_new if fn_new not in ("unknown", "/dev/null") else fn_old)
             parsed_file = ParsedFileDiff(filename_old=fn_old, filename_new=fn_new, is_noise=is_noise)
@@ -153,17 +167,18 @@ class DiffParser:
     @classmethod
     def parse_raw_snippet(cls, filename: str, code: str) -> ParsedFileDiff:
         """Parses a full code snippet as a unified diff for single-file review."""
+        is_noise = cls.is_noise_file(filename)
         lines = code.splitlines()
         hunk = DiffHunk(
-            header=f"@@ -1,{len(lines)} +1,{len(lines)} @@",
-            old_start=1,
-            old_length=len(lines),
+            header=f"@@ -0,0 +1,{len(lines)} @@",
+            old_start=0,
+            old_length=0,
             new_start=1,
             new_length=len(lines)
         )
         for idx, line in enumerate(lines, 1):
             hunk.lines.append(ChangedLine(
-                line_number_old=idx,
+                line_number_old=None,
                 line_number_new=idx,
                 line_type='+',
                 content=line
@@ -172,5 +187,5 @@ class DiffParser:
             filename_old=filename,
             filename_new=filename,
             hunks=[hunk],
-            is_noise=cls.is_noise_file(filename)
+            is_noise=is_noise
         )

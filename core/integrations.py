@@ -1,13 +1,65 @@
-"""
-Kavach AI — Enterprise Integrations & Compliance Dispatcher
-Formats and routes real-time security alerts and SOC 2 / HIPAA compliance evidence
-to Slack, Atlassian Jira, Linear, and Vanta/Drata compliance platforms.
-"""
-
 import json
+import socket
+import ipaddress
+import datetime
+import urllib.parse
 import urllib.request
 import urllib.error
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
+
+def is_safe_webhook_url(url: str, allow_dev: bool = False) -> Tuple[bool, str]:
+    """
+    Strictly validates destination webhook URL against SSRF, internal network pivots,
+    cloud metadata endpoints (169.254.169.254), and local hostnames.
+    """
+    if not url:
+        return False, "Empty URL"
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme != "https" and not (allow_dev and parsed.scheme == "http"):
+            return False, f"Insecure scheme '{parsed.scheme}': webhooks must use HTTPS"
+        host = parsed.hostname
+        if not host:
+            return False, "Missing hostname in URL"
+        
+        # Block known cloud metadata hostnames
+        blocked_hosts = {"metadata.google.internal", "metadata", "instance-data", "169.254.169.254"}
+        if host.lower() in blocked_hosts or "169.254" in host or "100.100" in host:
+            return False, f"SSRF blocked: cloud metadata target '{host}' rejected"
+
+        # Resolve hostname to check for loopback and private network ranges
+        try:
+            addr_info = socket.getaddrinfo(host, None)
+            for _, _, _, _, sockaddr in addr_info:
+                ip_str = sockaddr[0]
+                ip = ipaddress.ip_address(ip_str)
+                if isinstance(ip, ipaddress.IPv6Address):
+                    # Check for NAT64 well-known prefix (64:ff9b::/96)
+                    if ip in ipaddress.IPv6Network("64:ff9b::/96"):
+                        embedded_ipv4 = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+                        if embedded_ipv4.is_loopback:
+                            return False, f"SSRF blocked: loopback target {embedded_ipv4} rejected"
+                        if not allow_dev and embedded_ipv4.is_private:
+                            return False, f"SSRF blocked: private network target {embedded_ipv4} rejected"
+                        if embedded_ipv4.is_link_local:
+                            return False, f"SSRF blocked: link-local target {embedded_ipv4} rejected"
+                        continue
+
+                if ip.is_loopback:
+                    return False, f"SSRF blocked: loopback target {ip_str} rejected"
+                if ip.is_link_local:
+                    return False, f"SSRF blocked: link-local target {ip_str} rejected"
+                if ip.is_reserved or ip.is_multicast:
+                    return False, f"SSRF blocked: reserved/multicast target {ip_str} rejected"
+                if not allow_dev and ip.is_private:
+                    return False, f"SSRF blocked: private network target {ip_str} rejected"
+        except socket.gaierror:
+            # If hostname doesn't resolve in dry-run or offline testing, allow syntax if host is valid domain
+            if "." not in host or host.startswith("."):
+                return False, f"Unresolvable or invalid domain '{host}'"
+        return True, "OK"
+    except Exception as e:
+        return False, f"URL parse error: {e}"
 
 class EnterpriseIntegrationDispatcher:
     """
@@ -184,14 +236,14 @@ class EnterpriseIntegrationDispatcher:
             "evidence_type": "continuous_automated_pre_merge_security_gate",
             "framework": framework,
             "compliance_controls": controls_mapped,
-            "timestamp_utc": "2026-11-10T09:45:00Z",
+            "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "audit_trail": {
                 "repository": repo_name,
                 "commit": commit_sha,
                 "scan_verdict": "PASSED" if gate_passed else "BLOCKED_ON_FINDINGS",
                 "files_analyzed": scanned_files_count,
                 "unpatched_vulnerabilities": findings_count,
-                "verified_zero_false_positives": True,
+                "verified_zero_false_positives": findings_count == 0,
                 "evidence_collector": "Kavach AI CISO Compliance Plane v2.0"
             }
         }
@@ -206,7 +258,25 @@ class EnterpriseIntegrationDispatcher:
         Dispatches payload via HTTP POST to the specified webhook endpoint.
         Returns a structured dictionary with dispatch status and HTTP response code.
         """
-        if dry_run or not webhook_url:
+        if not webhook_url:
+            return {
+                "success": False,
+                "dry_run": dry_run,
+                "status_code": 400,
+                "error": "Missing webhook URL"
+            }
+
+        # SSRF validation
+        safe, reason = is_safe_webhook_url(webhook_url)
+        if not safe:
+            return {
+                "success": False,
+                "dry_run": dry_run,
+                "status_code": 400,
+                "error": f"SSRF Protection blocked URL: {reason}"
+            }
+
+        if dry_run:
             return {
                 "success": True,
                 "dry_run": True,

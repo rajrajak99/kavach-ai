@@ -46,10 +46,9 @@ def is_ignored_path(filepath: str, extra_ignores: Optional[Set[str]] = None) -> 
     if any(p in all_ignores or p.endswith('_tests') or p.endswith('_test') or p.startswith('test_') for p in parts[:-1]):
         return True
     filename = parts[-1] if parts else ""
-    if (filename in ("tests.py", "test.py", "conftest.py", "tests.js", "test.js") 
-            or filename.startswith(("demo_", "benchmark_", "test_"))
-            or filename.endswith(("_test.py", ".test.js", ".spec.js", ".test.ts", ".spec.ts"))
-            or "mock" in filename):
+    if (filename in ("tests.py", "test.py", "conftest.py", "tests.js", "test.js", "mock.py", "mocks.py") 
+            or filename.startswith(("demo_", "benchmark_", "test_", "mock_", "mocks_"))
+            or filename.endswith(("_test.py", ".test.js", ".spec.js", ".test.ts", ".spec.ts", "_mock.py", "_mocks.py", ".mock.js", ".mock.ts"))):
         return True
     if any(p in all_ignores for p in parts):
         return True
@@ -65,20 +64,20 @@ def get_git_diff() -> Optional[str]:
         base_ref = os.getenv("GITHUB_BASE_REF")
         if base_ref:
             cmd = ["git", "diff", f"origin/{base_ref}...HEAD", "--"]
-            p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            if p.returncode == 0:
+            p = subprocess.run(cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
+            if p.returncode == 0 and p.stdout.strip():
                 return p.stdout
 
         # Fallback 1: git diff against HEAD~1
         cmd = ["git", "diff", "HEAD~1"]
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        if p.returncode == 0:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
+        if p.returncode == 0 and p.stdout.strip():
             return p.stdout
 
         # Fallback 2: git diff unstaged/staged
         cmd = ["git", "diff", "HEAD"]
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        if p.returncode == 0:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
+        if p.returncode == 0 and p.stdout.strip():
             return p.stdout
     except Exception:
         pass
@@ -301,6 +300,13 @@ def main():
         ignored_count = len(raw_diffs) - len(file_diffs)
         if ignored_count > 0:
             print(f"[i] Filtered out {ignored_count} non-production/test/script/lead file(s) from security gate.")
+
+        # If the changeset only modified ignored/test/doc files, pass immediately
+        if raw_diffs and not file_diffs:
+            print("[+] Pull Request only modifies non-production, test, or documentation files.")
+            print("[+] Zero production changes detected. Security gate PASSED.")
+            sys.exit(0)
+
         total_files = len(file_diffs)
 
     if not file_diffs:

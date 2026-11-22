@@ -24,6 +24,7 @@ export default function Scorecard({
   warningCount = 0,
   onDownloadReport,
 }: ScorecardProps) {
+  const clampedScore = Math.min(100, Math.max(0, score));
   const isPassed = criticalCount === 0;
   const safeCvss = Number(cvssMax) || 0;
 
@@ -44,9 +45,9 @@ export default function Scorecard({
           </div>
           <div>
             <div className="text-sm font-semibold text-slateText-primary flex items-center gap-2">
-              <span>Security Health: {score}/100</span>
+              <span>Security Health: {clampedScore}/100</span>
               <span className="text-[11px] px-2 py-0.5 rounded font-mono font-medium" style={{ backgroundColor: `${color}15`, color: color }}>
-                {isPassed ? "PASS" : "BLOCKED"}
+                {isPassed ? (warningCount > 0 ? "WARNING" : "PASS") : "BLOCKED"}
               </span>
             </div>
             <p className="text-[11.5px] text-slateText-secondary">{gradeLabel}</p>
@@ -65,27 +66,34 @@ export default function Scorecard({
       <div className="w-full h-1.5 rounded-full bg-obsidian-700 overflow-hidden mb-3.5">
         <div
           className="h-full transition-all duration-500 rounded-full"
-          style={{ width: `${Math.max(5, score)}%`, backgroundColor: color }}
+          style={{ width: `${Math.max(5, Math.min(100, clampedScore))}%`, backgroundColor: color }}
         />
       </div>
 
       {/* Status Alert Banner */}
       <div
         className={`px-3 py-2 rounded-md mb-3 flex items-center gap-2 text-xs font-medium ${
-          isPassed
-            ? "bg-emerald-950/25 border border-emerald-500/30 text-emerald-400"
-            : "bg-red-950/25 border border-red-500/30 text-red-400"
+          !isPassed
+            ? "bg-red-950/25 border border-red-500/30 text-red-400"
+            : warningCount > 0
+            ? "bg-amber-950/25 border border-amber-500/30 text-amber-400"
+            : "bg-emerald-950/25 border border-emerald-500/30 text-emerald-400"
         }`}
       >
-        {isPassed ? (
-          <>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>ALL CHECKS PASSED — 100% Zero-Noise AST Verified</span>
-          </>
-        ) : (
+        {!isPassed ? (
           <>
             <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
             <span>MERGE BLOCKED — {criticalCount} Critical Exploit(s) Detected</span>
+          </>
+        ) : warningCount > 0 ? (
+          <>
+            <AlertOctagon className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>PASSED WITH WARNINGS — 0 Critical, {warningCount} Non-blocking Issue(s)</span>
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>ALL CHECKS PASSED — 100% Zero-Noise AST Verified</span>
           </>
         )}
       </div>

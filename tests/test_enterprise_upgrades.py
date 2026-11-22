@@ -153,7 +153,7 @@ def test_sca_reachability_classification():
 
 # ----------------- 4. BILLING & MoR PIPELINE TESTS -----------------
 def test_billing_redirect_activation():
-    # Successful payment callback from Dodo Payments / LemonSqueezy
+    # Successful payment callback with valid payment_id
     query_params = {
         "status": "success",
         "payment_id": "dodo_test_ord_987654",
@@ -165,15 +165,28 @@ def test_billing_redirect_activation():
     assert res["tier"] == "DEVELOPER_PRO"
     assert res["license_key"].startswith("KAVACH-PRO-")
 
+    # Negative test 1: Failed / canceled payment must be rejected
+    assert BillingManager.inspect_and_activate_redirect({"status": "failed", "payment_id": "ord_12345"}) is None
+    assert BillingManager.inspect_and_activate_redirect({"status": "cancelled", "payment_id": "ord_12345"}) is None
+
+    # Negative test 2: Missing or blank payment_id must fail closed
+    assert BillingManager.inspect_and_activate_redirect({"status": "success", "payment_id": ""}) is None
+    assert BillingManager.inspect_and_activate_redirect({"status": "success"}) is None
+
+    # Negative test 3: Unrecognized tier must fail closed
+    assert BillingManager.inspect_and_activate_redirect({"status": "success", "payment_id": "ord_12345", "tier": "HACK_GOD_TIER"}) is None
+
 def test_billing_invoice_mailto_generation():
     url = BillingManager.get_invoice_request_url("Team Enterprise", "annual")
-    assert url.startswith("mailto:rajabhaiyarajak2008@gmail.com?")
+    assert url.startswith(f"mailto:{BillingManager.FOUNDER_BILLING_EMAIL}?")
     assert "Team+Enterprise" in url or "Team%20Enterprise" in url
 
 def test_billing_invoice_gmail_web_generation():
+    import urllib.parse
     url = BillingManager.get_gmail_invoice_url("Global Enterprise & Compliance", "Annual ($4,990/yr)")
     assert url.startswith("https://mail.google.com/mail/?view=cm&fs=1")
-    assert "to=rajabhaiyarajak2008%40gmail.com" in url
+    encoded_email = urllib.parse.quote(BillingManager.FOUNDER_BILLING_EMAIL)
+    assert f"to={encoded_email}" in url or f"to={BillingManager.FOUNDER_BILLING_EMAIL}" in url
     assert "Global+Enterprise" in url or "Global%20Enterprise" in url
 
 # ----------------- 5. SOC 2 COMPLIANCE REPORT GENERATOR TESTS -----------------

@@ -60,10 +60,19 @@ class AccountStore:
 
         return (url or None, key or None)
 
+    def _get_connection(self) -> sqlite3.Connection:
+        """Returns SQLite connection with WAL mode and 10s busy timeout."""
+        conn = sqlite3.connect(str(self.db_path), timeout=10.0)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+        except Exception:
+            pass
+        return conn
+
     def _init_sqlite(self):
-        """Initializes local SQLite database schema."""
+        """Initializes local SQLite database schema with secure permissions."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_connection()
         try:
             cursor = conn.cursor()
             cursor.execute("""
@@ -81,6 +90,12 @@ class AccountStore:
             conn.commit()
         finally:
             conn.close()
+
+        if sys.platform != "win32" and self.db_path.exists():
+            try:
+                os.chmod(self.db_path, 0o600)
+            except Exception:
+                pass
 
     @staticmethod
     def hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:
@@ -126,7 +141,7 @@ class AccountStore:
             return False
 
     def _fetch_from_cloud(self, email: str) -> Optional[Dict[str, Any]]:
-        """Attempts to fetch user account from Supabase REST table."""
+        """Attempts to fetch user account from Supabase REST table with URL-encoded query."""
         supabase_url, supabase_key = self._get_cloud_config()
         if not supabase_url or not supabase_key:
             return None
@@ -135,7 +150,8 @@ class AccountStore:
             import urllib.request
             import urllib.parse
             clean_email = email.strip().lower()
-            params = urllib.parse.urlencode({"email": f"eq.{clean_email}", "select": "*"})
+            quoted_email = urllib.parse.quote(clean_email, safe="")
+            params = urllib.parse.urlencode({"email": f"eq.{quoted_email}", "select": "*"})
             endpoint = f"{supabase_url.rstrip('/')}/rest/v1/kavach_accounts?{params}"
             headers = {
                 "apikey": supabase_key,
@@ -179,14 +195,16 @@ class AccountStore:
             if password:
                 pwd_hash, salt = self.hash_password(password)
 
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             try:
                 cursor = conn.cursor()
                 cursor.execute("""
                 UPDATE kavach_accounts
-                SET password_hash = ?, salt = ?, tier = ?, license_key = ?, payment_id = ?, updated_at = ?
+                SET password_hash = COALESCE(NULLIF(?, ''), password_hash),
+                    salt = COALESCE(NULLIF(?, ''), salt),
+                    tier = ?, license_key = ?, payment_id = COALESCE(?, payment_id), updated_at = ?
                 WHERE email = ?;
-                """, (pwd_hash, salt, tier, license_key, payment_id or existing.get("payment_id"), now_str, clean_email))
+                """, (pwd_hash if password else "", salt if password else "", tier, license_key, payment_id or existing.get("payment_id"), now_str, clean_email))
                 conn.commit()
             finally:
                 conn.close()
@@ -197,7 +215,7 @@ class AccountStore:
             if password:
                 pwd_hash, salt = self.hash_password(password)
 
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             try:
                 cursor = conn.cursor()
                 cursor.execute("""
@@ -259,6 +277,17 @@ class AccountStore:
                     user = self.register_or_upgrade_user(email=email, tier=tier)
                 else:
                     user["license_key"] = key_candidate
+                    # Persist updated license_key to SQLite and cloud
+                    now_str = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    conn = self._get_connection()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE kavach_accounts SET license_key = ?, updated_at = ? WHERE email = ?;", (key_candidate, now_str, email))
+                        conn.commit()
+                    finally:
+                        conn.close()
+                    self._sync_to_cloud({"email": email, "license_key": key_candidate, "updated_at": now_str})
+
                 return {
                     "authenticated": True,
                     "user": user,
@@ -284,7 +313,8 @@ class AccountStore:
             cloud_user = self._fetch_from_cloud(clean_id)
             if cloud_user:
                 # Cache into local SQLite
-                with sqlite3.connect(str(self.db_path)) as conn:
+                conn = self._get_connection()
+                try:
                     cursor = conn.cursor()
                     cursor.execute("""
                     INSERT OR REPLACE INTO kavach_accounts (email, password_hash, salt, tier, license_key, payment_id, created_at, updated_at)
@@ -296,13 +326,15 @@ class AccountStore:
                         cloud_user.get("created_at"), cloud_user.get("updated_at")
                     ))
                     conn.commit()
+                finally:
+                    conn.close()
                 user_with_secrets = cloud_user
 
         if not user_with_secrets:
             return {
                 "authenticated": False,
                 "user": None,
-                "error": "No account found with this email."
+                "error": "Incorrect password or account not found. Please verify and try again."
             }
 
         pwd_hash = user_with_secrets.get("password_hash")
@@ -330,13 +362,13 @@ class AccountStore:
         return {
             "authenticated": False,
             "user": None,
-            "error": "Incorrect password. Please verify and try again."
+            "error": "Incorrect password or account not found. Please verify and try again."
         }
 
     def get_user_by_email(self, email: str, include_secrets: bool = False) -> Optional[Dict[str, Any]]:
         """Retrieves user by email address."""
         clean_email = email.strip().lower()
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_connection()
         try:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -355,7 +387,7 @@ class AccountStore:
     def get_user_by_license(self, license_key: str) -> Optional[Dict[str, Any]]:
         """Retrieves user by their license key."""
         clean_key = license_key.strip()
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_connection()
         try:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()

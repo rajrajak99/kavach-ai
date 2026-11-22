@@ -213,7 +213,8 @@ data = pickle.loads(untrusted_payload)
     assert len(pickle_findings) == 1
     assert "try:" not in pickle_findings[0].fixed_code
     assert "except" not in pickle_findings[0].fixed_code
-    assert "hmac" in pickle_findings[0].fixed_code.lower() or "json" in pickle_findings[0].fixed_code.lower()
+    assert "hmac" in pickle_findings[0].fixed_code.lower()
+    assert "json" in pickle_findings[0].fixed_code.lower()
 
 def test_storage_key_names_never_flagged_as_secrets(parser, analyzer):
     """Confirm _KEY_NAME, _COOKIE_NAME, _HEADER, or low-entropy identifiers like 'aso_refresh_token' are never flagged."""
@@ -225,8 +226,7 @@ SESSION_STORAGE_KEY = "user_auth_session"
 """
     diff = parser.parse_raw_snippet("tokens.ts", code)
     res = analyzer.generate_pull_request_review([diff])
-    secret_findings = [f for f in res['findings'] if f.cwe_id == "CWE-798"]
-    assert len(secret_findings) == 0, f"Expected 0 findings for storage key names, got: {secret_findings}"
+    assert len(res['findings']) == 0, f"Expected 0 findings for storage key names, got: {res['findings']}"
 
 def test_asyncpg_indexed_placeholders_and_constant_propagation(parser, analyzer):
     """Verify that PostgreSQL asyncpg $1, $2 placeholders and module constants in join are zero false positive."""

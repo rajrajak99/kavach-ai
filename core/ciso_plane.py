@@ -47,13 +47,28 @@ class CISOCompliancePlane:
             soc2_cc6_1_status=cc6_status,
             soc2_cc7_1_status=cc7_status
         )
+        # Deduplicate: update existing repo profile if already registered
+        self.repos = [r for r in self.repos if r.repo_name != repo_name]
         self.repos.append(profile)
         return profile
 
     def compute_organization_score(self) -> Dict[str, Any]:
         """Computes aggregate CISO Executive Index (0 to 100%)."""
         if not self.repos:
-            return {"score": 100, "grade": "A+", "total_repos": 0, "status": "NO_REPOS_TRACKED"}
+            return {
+                "organization": self.organization_name,
+                "total_repos_audited": 0,
+                "total_repos": 0,
+                "aggregate_score": 100,
+                "score": 100,
+                "security_grade": "A+ (No Repositories Audited)",
+                "grade": "A+",
+                "total_critical_vulnerabilities": 0,
+                "total_high_vulnerabilities": 0,
+                "soc2_compliance_rate": "100.0%",
+                "executive_status": "Audit Ready (No Findings)",
+                "status": "NO_REPOS_TRACKED"
+            }
 
         total_critical = sum(r.critical_findings for r in self.repos)
         total_high = sum(r.high_findings for r in self.repos)
@@ -72,6 +87,9 @@ class CISOCompliancePlane:
         else:
             grade = "F (High Breach Risk)"
 
+        compliant_repos = sum(1 for r in self.repos if r.soc2_cc6_1_status == "PASS" and r.soc2_cc7_1_status == "PASS")
+        compliance_pct = round((compliant_repos / len(self.repos)) * 100, 1)
+
         return {
             "organization": self.organization_name,
             "total_repos_audited": len(self.repos),
@@ -79,6 +97,6 @@ class CISOCompliancePlane:
             "security_grade": grade,
             "total_critical_vulnerabilities": total_critical,
             "total_high_vulnerabilities": total_high,
-            "soc2_compliance_rate": f"{round((sum(1 for r in self.repos if r.soc2_cc6_1_status == 'PASS') / len(self.repos)) * 100, 1)}%",
+            "soc2_compliance_rate": f"{compliance_pct}%",
             "executive_status": "Audit Ready" if score >= 85 else "Remediate Criticals"
         }

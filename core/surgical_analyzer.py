@@ -29,12 +29,15 @@ KNOWN_SECRET_PREFIXES = (
     "github_pat_", "AKIA", "ASIA", "xoxb-", "xoxp-", "sq0atp-", "live_secret_"
 )
 
-DUMMY_SECRET_INDICATORS = {
+DUMMY_SECRET_EXACT = {
+    "admin", "password", "pass", "root", "default", "none", "null",
+    "undefined", "xxxx", "000000", "123456", "12345678", "skip", "filter", "bypass"
+}
+
+DUMMY_SECRET_SUBSTRINGS = {
     "dummy", "example", "sample", "placeholder", "changeme", "change_me",
-    "your_", "your-", "your_key", "your_secret", "fake", "filter", "bypass",
-    "todo", "replace", "insert", "secret_here", "token_here", "apikey_here",
-    "none", "null", "undefined", "default", "xxxx", "000000", "admin", "password",
-    "skip", "governor", "footer", "test_key", "test_token", "test_secret"
+    "your_key", "your_secret", "your-key", "your-secret", "secret_here",
+    "token_here", "apikey_here", "test_key", "test_token", "test_secret"
 }
 
 def is_dummy_or_placeholder_secret(val: str, var_name: str = "") -> bool:
@@ -66,7 +69,13 @@ def is_dummy_or_placeholder_secret(val: str, var_name: str = "") -> bool:
         return True
 
     lowered = clean.lower()
-    for ind in DUMMY_SECRET_INDICATORS:
+    if lowered in DUMMY_SECRET_EXACT:
+        return True
+
+    if lowered.startswith(("your_", "your-")):
+        return True
+
+    for ind in DUMMY_SECRET_SUBSTRINGS:
         if ind in lowered:
             return True
 
@@ -338,7 +347,7 @@ class SurgicalAnalyzer:
                 return True
             return False
 
-        # Unwrap text(...) or select(...) calls
+        # Unwrap text(...) or select(...) calls or chained ORM methods
         if isinstance(arg_node, ast.Call):
             func_name = None
             if isinstance(arg_node.func, ast.Name):
@@ -348,8 +357,16 @@ class SurgicalAnalyzer:
             if func_name in ("text", "literal_column", "select"):
                 if arg_node.args:
                     return self._is_dynamic_sql(arg_node.args[0], tainted_sql_vars, safe_placeholder_vars, uppercase_constants)
-            # Chained parameter binding methods (.bindparams, .params, .where) are safe
+            # Chained parameter binding methods (.bindparams, .params, .where, .filter)
             if func_name in ("bindparams", "params", "values", "filter", "where", "filter_by"):
+                # Recursively check the receiver (e.g. text(f"...").bindparams(...))
+                if isinstance(arg_node.func, ast.Attribute):
+                    if self._is_dynamic_sql(arg_node.func.value, tainted_sql_vars, safe_placeholder_vars, uppercase_constants):
+                        return True
+                # Also check arguments to where/filter if passed dynamically
+                for a in arg_node.args:
+                    if self._is_dynamic_sql(a, tainted_sql_vars, safe_placeholder_vars, uppercase_constants):
+                        return True
                 return False
 
         # 1. Direct variable that was tracked as dynamic/tainted
@@ -451,7 +468,16 @@ class SurgicalAnalyzer:
                 import textwrap
                 tree = ast.parse(textwrap.dedent(full_code))
             except Exception:
-                return ast_findings, safely_closed_handles, None
+                try:
+                    non_empty_lines = [l for l in full_code.splitlines() if l.strip()]
+                    if non_empty_lines:
+                        min_indent = min(len(l) - len(l.lstrip()) for l in non_empty_lines)
+                        dedented = "\n".join((l[min_indent:] if len(l) >= min_indent else l) for l in full_code.splitlines())
+                        tree = ast.parse(dedented)
+                    else:
+                        return ast_findings, safely_closed_handles, None
+                except Exception:
+                    return ast_findings, safely_closed_handles, None
         except SyntaxError as se:
             is_c_cpp = bool(re.search(r'(#include\s*<|\bstd::|\bcout\b|\bprintf\b|\bstrcpy\b|\bgets\b|\bint\s+main\b|\bchar\s*\*)', full_code))
             is_js = bool(re.search(r'(\bfunction\b|\bconst\b|\bvar\b|\blet\b|=>|console\.log\b|\bmodule\.exports\b|\brequire\s*\()', full_code))
@@ -472,8 +498,11 @@ class SurgicalAnalyzer:
         uppercase_constants: Set[str] = set()
         safe_placeholder_vars: Set[str] = set()
 
+        # Sort nodes by line number to guarantee execution source order for taint tracking
+        ordered_nodes = sorted(list(ast.walk(tree)), key=lambda n: getattr(n, 'lineno', 0))
+
         # Pre-scan for constants, uppercase SQL identifiers, and safe placeholder generators
-        for pnode in ast.walk(tree):
+        for pnode in ordered_nodes:
             if isinstance(pnode, ast.Assign):
                 for t in pnode.targets:
                     if isinstance(t, ast.Name):
@@ -486,7 +515,7 @@ class SurgicalAnalyzer:
                         if self._is_safe_placeholder_expr(pnode.value, safe_placeholder_vars):
                             safe_placeholder_vars.add(t.id)
 
-        for node in ast.walk(tree):
+        for node in ordered_nodes:
             # 1. Track String Constants & Obfuscated Secrets
             if isinstance(node, ast.Assign):
                 target_name = None
@@ -691,6 +720,9 @@ class SurgicalAnalyzer:
                         indent = len(line_str) - len(line_str.lstrip())
                         indent_str = " " * indent
                         fixed = line_str.replace("yaml.load(", "yaml.safe_load(")
+                        # Strip Loader argument since yaml.safe_load() does not accept Loader
+                        fixed = re.sub(r',\s*Loader\s*=\s*[^,\)]+', '', fixed)
+                        fixed = re.sub(r'Loader\s*=\s*[^,\)]+\s*,\s*', '', fixed)
                         if fixed == line_str:
                             fixed = f"{indent_str}yaml.safe_load(payload)"
                         ast_findings.append(PatchFinding(
@@ -838,9 +870,15 @@ class SurgicalAnalyzer:
 
                 if is_subp and node.lineno in changed_line_nums:
                     has_shell_true = any(kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value is True for kw in node.keywords)
-                    if has_shell_true and node.args:
-                        arg0 = node.args[0]
-                        has_dyn = any(isinstance(sub, (ast.JoinedStr, ast.BinOp, ast.Call, ast.FormattedValue, ast.Name)) for sub in ast.walk(arg0))
+                    cmd_arg = node.args[0] if node.args else None
+                    if cmd_arg is None:
+                        for kw in node.keywords:
+                            if kw.arg == "args":
+                                cmd_arg = kw.value
+                                break
+
+                    if has_shell_true and cmd_arg is not None:
+                        has_dyn = any(isinstance(sub, (ast.JoinedStr, ast.BinOp, ast.Call, ast.FormattedValue, ast.Name)) for sub in ast.walk(cmd_arg))
                         if has_dyn:
                             line_str = lines_by_num.get(node.lineno, "subprocess.run(..., shell=True)")
                             indent = len(line_str) - len(line_str.lstrip())

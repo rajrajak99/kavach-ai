@@ -7,8 +7,11 @@ import os
 import sys
 import datetime
 import urllib.parse
+import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 try:
     from kavach_license import generate_signed_license, PlanTier
@@ -24,7 +27,8 @@ class BillingManager:
     inspection, and automated plan activation.
     """
 
-    DEFAULT_INVOICE_EMAIL = "rajabhaiyarajak2008@gmail.com"
+    DEFAULT_INVOICE_EMAIL = os.getenv("KAVACH_BILLING_EMAIL", "billing@kavach.ai")
+    FOUNDER_BILLING_EMAIL = DEFAULT_INVOICE_EMAIL
 
     @classmethod
     def get_checkout_urls(cls) -> Dict[str, str]:
@@ -138,57 +142,73 @@ class BillingManager:
             return str(val)
 
         status = get_single("status").lower()
-        payment_id = get_single("payment_id") or get_single("order_id") or get_single("checkout_id")
-        tier_str = get_single("tier").upper() or get_single("plan").upper()
-        license_key = get_single("license_key") or get_single("key")
-        customer_email = get_single("email") or get_single("customer_email") or ""
+        payment_id = (get_single("payment_id") or get_single("order_id") or get_single("checkout_id")).strip()
+        tier_str = (get_single("tier") or get_single("plan")).upper().strip()
+        license_key = (get_single("license_key") or get_single("key")).strip()
+        customer_email = (get_single("email") or get_single("customer_email")).strip()
 
-        # Check for success indicators from MoR gateways
-        is_success = status in ("success", "paid", "active", "completed") or bool(payment_id and (license_key or customer_email))
+        # Fail closed: payment_id is strictly required and must be at least 6 characters
+        if not payment_id or len(payment_id) < 6:
+            logger.warning("Billing activation rejected: missing or invalid payment_id")
+            return None
 
-        if is_success:
-            # Map tier string to recognized plan
-            target_tier = "FREE"
-            if "PRO" in tier_str or "DEV" in tier_str or "INDIE" in tier_str:
-                target_tier = "DEVELOPER_PRO"
-            elif "GROWTH" in tier_str or "TEAM" in tier_str or "STARTUP" in tier_str:
-                target_tier = "TEAM_ENTERPRISE"
-            elif "ENTERPRISE" in tier_str or "COMPLIANCE" in tier_str:
-                target_tier = "TEAM_ENTERPRISE"
-            else:
-                target_tier = "DEVELOPER_PRO"
+        # Check for verified success status
+        is_success = status in ("success", "paid", "active", "completed")
+        if not is_success:
+            logger.warning(f"Billing activation rejected: status '{status}' is not successful")
+            return None
 
-            tier_short = "PRO" if target_tier == "DEVELOPER_PRO" else "TEAM"
+        # Map tier string to recognized plan — fail closed on unknown or empty tiers
+        target_tier = None
+        if any(k in tier_str for k in ("PRO", "DEV", "INDIE")):
+            target_tier = "DEVELOPER_PRO"
+        elif any(k in tier_str for k in ("GROWTH", "TEAM", "STARTUP", "ENTERPRISE", "COMPLIANCE")):
+            target_tier = "TEAM_ENTERPRISE"
+        else:
+            logger.warning(f"Billing activation rejected: unknown or empty tier '{tier_str}'")
+            return None
 
-            # Generate authentic signed HMAC key
-            email_to_use = customer_email or f"{payment_id}@customer.kavach.ai"
-            if not license_key:
-                license_key = generate_signed_license(email_to_use, tier=tier_short)
-                try:
-                    from core.auth_store import AccountStore
-                    store = AccountStore()
-                    store.register_or_upgrade_user(email_to_use, tier=tier_short, payment_id=payment_id)
-                except Exception:
-                    pass
+        tier_short = "PRO" if target_tier == "DEVELOPER_PRO" else "TEAM"
 
-            needs_email = not bool(customer_email)
-            receipt_text = cls.generate_receipt_text(
-                customer_email or "customer@kavach.ai",
-                tier_short,
-                license_key,
-                payment_id
-            )
+        # Validate client-provided license key signature if supplied; otherwise mint fresh signed key
+        if license_key:
+            try:
+                from kavach_license import verify_signed_license
+                v_res = verify_signed_license(license_key)
+                if not v_res.get("valid"):
+                    logger.warning("Billing activation: client supplied invalid license key signature, minting fresh key")
+                    license_key = ""
+            except Exception as e:
+                logger.error(f"License verification error during billing activation: {e}")
+                license_key = ""
 
-            return {
-                "activated": True,
-                "needs_email": needs_email,
-                "tier": target_tier,
-                "tier_short": tier_short,
-                "email": customer_email,
-                "license_key": license_key,
-                "payment_id": payment_id,
-                "receipt": receipt_text,
-                "message": f"Payment verified ({payment_id}). Plan unlocked: {target_tier}!"
-            }
+        # Generate authentic signed HMAC key
+        email_to_use = customer_email or f"{payment_id}@customer.kavach.ai"
+        if not license_key:
+            license_key = generate_signed_license(email_to_use, tier=tier_short)
+            try:
+                from core.auth_store import AccountStore
+                store = AccountStore()
+                store.register_or_upgrade_user(email_to_use, tier=tier_short, payment_id=payment_id)
+            except Exception as e:
+                logger.error(f"Failed to register/upgrade user in AccountStore: {e}", exc_info=True)
 
-        return None
+        needs_email = not bool(customer_email)
+        receipt_text = cls.generate_receipt_text(
+            customer_email or "customer@kavach.ai",
+            tier_short,
+            license_key,
+            payment_id
+        )
+
+        return {
+            "activated": True,
+            "needs_email": needs_email,
+            "tier": target_tier,
+            "tier_short": tier_short,
+            "email": customer_email,
+            "license_key": license_key,
+            "payment_id": payment_id,
+            "receipt": receipt_text,
+            "message": f"Payment verified ({payment_id}). Plan unlocked: {target_tier}!"
+        }

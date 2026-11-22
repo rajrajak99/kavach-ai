@@ -27,25 +27,26 @@ except ImportError:
     sys.exit(1)
 
 def load_env_file():
-    candidates = [
-        Path(".env"),
-        Path(__file__).resolve().parent.parent / ".env"
-    ]
-    for env_path in candidates:
-        if env_path.exists():
-            with open(env_path, "r", encoding="utf-8-sig") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#") and "=" in line:
-                        k, v = line.split("=", 1)
-                        os.environ.setdefault(k.strip(), v.strip().strip('"\''))
-            break
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8-sig") as f:
+            for line in f:
+                line = line.strip()
+                if "#" in line:
+                    line = line.split("#", 1)[0].strip()
+                if line and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip().strip('"\''))
 
 def mint_license(tier: str, subject: str, days: int = 365) -> str:
     load_env_file()
     priv_hex = os.getenv("KAVACH_MASTER_SIGNING_KEY", "")
     if not priv_hex:
         raise RuntimeError("KAVACH_MASTER_SIGNING_KEY not found in environment or .env")
+
+    clean_sub = subject.strip()
+    if not clean_sub:
+        raise ValueError("Subject cannot be empty or whitespace.")
 
     tier_clean = tier.strip().upper()
     if tier_clean in ["PRO", "DEVELOPER_PRO"]:
@@ -62,7 +63,7 @@ def mint_license(tier: str, subject: str, days: int = 365) -> str:
 
     payload = {
         "tier": full_tier,
-        "sub": subject.strip(),
+        "sub": clean_sub,
         "exp": exp,
         "iat": now
     }
@@ -70,14 +71,18 @@ def mint_license(tier: str, subject: str, days: int = 365) -> str:
     payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
     payload_b64 = base64.urlsafe_b64encode(payload_json.encode("utf-8")).decode("utf-8").rstrip("=")
 
-    priv_bytes = bytes.fromhex(priv_hex.strip())
-    priv_key = ed25519.Ed25519PrivateKey.from_private_bytes(priv_bytes)
+    try:
+        priv_bytes = bytes.fromhex(priv_hex.strip())
+        priv_key = ed25519.Ed25519PrivateKey.from_private_bytes(priv_bytes)
+    except Exception as e:
+        raise RuntimeError(f"Invalid Ed25519 private key in KAVACH_MASTER_SIGNING_KEY: {e}")
     
-    # Sign the canonical base64 payload
-    sig = priv_key.sign(payload_b64.encode("utf-8"))
+    # Sign the canonical prefix + payload string to prevent prefix swapping
+    message_to_sign = f"KAVACH-{prefix_tag}-{payload_b64}"
+    sig = priv_key.sign(message_to_sign.encode("utf-8"))
     sig_b64 = base64.urlsafe_b64encode(sig).decode("utf-8").rstrip("=")
 
-    token = f"KAVACH-{prefix_tag}-{payload_b64}.{sig_b64}"
+    token = f"{message_to_sign}.{sig_b64}"
     return token
 
 def main():
@@ -87,11 +92,20 @@ def main():
     parser.add_argument("--days", type=int, default=365, help="Validity period in days (default: 365, 0 = lifetime)")
     args = parser.parse_args()
 
-    token = mint_license(tier=args.tier, subject=args.sub, days=args.days)
+    if args.days < 0:
+        print("Error: Validity days cannot be negative.", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        token = mint_license(tier=args.tier, subject=args.sub, days=args.days)
+    except Exception as e:
+        print(f"Error minting license: {e}", file=sys.stderr)
+        sys.exit(1)
+
     print("\n=======================================================")
     print("  🛡️ Kavach AI - Cryptographically Signed License Token")
     print("=======================================================")
-    print(f"Subject:   {args.sub}")
+    print(f"Subject:   {args.sub.strip()}")
     print(f"Tier:      {args.tier.upper()}")
     print(f"Validity:  {args.days} days" if args.days > 0 else "Validity:  LIFETIME")
     print(f"Token:\n{token}\n")

@@ -11,6 +11,8 @@ class PatchValidator:
     
     @staticmethod
     def validate_python_syntax(code: str) -> Tuple[bool, str]:
+        if not code or not code.strip():
+            return False, "Empty code snippet"
         try:
             ast.parse(code)
             return True, "Valid Python syntax"
@@ -21,15 +23,14 @@ class PatchValidator:
 
     @staticmethod
     def clean_suggestion_block(raw_patch: str) -> str:
-        """Strips markdown fences if present."""
-        cleaned = raw_patch.strip()
-        if cleaned.startswith("```suggestion"):
-            cleaned = cleaned[len("```suggestion"):].strip()
-        elif cleaned.startswith("```python"):
-            cleaned = cleaned[len("```python"):].strip()
-        elif cleaned.startswith("```"):
-            cleaned = cleaned[3:].strip()
-            
-        if cleaned.endswith("```"):
-            cleaned = cleaned[:-3].strip()
+        """Strips markdown fences if present without altering indentation."""
+        if not raw_patch:
+            return ""
+        # Remove opening fence line (e.g. ```suggestion, ```python, ```py, ```)
+        cleaned = re.sub(r"^```[a-zA-Z0-9_\-]*\r?\n", "", raw_patch.lstrip("\r\n"))
+        # Remove closing fence at end
+        cleaned = re.sub(r"\r?\n```\s*$", "", cleaned.rstrip())
+        # Also handle one-line fences like ```code```
+        if cleaned.startswith("```") and cleaned.endswith("```") and len(cleaned) >= 6:
+            cleaned = cleaned[3:-3]
         return cleaned

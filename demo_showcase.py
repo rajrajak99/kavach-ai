@@ -19,7 +19,8 @@ DIM = "\033[2m"
 RESET = "\033[0m"
 
 def main():
-    os.system("") # Enable ANSI terminal colors on Windows
+    if sys.platform == "win32":
+        os.system("") # Enable ANSI terminal colors on Windows
     print(f"\n{BOLD}{CYAN}======================================================================{RESET}")
     print(f"{BOLD}{CYAN}      🛡️  KAVACH AI — AUTONOMOUS CODE ARMOR & SURGICAL HEALER        {RESET}")
     print(f"{BOLD}{CYAN}======================================================================{RESET}\n")
@@ -34,11 +35,11 @@ def main():
     time.sleep(0.4)
     print(f"  {RED}[!] Line 42: Raw SQL Injection detected (CWE-89){RESET}")
     print(f"      {DIM}Query: cursor.execute(f'SELECT * FROM users WHERE id = {{user_id}}'){RESET}")
-    print(f"      {YELLOW}Threat CVSS: 9.8 (CRITICAL) | Vector: Remote Code Execution via Database{RESET}")
+    print(f"      {YELLOW}Threat CVSS: 9.8 (CRITICAL) | Vector: Unauthorized Data Exfiltration & Database Compromise{RESET}")
     time.sleep(0.5)
 
-    print(f"  {RED}[!] Line 88: Leaked Stripe Production Secret Key (CWE-798){RESET}")
-    print(f"      {DIM}Token: sk-live-99a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4{RESET}")
+    print(f"  {RED}[!] Line 88: Leaked API Secret Token (CWE-798){RESET}")
+    print(f"      {DIM}Token: sk_test_demo_placeholder_99a8b7c6d5e4f3a2b1c0d9e8{RESET}")
     print(f"      {YELLOW}Threat CVSS: 8.5 (HIGH) | Vector: Unauthorized API Takeover{RESET}")
     time.sleep(0.5)
 

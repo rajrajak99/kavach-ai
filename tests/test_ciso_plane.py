@@ -11,5 +11,15 @@ def test_ciso_compliance_plane_scoring():
     assert summary["organization"] == "Acme Global Enterprises"
     assert summary["total_repos_audited"] == 3
     assert summary["total_critical_vulnerabilities"] == 1
-    assert summary["aggregate_score"] < 100
-    assert "Audit Ready" in summary["executive_status"] or "Remediate" in summary["executive_status"]
+    assert summary["total_high_vulnerabilities"] == 3
+    assert summary["aggregate_score"] == 81
+    assert summary["security_grade"] == "B (Good Posture)"
+    assert summary["executive_status"] == "Remediate Criticals"
+
+def test_ciso_compliance_plane_all_clean():
+    plane = CISOCompliancePlane("Secure Corp")
+    plane.register_repo_scan("clean-repo", total_files=50, critical_count=0, high_count=0, has_ci_gate=True)
+    summary = plane.compute_organization_score()
+    assert summary["aggregate_score"] == 100
+    assert summary["executive_status"] == "Audit Ready"
+    assert summary["soc2_compliance_rate"] == "100.0%"

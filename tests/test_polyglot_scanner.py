@@ -85,3 +85,39 @@ def test_project_scanner_polyglot_integration():
     result = scanner.analyze_file_bundle(bundle, project_name="polyglot-test")
     assert len(result["file_findings"]) == 4
     assert result["metrics"]["critical"] >= 2
+
+def test_polyglot_safe_code_negative_cases():
+    """Verify that safe idiomatic code in Go, TS, and Terraform generates 0 false positives."""
+    go_scanner = GoScanner()
+    safe_go = """package main
+import "database/sql"
+func getUser(id string) {
+    db.Query("SELECT * FROM users WHERE id = $1", id)
+}
+"""
+    assert len(go_scanner.scan_code(safe_go, "safe.go")) == 0
+
+    ts_scanner = TSScanner()
+    safe_ts = """import DOMPurify from 'dompurify';
+export function SafeBox({ input }: { input: string }) {
+    return <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(input) }} />;
+}
+"""
+    assert len(ts_scanner.scan_code(safe_ts, "safe.tsx")) == 0
+
+    tf_scanner = TerraformScanner()
+    safe_tf = """resource "aws_s3_bucket" "private_b" {
+  bucket = "corp-private-logs"
+  acl    = "private"
+}
+resource "aws_security_group" "outbound_only" {
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+"""
+    assert len(tf_scanner.scan_code(safe_tf, "safe.tf")) == 0
+

@@ -27,10 +27,8 @@ try:
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
-DEFAULT_MASTER_SECRET = "kavach_master_hmac_placeholder_salt_v1_4_0"
-
 def get_master_secret(master_secret: Optional[str] = None) -> str:
-    """Retrieves master HMAC secret with deterministic fallback."""
+    """Retrieves master HMAC secret securely without hardcoded public secrets."""
     if master_secret:
         return master_secret
     try:
@@ -43,7 +41,12 @@ def get_master_secret(master_secret: Optional[str] = None) -> str:
     except Exception:
         pass
     env_secret = os.getenv("KAVACH_MASTER_SECRET") or os.getenv("KAVACH_MASTER_SIGNING_KEY")
-    return (env_secret or DEFAULT_MASTER_SECRET).strip()
+    if env_secret and env_secret.strip():
+        return env_secret.strip()
+    # Derive deterministic machine/environment key if env var is not explicitly set
+    # (prevents static public string from repository being reused to forge keys)
+    machine_seed = f"kavach_{os.name}_{sys.platform}_{Path.home()}_{os.getenv('COMPUTERNAME', '')}_{os.getenv('USERNAME', '')}"
+    return hashlib.sha256(machine_seed.encode("utf-8")).hexdigest()
 
 def generate_signed_license(
     email: str,
@@ -53,8 +56,8 @@ def generate_signed_license(
 ) -> str:
     """
     Generates an HMAC-SHA256 signed stateless license key.
-    Format: KAVACH-<TIER>-<BASE64_EMAIL>-<EXPIRY_YYYYMMDD>-<HMAC_SIGNATURE_12CHARS>
-    e.g. KAVACH-PRO-dGVzdEBleGFtcGxlLmNvbQ-20361106-9A8B7C6D5E4F
+    Format: KAVACH-<TIER>-<BASE64_EMAIL>-<EXPIRY_YYYYMMDD>-<HMAC_SIGNATURE_32CHARS>
+    e.g. KAVACH-PRO-dGVzdEBleGFtcGxlLmNvbQ-20361106-9A8B7C6D5E4F1A2B3C4D5E6F7A8B9C0D
     """
     clean_email = email.strip().lower()
     clean_tier = tier.strip().upper()
@@ -72,7 +75,7 @@ def generate_signed_license(
     # Build payload to sign
     payload = f"KAVACH-{clean_tier}-{b64_email}-{exp_date}"
     secret = get_master_secret(master_secret)
-    sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()[:12].upper()
+    sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()[:32].upper()
     
     return f"{payload}-{sig}"
 
@@ -82,6 +85,8 @@ def verify_signed_license(
 ) -> Dict[str, Any]:
     """
     Statelessly verifies an HMAC-SHA256 signed license key.
+    Supports both modern 32-character and legacy 12-character HMAC signatures.
+    Handles hyphens inside URL-safe Base64 encoded email payloads.
     Returns: {"valid": bool, "email": str, "tier": str, "expires": str, "error": Optional[str]}
     """
     if not license_key or not isinstance(license_key, str):
@@ -91,11 +96,16 @@ def verify_signed_license(
     if not clean_key.startswith("KAVACH-"):
         return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid prefix (must start with KAVACH-)"}
     
-    parts = clean_key.split("-")
-    if len(parts) != 5:
+    tokens = clean_key.split("-")
+    if len(tokens) < 5:
         return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid key structure"}
     
-    prefix, tier, b64_email, exp_date, sig = parts
+    prefix = tokens[0]
+    tier = tokens[1]
+    sig = tokens[-1]
+    exp_date = tokens[-2]
+    b64_email = "-".join(tokens[2:-2])
+    
     if prefix != "KAVACH":
         return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid token header"}
     
@@ -106,12 +116,14 @@ def verify_signed_license(
     except Exception:
         return {"valid": False, "email": "", "tier": "", "expires": "", "error": "Invalid email encoding"}
     
-    # Verify HMAC
+    # Verify HMAC (accept 32-char modern signature or 12-char legacy signature)
     payload = f"KAVACH-{tier}-{b64_email}-{exp_date}"
     secret = get_master_secret(master_secret)
-    expected_sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()[:12].upper()
+    full_sig = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest().upper()
+    expected_sig_32 = full_sig[:32]
+    expected_sig_12 = full_sig[:12]
     
-    if not hmac.compare_digest(sig.upper(), expected_sig):
+    if not (hmac.compare_digest(sig.upper(), expected_sig_32) or hmac.compare_digest(sig.upper(), expected_sig_12)):
         return {"valid": False, "email": email, "tier": tier, "expires": exp_date, "error": "Cryptographic signature verification failed (tampered key)"}
     
     # Check expiration
@@ -172,10 +184,23 @@ class LicenseManager:
             sig_pad = sig_b64 + "=" * (-len(sig_b64) % 4)
             sig_bytes = base64.urlsafe_b64decode(sig_pad)
 
-            # Verify signature against the raw payload_b64 bytes
+            # Verify signature against prefix_and_payload (modern) or payload_b64 (legacy)
             pub_bytes = bytes.fromhex(cls.PUBLIC_KEY_HEX.strip())
             pub_key = ed25519.Ed25519PublicKey.from_public_bytes(pub_bytes)
-            pub_key.verify(sig_bytes, payload_b64.encode("utf-8"))
+            
+            verified = False
+            try:
+                pub_key.verify(sig_bytes, prefix_and_payload.encode("utf-8"))
+                verified = True
+            except Exception:
+                pass
+
+            if not verified:
+                try:
+                    pub_key.verify(sig_bytes, payload_b64.encode("utf-8"))
+                    verified = True
+                except Exception:
+                    return None
 
             # Decode and validate payload contents
             payload_pad = payload_b64 + "=" * (-len(payload_b64) % 4)
@@ -187,9 +212,10 @@ class LicenseManager:
                 return None  # Expired license token
 
             tier_str = payload_data.get("tier", "").strip().upper()
-            if tier_str == "DEVELOPER_PRO":
+            # Enforce that prefix matches the payload tier to prevent prefix swapping
+            if tier_hint == "PRO" and tier_str == "DEVELOPER_PRO":
                 return PlanTier.DEVELOPER_PRO, payload_data
-            elif tier_str in ["TEAM_ENTERPRISE", "TEAM"]:
+            elif tier_hint == "TEAM" and tier_str in ["TEAM_ENTERPRISE", "TEAM"]:
                 return PlanTier.TEAM_ENTERPRISE, payload_data
 
             return None
@@ -277,7 +303,7 @@ class LicenseManager:
                         try:
                             return PlanTier(t.strip().upper())
                         except ValueError:
-                            return PlanTier.DEVELOPER_PRO
+                            return PlanTier.FREE
                 elif pair.strip() == clean_key:
                     return PlanTier.DEVELOPER_PRO
 

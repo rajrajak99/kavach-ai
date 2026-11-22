@@ -92,11 +92,15 @@ def get_analyzer():
 def get_parser():
     return DiffParser()
 
+import threading
 _ANALYSIS_CACHE = {}
+_ANALYSIS_CACHE_LOCK = threading.Lock()
 
 def analyze_code_cached(code_str: str):
-    if code_str in _ANALYSIS_CACHE:
-        return _ANALYSIS_CACHE[code_str]
+    with _ANALYSIS_CACHE_LOCK:
+        if code_str in _ANALYSIS_CACHE:
+            return _ANALYSIS_CACHE[code_str]
+
     analyzer = get_analyzer()
     parser = get_parser()
     diffs = []
@@ -104,15 +108,24 @@ def analyze_code_cached(code_str: str):
         diffs = parser.parse_git_diff(code_str)
     if not diffs:
         sn_name = "snippet.py"
-        if "function " in code_str or "const " in code_str or "var " in code_str:
-            sn_name = "snippet.js"
-        elif "#include" in code_str:
+        if "#include" in code_str or "std::" in code_str:
             sn_name = "snippet.cpp"
+        elif re.search(r'^\s*package\s+[a-zA-Z0-9_]+', code_str, re.MULTILINE):
+            sn_name = "snippet.go"
+        else:
+            try:
+                import ast
+                ast.parse(code_str)
+            except SyntaxError:
+                if re.search(r'\b(const|let|var|function)\s+[a-zA-Z0-9_$]+', code_str) or "require(" in code_str:
+                    sn_name = "snippet.js"
         diffs = [parser.parse_raw_snippet(sn_name, code_str)]
     res = analyzer.generate_pull_request_review(diffs)
-    if len(_ANALYSIS_CACHE) > 100:
-        _ANALYSIS_CACHE.clear()
-    _ANALYSIS_CACHE[code_str] = res
+
+    with _ANALYSIS_CACHE_LOCK:
+        if len(_ANALYSIS_CACHE) > 100:
+            _ANALYSIS_CACHE.clear()
+        _ANALYSIS_CACHE[code_str] = res
     return res
 
 @st.cache_data
@@ -211,6 +224,12 @@ if "project_sca_findings" not in st.session_state:
 try:
     if not st.session_state.get("is_authenticated") and hasattr(st, "query_params") and "session_token" in st.query_params:
         _sess_token = str(st.query_params["session_token"]).strip()
+        # Immediately remove session_token from URL query parameters to prevent leakage in history/referers
+        try:
+            del st.query_params["session_token"]
+        except Exception:
+            pass
+
         if _sess_token:
             _verified = verify_signed_license(_sess_token)
             if _verified.get("valid"):
@@ -224,12 +243,22 @@ try:
                 _store = get_account_store()
                 _usr = _store.get_user_by_license(_sess_token)
                 if _usr:
-                    st.session_state.is_authenticated = True
-                    st.session_state.user_email = _usr["email"]
-                    st.session_state.license_key = _sess_token
-                    _ut = _usr.get("tier", "FREE")
-                    st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if _ut in ("TEAM", "LTD") else (PlanTier.DEVELOPER_PRO.value if _ut == "PRO" else PlanTier.FREE.value)
-                    st.session_state.is_pro_user = (_ut != "FREE")
+                    _exp = _usr.get("expires_at") or _usr.get("expires")
+                    _is_expired = False
+                    if _exp:
+                        try:
+                            _exp_dt = datetime.datetime.fromisoformat(str(_exp).replace("Z", "+00:00"))
+                            if _exp_dt < datetime.datetime.now(datetime.timezone.utc):
+                                _is_expired = True
+                        except Exception:
+                            pass
+                    if not _is_expired:
+                        st.session_state.is_authenticated = True
+                        st.session_state.user_email = _usr["email"]
+                        st.session_state.license_key = _sess_token
+                        _ut = _usr.get("tier", "FREE")
+                        st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if _ut in ("TEAM", "LTD") else (PlanTier.DEVELOPER_PRO.value if _ut == "PRO" else PlanTier.FREE.value)
+                        st.session_state.is_pro_user = (_ut != "FREE")
 except Exception:
     pass
 
@@ -248,8 +277,12 @@ try:
                 st.session_state.is_authenticated = True
                 st.session_state.is_pro_user = (_act_res["tier"] != PlanTier.FREE.value)
                 st.session_state.toast_msg = f"🎉 {_act_res['message']}"
-                if hasattr(st, "query_params") and _act_res.get("license_key"):
-                    st.query_params["session_token"] = _act_res["license_key"]
+                # Clean any lingering tokens from URL
+                if hasattr(st, "query_params") and "session_token" in st.query_params:
+                    try:
+                        del st.query_params["session_token"]
+                    except Exception:
+                        pass
 except Exception:
     pass
 # ----------------- SOC2 & ISO-27001 PRE-AUDIT REPORT GENERATOR -----------------
@@ -348,14 +381,41 @@ def generate_soc2_compliance_report(code_snippet: str, scan_res: dict, sca_findi
     
     return "\n".join(lines)
 
-# ----------------- GITHUB AUTH HELPER -----------------
+# ----------------- GITHUB AUTH HELPER (AUTHENTICATED VIA /user) -----------------
 @st.cache_data(ttl=3600)
 def fetch_github_profile(username: str, token: str = ""):
-    if not username:
-        return {"success": False, "error": "Username cannot be empty."}
-    headers = {"User-Agent": "Kavach-AI-Scanner"}
+    if not username and not token:
+        return {"success": False, "error": "Username or Personal Access Token is required."}
+    headers = {"User-Agent": "Kavach-AI-Scanner", "Accept": "application/vnd.github.v3+json"}
+    
+    # If token is provided, authenticate against GitHub /user endpoint
     if token:
-        headers["Authorization"] = f"token {token}"
+        headers["Authorization"] = f"Bearer {token.strip()}"
+        try:
+            res = requests.get("https://api.github.com/user", headers=headers, timeout=5)
+            if res.status_code == 200:
+                data = res.json()
+                auth_login = data.get("login", "")
+                if username and auth_login.lower() != username.strip().lower():
+                    return {"success": False, "error": f"Token belongs to @{auth_login}, not @{username}."}
+                return {
+                    "success": True,
+                    "login": auth_login,
+                    "name": data.get("name") or auth_login,
+                    "avatar_url": data.get("avatar_url"),
+                    "public_repos": data.get("public_repos", 0),
+                    "html_url": data.get("html_url"),
+                    "bio": data.get("bio", ""),
+                    "authenticated": True,
+                }
+            elif res.status_code == 401:
+                return {"success": False, "error": "Invalid GitHub Personal Access Token."}
+            else:
+                return {"success": False, "error": f"GitHub API error (status {res.status_code})"}
+        except Exception as e:
+            return {"success": False, "error": f"Network error: {str(e)}"}
+
+    # Public unauthenticated lookup fallback
     try:
         res = requests.get(f"https://api.github.com/users/{username.strip()}", headers=headers, timeout=5)
         if res.status_code == 200:
@@ -368,6 +428,7 @@ def fetch_github_profile(username: str, token: str = ""):
                 "public_repos": data.get("public_repos", 0),
                 "html_url": data.get("html_url"),
                 "bio": data.get("bio", ""),
+                "authenticated": False,
             }
         elif res.status_code == 404:
             return {"success": False, "error": f"GitHub user '@{username}' not found."}
@@ -379,8 +440,8 @@ def fetch_github_profile(username: str, token: str = ""):
 def login_github():
     username = st.session_state.get("input_gh_user", "").strip()
     token = st.session_state.get("input_gh_pat", "").strip()
-    if not username:
-        st.session_state.auth_error = "Please enter your GitHub username."
+    if not username and not token:
+        st.session_state.auth_error = "Please enter your GitHub username or Personal Access Token."
         return
     profile = fetch_github_profile(username, token)
     if profile.get("success"):
@@ -388,7 +449,7 @@ def login_github():
         st.session_state.auth_error = None
         st.session_state.toast_msg = f"Connected as @{profile['login']}!"
     else:
-        st.session_state.auth_error = profile.get("error", "GitHub user not found.")
+        st.session_state.auth_error = profile.get("error", "GitHub authentication failed.")
 
 def demo_login_github():
     profile = fetch_github_profile("rajrajak99")
@@ -405,32 +466,33 @@ def logout_github():
 # ----------------- CALLBACKS & PAYWALL ENFORCEMENT -----------------
 def claim_free_trial(email: str, tier: str = "PRO"):
     """
-    Validates work email, generates a cryptographically signed 30-day enterprise pilot key,
+    Validates work email, generates a cryptographically signed 30-day developer pilot key,
     activates it for the session, registers the user, and records the lead.
+    Free trials are strictly restricted to DEVELOPER_PRO (cannot grant TEAM or ENTERPRISE keys).
     """
     clean_email = email.strip().lower()
     if not clean_email or "@" not in clean_email or clean_email.startswith("@") or "." not in clean_email.split("@")[-1] or " " in clean_email:
         return False, "Please enter a valid work email address."
 
-    # Generate authentic signed key
-    trial_key = generate_signed_license(clean_email, tier=tier, valid_days=30)
+    # Always enforce DEVELOPER_PRO for free trials to prevent privilege escalation
+    trial_tier = "PRO"
+    trial_key = generate_signed_license(clean_email, tier=trial_tier, valid_days=30)
     v = verify_signed_license(trial_key)
     if not v.get("valid"):
         return False, "Could not issue trial license signature."
 
-    # Activate session
-    st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if tier.upper() in ("TEAM", "ENTERPRISE") else PlanTier.DEVELOPER_PRO.value
+    # Activate session strictly as DEVELOPER_PRO
+    st.session_state.license_tier = PlanTier.DEVELOPER_PRO.value
     st.session_state.license_key = trial_key
     st.session_state.is_pro_user = True
     st.session_state.is_authenticated = True
     st.session_state.user_email = clean_email
-    if hasattr(st, "query_params"):
-        st.query_params["session_token"] = trial_key
+    # Removed st.query_params["session_token"] = trial_key to prevent token leak in URL
 
     # Record in Account Store
     try:
         acc_store = get_account_store()
-        acc_store.register_or_upgrade_user(clean_email, tier=tier, license_key=trial_key)
+        acc_store.register_or_upgrade_user(clean_email, tier=trial_tier, license_key=trial_key)
     except Exception:
         pass
 
@@ -536,8 +598,6 @@ def activate_custom_key():
         st.session_state.license_tier = tier.value
         st.session_state.license_key = key
         st.session_state.is_pro_user = (tier != PlanTier.FREE)
-        if hasattr(st, "query_params"):
-            st.query_params["session_token"] = key
         v = verify_signed_license(key)
         if v.get("valid"):
             st.session_state.is_authenticated = True
@@ -553,14 +613,22 @@ def activate_custom_key():
         acc_store = get_account_store()
         usr = acc_store.get_user_by_license(key)
         if usr:
+            # Enforce expiration check even when falling back to DB record
+            exp_val = usr.get("expires_at") or usr.get("expires")
+            if exp_val:
+                try:
+                    exp_dt = datetime.datetime.fromisoformat(str(exp_val).replace("Z", "+00:00"))
+                    if exp_dt < datetime.datetime.now(datetime.timezone.utc):
+                        st.session_state.key_feedback = ("error", f"License expired on {exp_val}.")
+                        return
+                except Exception:
+                    pass
             st.session_state.is_authenticated = True
             st.session_state.user_email = usr["email"]
             st.session_state.license_key = usr["license_key"]
             ut = usr.get("tier", "FREE")
             st.session_state.license_tier = PlanTier.TEAM_ENTERPRISE.value if ut in ("TEAM", "LTD") else (PlanTier.DEVELOPER_PRO.value if ut == "PRO" else PlanTier.FREE.value)
             st.session_state.is_pro_user = (ut != "FREE")
-            if hasattr(st, "query_params"):
-                st.query_params["session_token"] = usr["license_key"]
             st.session_state.key_feedback = ("success", f"Verified: {st.session_state.license_tier} Activated!")
             st.session_state.toast_msg = f"Verified: {st.session_state.license_tier}"
         else:
@@ -1976,13 +2044,17 @@ def render_project_archive_inspector():
         proj_name = "demo_flask_service.zip"
         scan_needed = True
     elif uploaded_zip:
-        upload_sig = f"{uploaded_zip.name}_{uploaded_zip.size}"
-        if st.session_state.get("_last_uploaded_zip_sig") != upload_sig:
-            st.session_state._last_uploaded_zip_sig = upload_sig
-            uploaded_zip.seek(0)
-            zip_bytes = uploaded_zip.read()
-            proj_name = uploaded_zip.name
-            scan_needed = True
+        # Enforce maximum 20MB archive limit before reading into memory to prevent memory exhaustion / zip bomb DoS
+        if uploaded_zip.size > 20 * 1024 * 1024:
+            st.error("Uploaded ZIP file exceeds the maximum allowed size (20MB).")
+        else:
+            upload_sig = f"{uploaded_zip.name}_{uploaded_zip.size}"
+            if st.session_state.get("_last_uploaded_zip_sig") != upload_sig:
+                st.session_state._last_uploaded_zip_sig = upload_sig
+                uploaded_zip.seek(0)
+                zip_bytes = uploaded_zip.read()
+                proj_name = uploaded_zip.name
+                scan_needed = True
 
     if scan_needed:
         with st.spinner("Executing inter-procedural AST taint tracing & SCA reachability matrix..."):
@@ -2049,25 +2121,33 @@ def render_project_archive_inspector():
         st.markdown("<div style='font-size:14px; font-weight:600; color:#F1F3F5; margin-bottom:10px;'>🚨 Inter-Procedural Cross-File Taint Traces</div>", unsafe_allow_html=True)
         if cf_findings:
             for idx, cf in enumerate(cf_findings, 1):
+                cat_escaped = html.escape(str(cf.category))
+                exp_escaped = html.escape(str(cf.explanation))
+                cwe_escaped = html.escape(str(cf.cwe_id))
+                src_snippet_escaped = html.escape(str(cf.source_snippet))
+                sink_snippet_escaped = html.escape(str(cf.sink_snippet))
+                src_file_escaped = html.escape(str(cf.source_file))
+                sink_file_escaped = html.escape(str(cf.sink_file))
+                sink_fn_escaped = html.escape(str(cf.sink_function))
                 st.markdown(f"""
                 <div style="background:#11151B; border:1px solid #252B35; border-left:3px solid #F05252; border-radius:6px; padding:14px 18px; margin-bottom:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <span style="background:rgba(239,68,68,0.15); color:#F05252; font-weight:700; font-size:11px; padding:3px 8px; border-radius:4px;">
-                            CRITICAL • {cf.cwe_id}
+                            CRITICAL • {cwe_escaped}
                         </span>
                         <span style="font-family:monospace; font-size:12px; color:#929BA8;">Trace #{idx:02d}</span>
                     </div>
-                    <div style="font-size:13px; font-weight:600; color:#F1F3F5; margin-bottom:6px;">{cf.category}</div>
-                    <div style="font-size:12px; color:#929BA8; margin-bottom:10px;">{cf.explanation}</div>
+                    <div style="font-size:13px; font-weight:600; color:#F1F3F5; margin-bottom:6px;">{cat_escaped}</div>
+                    <div style="font-size:12px; color:#929BA8; margin-bottom:10px;">{exp_escaped}</div>
                     <div style="display:flex; gap:12px; font-size:11.5px; font-family:monospace; background:#090B0F; padding:10px; border-radius:4px; border:1px solid #252B35;">
                         <div style="flex:1;">
-                            <span style="color:#929BA8;">Caller Origin:</span> <code>{cf.source_file}:{cf.source_line}</code><br>
-                            <span style="color:#F1F3F5;">{cf.source_snippet}</span>
+                            <span style="color:#929BA8;">Caller Origin:</span> <code>{src_file_escaped}:{cf.source_line}</code><br>
+                            <span style="color:#F1F3F5;">{src_snippet_escaped}</span>
                         </div>
                         <div style="color:#667080; align-self:center;">➔</div>
                         <div style="flex:1;">
-                            <span style="color:#F05252;">Sink Execution:</span> <code>{cf.sink_file}:{cf.sink_line} ({cf.sink_function})</code><br>
-                            <span style="color:#F1F3F5;">{cf.sink_snippet}</span>
+                            <span style="color:#F05252;">Sink Execution:</span> <code>{sink_file_escaped}:{cf.sink_line} ({sink_fn_escaped})</code><br>
+                            <span style="color:#F1F3F5;">{sink_snippet_escaped}</span>
                         </div>
                     </div>
                 </div>
@@ -2082,18 +2162,24 @@ def render_project_archive_inspector():
         if sca_f:
             for s in sca_f:
                 b_color = "#F05252" if s.is_reachable else "#22C58B"
-                callers_str = ", ".join(f"`{f}`" for f in s.imported_files[:3]) if s.imported_files else "None (Unimported Library)"
+                callers_str = ", ".join(f"`{html.escape(f)}`" for f in s.imported_files[:3]) if s.imported_files else "None (Unimported Library)"
+                pkg_escaped = html.escape(str(s.package_name))
+                inst_escaped = html.escape(str(s.installed_version))
+                fixed_escaped = html.escape(str(s.fixed_version))
+                cve_escaped = html.escape(str(s.cve_id))
+                adv_escaped = html.escape(str(s.advisory_title))
+                reach_escaped = html.escape(str(s.reachability_status))
                 st.markdown(f"""
                 <div style="background:#11151B; border:1px solid #252B35; border-radius:6px; padding:12px 16px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <span style="font-weight:600; font-size:13.5px; color:#F1F3F5;">{s.package_name}</span>
-                        <span style="font-size:12px; color:#667080; margin-left:6px;">Installed: <code>{s.installed_version}</code> • Safe: <code>{s.fixed_version}</code></span>
-                        <div style="font-size:12px; color:#929BA8; margin-top:3px;"><b>{s.cve_id}</b>: {s.advisory_title}</div>
+                        <span style="font-weight:600; font-size:13.5px; color:#F1F3F5;">{pkg_escaped}</span>
+                        <span style="font-size:12px; color:#667080; margin-left:6px;">Installed: <code>{inst_escaped}</code> • Safe: <code>{fixed_escaped}</code></span>
+                        <div style="font-size:12px; color:#929BA8; margin-top:3px;"><b>{cve_escaped}</b>: {adv_escaped}</div>
                         <div style="font-size:11.5px; color:#667080; margin-top:2px;">Callers in codebase: {callers_str}</div>
                     </div>
                     <div>
                         <span style="background:rgba(255,255,255,0.05); border:1px solid {b_color}; color:{b_color}; font-weight:600; font-size:11px; padding:4px 10px; border-radius:12px;">
-                            {s.reachability_status}
+                            {reach_escaped}
                         </span>
                     </div>
                 </div>

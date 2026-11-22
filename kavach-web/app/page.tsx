@@ -123,12 +123,43 @@ export default function Home() {
     runScan(code, filename);
   }, [runScan]);
 
+  const [currentTier, setCurrentTier] = useState("FREE");
+
   const handleApplyFix = (problemCode: string, fixedCode: string, lineNum: number) => {
-    const updatedCode = code.replace(problemCode, fixedCode);
-    setCode(updatedCode);
-    setAppliedPatches((prev) => ({ ...prev, [lineNum]: true }));
-    // Immediately re-scan with new code
-    runScan(updatedCode, filename);
+    const lines = code.split("\n");
+    let updatedCode = "";
+    const targetIdx = lineNum - 1;
+    const cleanProb = problemCode.trim();
+
+    if (targetIdx >= 0 && targetIdx < lines.length && lines[targetIdx].includes(cleanProb)) {
+      lines[targetIdx] = lines[targetIdx].replace(cleanProb, fixedCode);
+      updatedCode = lines.join("\n");
+    } else {
+      const probLines = cleanProb.split("\n");
+      let matched = false;
+      if (targetIdx >= 0 && targetIdx + probLines.length <= lines.length) {
+        const sliceStr = lines.slice(targetIdx, targetIdx + probLines.length).map(l => l.trim()).join("\n");
+        if (sliceStr.includes(cleanProb)) {
+          const origIndent = lines[targetIdx].match(/^\s*/)?.[0] || "";
+          const fixedIndented = fixedCode.split("\n").map(fl => origIndent + fl.trimStart()).join("\n");
+          lines.splice(targetIdx, probLines.length, fixedIndented);
+          updatedCode = lines.join("\n");
+          matched = true;
+        }
+      }
+      if (!matched) {
+        updatedCode = code.replace(cleanProb, fixedCode);
+        if (updatedCode === code) {
+          updatedCode = code.replace(problemCode, fixedCode);
+        }
+      }
+    }
+
+    if (updatedCode !== code) {
+      setCode(updatedCode);
+      setAppliedPatches((prev) => ({ ...prev, [lineNum]: true }));
+      runScan(updatedCode, filename);
+    }
   };
 
   const LANGUAGES = [
@@ -137,8 +168,8 @@ export default function Home() {
     { id: "typescript", name: "TypeScript", ext: "ts" },
     { id: "cpp", name: "C / C++", ext: "cpp" },
     { id: "go", name: "Go", ext: "go" },
-    { id: "rust", name: "Rust", ext: "rs" },
-    { id: "java", name: "Java", ext: "java" },
+    { id: "dockerfile", name: "Dockerfile", ext: "dockerfile" },
+    { id: "terraform", name: "Terraform", ext: "tf" },
   ];
 
   const handleLanguageChange = (newLang: string) => {
@@ -225,7 +256,12 @@ ${f.fixed_code}
   return (
     <div className="h-screen flex flex-row bg-obsidian-950 select-none overflow-hidden">
       {/* Sidebar Navigation */}
-      <Sidebar activeView={activeView} onSelectView={setActiveView} />
+      <Sidebar
+        activeView={activeView}
+        onSelectView={setActiveView}
+        licenseTier={currentTier}
+        onTierChange={setCurrentTier}
+      />
 
       {/* Main Content Workspace */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">

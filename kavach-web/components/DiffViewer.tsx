@@ -22,8 +22,17 @@ export default function DiffViewer({
   onApplyFix,
   isApplied = false,
 }: DiffViewerProps) {
-  const probLines = problemCode.trim().split("\n");
-  const fixLines = fixedCode.trim().split("\n");
+  const cleanLines = (text: string) => {
+    if (!text) return [];
+    const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const lines = normalized.split("\n");
+    while (lines.length > 0 && lines[0].trim() === "") lines.shift();
+    while (lines.length > 0 && lines[lines.length - 1].trim() === "") lines.pop();
+    return lines.length > 0 ? lines : [normalized];
+  };
+
+  const probLines = cleanLines(problemCode);
+  const fixLines = cleanLines(fixedCode);
 
   return (
     <div className="rounded-lg border border-obsidian-700 bg-obsidian-950 overflow-hidden shadow-xl mb-4 transition-all hover:border-obsidian-600">

@@ -26,17 +26,21 @@ class TSScanner:
 
     CMD_INJ_PATTERNS = [
         re.compile(r"""child_process\.(exec|execSync)\s*\(\s*([`"'].*?[\${].*?[`"']|[a-zA-Z0-9_]+)"""),
-        re.compile(r"""exec\s*\(\s*`[^`]*\${[^}]+}[^`]*`\s*[\),:]"""),
+        re.compile(r"""\b(?:exec|execSync)\s*\(\s*`[^`]*\${[^}]+}[^`]*`"""),
     ]
 
     SQLI_PATTERNS = [
-        re.compile(r"""(?:sequelize|prisma|db)\.\$?(?:query|executeRawUnsafe)\s*\(\s*`[^`]*\${[^}]+}[^`]*`"""),
-        re.compile(r"""(?:sequelize|db)\.query\s*\(\s*["'].*?["']\s*\+\s*[a-zA-Z0-9_]+"""),
+        re.compile(r"""(?:sequelize|prisma|db)\.\$?(?:query|queryRawUnsafe|executeRawUnsafe)\s*\(\s*`[^`]*\${[^}]+}[^`]*`"""),
+        re.compile(r"""(?:sequelize|prisma|db)\.\$?(?:query|queryRawUnsafe|executeRawUnsafe)\s*\(\s*["'].*?["']\s*\+\s*[a-zA-Z0-9_]+"""),
     ]
 
     XSS_PATTERNS = [
         re.compile(r"""dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html\s*:\s*([^}]+)\s*\}\s*\}"""),
         re.compile(r"""v-html\s*=\s*["']([^"']+)["']"""),
+    ]
+
+    DESERIALIZE_PATTERNS = [
+        re.compile(r"""\b(?:serialize|node-serialize)\.unserialize\s*\("""),
     ]
 
     SECRET_PATTERNS = [
@@ -85,7 +89,7 @@ class TSScanner:
                     break
 
             # 3. DOM Cross-Site Scripting (CWE-79)
-            if "DOMPurify" not in line and "sanitize" not in line.lower():
+            if not re.search(r'\b(DOMPurify\.sanitize|sanitize|escapeHtml|sanitizeHtml)\s*\(', line):
                 for pat in self.XSS_PATTERNS:
                     if pat.search(line):
                         findings.append(TSFinding(
@@ -100,7 +104,22 @@ class TSScanner:
                         ))
                         break
 
-            # 4. Hardcoded Secret (CWE-798)
+            # 4. Insecure Deserialization (CWE-502)
+            for pat in self.DESERIALIZE_PATTERNS:
+                if pat.search(line):
+                    findings.append(TSFinding(
+                        severity="CRITICAL",
+                        category="INSECURE_DESERIALIZATION",
+                        file_path=file_path,
+                        line_number=idx,
+                        cwe_id="CWE-502",
+                        explanation="Insecure deserialization via serialize.unserialize() executes arbitrary code upon parsing untrusted payloads.",
+                        vulnerable_snippet=line.strip(),
+                        remediation_patch='// Avoid serialize.unserialize(); use JSON.parse() with strict schema validation'
+                    ))
+                    break
+
+            # 5. Hardcoded Secret (CWE-798)
             for pat, sec_name in self.SECRET_PATTERNS:
                 if pat.search(line):
                     findings.append(TSFinding(

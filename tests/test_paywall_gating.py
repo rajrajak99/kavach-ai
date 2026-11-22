@@ -73,3 +73,22 @@ def test_plan_tier_constants_integrity():
     assert PlanTier.FREE.value == "FREE"
     assert PlanTier.DEVELOPER_PRO.value == "DEVELOPER_PRO"
     assert PlanTier.TEAM_ENTERPRISE.value == "TEAM_ENTERPRISE"
+
+def test_expired_license_rejection():
+    """Verify that expired licenses are rejected and cannot authenticate."""
+    key = generate_signed_license("expired@enterprise.com", tier="PRO", valid_days=-5)
+    verification = verify_signed_license(key)
+    assert verification["valid"] is False
+    assert "expired" in verification.get("error", "").lower()
+    assert LicenseManager.get_tier_for_key(key) is None
+
+def test_base64_hyphen_email_handling():
+    """Verify that email addresses whose base64 encoding produces hyphens are verified correctly."""
+    # Special character patterns that trigger '-' in urlsafe base64
+    email_with_special = "test-user.sub_domain+filter?@enterprise.co.in"
+    key = generate_signed_license(email_with_special, tier="TEAM", valid_days=30)
+    verification = verify_signed_license(key)
+    assert verification["valid"] is True
+    assert verification["email"] == email_with_special
+    assert LicenseManager.get_tier_for_key(key) == PlanTier.TEAM_ENTERPRISE
+

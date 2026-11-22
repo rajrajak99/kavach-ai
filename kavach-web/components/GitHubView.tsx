@@ -32,10 +32,25 @@ kavach heal . --verify-tests`;
   const vscodeSnippet = `# Install the official Kavach AI Extension:
 code --install-extension kavach-ai-1.0.0.vsix`;
 
-  const handleCopy = (text: string, setter: (v: boolean) => void) => {
-    navigator.clipboard.writeText(text);
-    setter(true);
-    setTimeout(() => setter(false), 2000);
+  const timersRef = React.useRef<NodeJS.Timeout[]>([]);
+
+  React.useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  const handleCopy = async (text: string, setter: (v: boolean) => void) => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setter(true);
+        const t = setTimeout(() => setter(false), 2000);
+        timersRef.current.push(t);
+      }
+    } catch (e) {
+      console.warn("Clipboard access denied or unavailable", e);
+    }
   };
 
   return (

@@ -30,7 +30,7 @@ class TerraformScanner:
     ]
 
     WILDCARD_SG_PATTERNS = [
-        re.compile(r"""cidr_blocks\s*=\s*\[\s*["']0\.0\.0\.0/0["']\s*\]"""),
+        re.compile(r"""(?:cidr_blocks|ipv6_cidr_blocks)\s*=\s*\[\s*["'](?:0\.0\.0\.0/0|::/0)["']\s*\]"""),
     ]
 
     UNENCRYPTED_STORAGE = [
@@ -42,14 +42,44 @@ class TerraformScanner:
         findings: List[TerraformFinding] = []
         lines = code.splitlines()
 
+        current_block = ""
+        in_multiline_comment = False
+
         for idx, line in enumerate(lines, 1):
             stripped = line.strip()
-            if stripped.startswith("#") or not stripped:
+
+            # Handle multiline comments /* ... */
+            if in_multiline_comment:
+                if "*/" in stripped:
+                    in_multiline_comment = False
                 continue
+            if stripped.startswith("/*"):
+                if "*/" not in stripped:
+                    in_multiline_comment = True
+                continue
+
+            # Strip HCL comments (#, //)
+            if stripped.startswith(("#", "//")) or not stripped:
+                continue
+
+            # Strip inline comments for pattern matching
+            code_line = stripped.split("#")[0].split("//")[0].strip()
+
+            # Track block context (ingress vs egress)
+            if re.search(r'\bingress\s*\{', code_line):
+                current_block = "ingress"
+            elif re.search(r'\begress\s*\{', code_line):
+                current_block = "egress"
+            elif re.search(r'\btype\s*=\s*["\']egress["\']', code_line):
+                current_block = "egress"
+            elif re.search(r'\btype\s*=\s*["\']ingress["\']', code_line):
+                current_block = "ingress"
+            elif code_line == "}":
+                current_block = ""
 
             # 1. Open S3 Bucket
             for pat in self.OPEN_S3_PATTERNS:
-                if pat.search(line):
+                if pat.search(code_line):
                     findings.append(TerraformFinding(
                         severity="CRITICAL",
                         category="CLOUD_MISCONFIGURATION",
@@ -62,24 +92,25 @@ class TerraformScanner:
                     ))
                     break
 
-            # 2. Wildcard Ingress Security Group
-            for pat in self.WILDCARD_SG_PATTERNS:
-                if pat.search(line):
-                    findings.append(TerraformFinding(
-                        severity="HIGH",
-                        category="CLOUD_MISCONFIGURATION",
-                        file_path=file_path,
-                        line_number=idx,
-                        cwe_id="CWE-284",
-                        explanation="Security Group allows unrestricted ingress from 0.0.0.0/0 on sensitive ports.",
-                        vulnerable_snippet=line.strip(),
-                        remediation_patch='cidr_blocks = [var.vpc_cidr_block] # Restrict to internal VPC'
-                    ))
-                    break
+            # 2. Wildcard Ingress Security Group (Only flag if NOT in egress block)
+            if current_block != "egress":
+                for pat in self.WILDCARD_SG_PATTERNS:
+                    if pat.search(code_line):
+                        findings.append(TerraformFinding(
+                            severity="HIGH",
+                            category="CLOUD_MISCONFIGURATION",
+                            file_path=file_path,
+                            line_number=idx,
+                            cwe_id="CWE-284",
+                            explanation="Security Group allows unrestricted ingress from 0.0.0.0/0 or ::/0 on sensitive ports.",
+                            vulnerable_snippet=line.strip(),
+                            remediation_patch='cidr_blocks = [var.vpc_cidr_block] # Restrict to internal VPC'
+                        ))
+                        break
 
             # 3. Unencrypted Storage
             for pat in self.UNENCRYPTED_STORAGE:
-                if pat.search(line):
+                if pat.search(code_line):
                     findings.append(TerraformFinding(
                         severity="HIGH",
                         category="INSECURE_CONFIGURATION",
