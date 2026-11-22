@@ -261,21 +261,22 @@ class ContainerSecurityScanner:
 
             # 3. Sensitive Ports Bound to 0.0.0.0 (Production Compose Files Only)
             if is_production_compose(file_path):
-                port_match = re.search(r'["\']?(?:0\.0\.0\.0:)?(\d{2,5}):(\d{2,5})["\']?', stripped)
-                if port_match:
-                    host_port = port_match.group(1)
-                    container_port = port_match.group(2)
-                    for sensitive_p, service_name in self.SENSITIVE_PORTS.items():
-                        if host_port == sensitive_p or container_port == sensitive_p:
-                            findings.append(ContainerFinding(
-                                file_path=file_path,
-                                line_number=idx,
-                                severity="HIGH",
-                                rule_id="COMPOSE-EXPOSED-DATABASE-PORT",
-                                title=f"Internal {service_name} Port ({sensitive_p}) Exposed Publicly",
-                                description=f"Service '{current_service}' exposes {service_name} port {sensitive_p} directly to the public network interface in production compose.",
-                                remediation=f"Bind port to loopback only (e.g. '127.0.0.1:{host_port}:{container_port}') or access via internal Docker network."
-                            ))
+                if "127.0.0.1" not in stripped and "localhost" not in stripped:
+                    port_match = re.search(r'["\']?(?:0\.0\.0\.0:)?(\d{2,5}):(\d{2,5})["\']?', stripped)
+                    if port_match:
+                        host_port = port_match.group(1)
+                        container_port = port_match.group(2)
+                        for sensitive_p, service_name in self.SENSITIVE_PORTS.items():
+                            if host_port == sensitive_p or container_port == sensitive_p:
+                                findings.append(ContainerFinding(
+                                    file_path=file_path,
+                                    line_number=idx,
+                                    severity="HIGH",
+                                    rule_id="COMPOSE-EXPOSED-DATABASE-PORT",
+                                    title=f"Internal {service_name} Port ({sensitive_p}) Exposed Publicly",
+                                    description=f"Service '{current_service}' exposes {service_name} port {sensitive_p} directly to the public network interface in production compose.",
+                                    remediation=f"Bind port to loopback only (e.g. '127.0.0.1:{host_port}:{container_port}') or access via internal Docker network."
+                                ))
 
             # 4. Hardcoded Passwords in Environment
             secret_match = self.SECRET_KEY_PATTERN.search(stripped)

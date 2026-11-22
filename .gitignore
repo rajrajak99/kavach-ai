@@ -65,5 +65,12 @@ tests/test_competitor_poacher.py
 backups/
 *.zip
 MASTER_PROJECT_VAULT.md
+*.png
+*.bak
+scratch/
+kavach-web/node_modules/
+kavach-web/.next/
+vscode-extension/*.vsix
+
 
 

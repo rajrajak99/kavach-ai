@@ -15,12 +15,15 @@ if sys.platform == "win32":
         pass
 
 from core.diff_parser import DiffParser
-from core.surgical_analyzer import SurgicalAnalyzer
+from core.surgical_analyzer import SurgicalAnalyzer, PatchFinding
 from core.ai_reasoner import AIReasoner
 from core.self_healing import SelfHealingTestRunner
 from core.license_manager import LicenseManager, PlanTier, verify_signed_license
 from core.project_scanner import ProjectASTScanner
 from core.sca_scanner import SCAScanner
+from core.polyglot.go_scanner import GoScanner
+from core.polyglot.ts_scanner import TSScanner
+from core.polyglot.terraform_scanner import TerraformScanner
 
 CREDS_FILE = Path.home() / ".kavach" / "credentials.json"
 
@@ -132,6 +135,9 @@ def scan_path(
 
     parser = DiffParser()
     analyzer = SurgicalAnalyzer()
+    go_scanner = GoScanner()
+    ts_scanner = TSScanner()
+    tf_scanner = TerraformScanner()
     reasoner = AIReasoner() if explain else None
     healing_runner = SelfHealingTestRunner(default_test_cmd=test_cmd) if heal else None
 
@@ -144,13 +150,58 @@ def scan_path(
         try:
             with open(file_p, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
-            diff = parser.parse_raw_snippet(str(file_p), content)
-            res = analyzer.generate_pull_request_review([diff])
-            if res['findings']:
-                file_findings_map[file_p] = res['findings']
+
+            f_str = str(file_p)
+            current_findings = []
+            if f_str.endswith(".go"):
+                for gf in go_scanner.scan_code(content, file_path=f_str):
+                    current_findings.append(PatchFinding(
+                        severity=gf.severity,
+                        category=gf.category,
+                        line_number=gf.line_number,
+                        problem_code=gf.vulnerable_snippet,
+                        fixed_code=gf.remediation_patch,
+                        explanation=gf.explanation,
+                        github_suggestion_block=gf.remediation_patch,
+                        cwe_id=gf.cwe_id,
+                        language="go"
+                    ))
+            elif f_str.endswith((".ts", ".tsx")):
+                for tf in ts_scanner.scan_code(content, file_path=f_str):
+                    current_findings.append(PatchFinding(
+                        severity=tf.severity,
+                        category=tf.category,
+                        line_number=tf.line_number,
+                        problem_code=tf.vulnerable_snippet,
+                        fixed_code=tf.remediation_patch,
+                        explanation=tf.explanation,
+                        github_suggestion_block=tf.remediation_patch,
+                        cwe_id=tf.cwe_id,
+                        language="typescript"
+                    ))
+            elif f_str.endswith(".tf"):
+                for tff in tf_scanner.scan_code(content, file_path=f_str):
+                    current_findings.append(PatchFinding(
+                        severity=tff.severity,
+                        category=tff.category,
+                        line_number=tff.line_number,
+                        problem_code=tff.vulnerable_snippet,
+                        fixed_code=tff.remediation_patch,
+                        explanation=tff.explanation,
+                        github_suggestion_block=tff.remediation_patch,
+                        cwe_id=tff.cwe_id,
+                        language="terraform"
+                    ))
+            else:
+                diff = parser.parse_raw_snippet(f_str, content)
+                res = analyzer.generate_pull_request_review([diff])
+                current_findings = res.get('findings', [])
+
+            if current_findings:
+                file_findings_map[file_p] = current_findings
                 if not as_json:
-                    print(f"[-] {file_p}: {len(res['findings'])} issue(s) detected")
-                for finding in res['findings']:
+                    print(f"[-] {file_p}: {len(current_findings)} issue(s) detected")
+                for finding in current_findings:
                     total_findings.append((file_p, finding))
                     unified_patches.append(f"# {file_p} line {finding.line_number}: {finding.category}\n{finding.github_suggestion_block}\n")
                     if not as_json:
@@ -177,7 +228,7 @@ def scan_path(
                 if heal and healing_runner:
                     h_res = healing_runner.heal_file(
                         str(file_p),
-                        res['findings'],
+                        current_findings,
                         test_command=test_cmd,
                         working_dir=str(path.parent if path.is_file() else path)
                     )

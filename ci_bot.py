@@ -263,7 +263,7 @@ if sys.platform == "win32":
 def main():
     parser = argparse.ArgumentParser(description="Kavach AI - Autonomous GitHub Action / CI Bot")
     parser.add_argument("--path", default=".", help="Path to inspect (defaults to current dir)")
-    parser.add_argument("--fail-on", default="CRITICAL", choices=["CRITICAL", "HIGH", "ALL", "NONE"], help="Fail severity threshold")
+    parser.add_argument("--fail-on", default="CRITICAL", type=str.upper, choices=["CRITICAL", "HIGH", "ALL", "NONE"], help="Fail severity threshold")
     parser.add_argument("--heal", action="store_true", help="Run self-healing regression test verification on patches")
     parser.add_argument("--test-cmd", default="pytest", help="Test command for self-healing verification (default: pytest)")
     parser.add_argument("--license-key", default=os.getenv("KAVACH_LICENSE_KEY"), help="Kavach AI License Key (Pro / Team)")
@@ -290,7 +290,7 @@ def main():
     file_diffs = []
     extra_excludes = set(args.exclude) if args.exclude else set()
 
-    if git_diff_raw is not None:
+    if git_diff_raw and git_diff_raw.strip():
         print("[+] Detected Git changeset via Git CLI. Parsing diff hunks...")
         raw_diffs = diff_parser.parse_git_diff(git_diff_raw)
         file_diffs = [
@@ -302,7 +302,8 @@ def main():
         if ignored_count > 0:
             print(f"[i] Filtered out {ignored_count} non-production/test/script/lead file(s) from security gate.")
         total_files = len(file_diffs)
-    else:
+
+    if not file_diffs:
         target_path = Path(args.path)
         print(f"[+] Scanning repository directory: {target_path.resolve()}")
         file_diffs = scan_repository_files(target_path, extra_ignores=extra_excludes)

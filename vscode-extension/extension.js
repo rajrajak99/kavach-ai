@@ -124,10 +124,10 @@ function analyzeDocument(document) {
                 const range = new vscode.Range(i, indent.length, i, text.length);
                 const diag = new vscode.Diagnostic(
                     range,
-                    `[AutoPatch AI] (${rule.cwe}) ${rule.category}: Potential security flaw or crash hazard.`,
+                    `[Kavach AI] (${rule.cwe}) ${rule.category}: Potential security flaw or crash hazard.`,
                     rule.severity
                 );
-                diag.source = 'AutoPatch AI';
+                diag.source = 'Kavach AI';
                 diag.code = rule.cwe;
 
                 const fixedCode = rule.fix(text, indent);
@@ -150,7 +150,7 @@ function analyzeDocument(document) {
 }
 
 function activate(context) {
-    diagnosticCollection = vscode.languages.createDiagnosticCollection('autopatch');
+    diagnosticCollection = vscode.languages.createDiagnosticCollection('kavach');
     context.subscriptions.push(diagnosticCollection);
 
     // Scan active editor on open
@@ -163,7 +163,7 @@ function activate(context) {
         vscode.workspace.onDidOpenTextDocument(doc => analyzeDocument(doc)),
         vscode.workspace.onDidChangeTextDocument(e => analyzeDocument(e.document)),
         vscode.workspace.onDidSaveTextDocument(doc => {
-            const config = vscode.workspace.getConfiguration('autopatch');
+            const config = vscode.workspace.getConfiguration('kavach');
             if (config.get('scanOnSave', true)) {
                 analyzeDocument(doc);
             }
@@ -182,7 +182,7 @@ function activate(context) {
                     for (const fix of fixes) {
                         if (fix.range.intersection(range)) {
                             const action = new vscode.CodeAction(
-                                `🛡️ AutoPatch: Fix ${fix.category} (${fix.cwe})`,
+                                `🛡️ Kavach AI: 1-Click Fix for ${fix.category} (${fix.cwe})`,
                                 vscode.CodeActionKind.QuickFix
                             );
                             action.isPreferred = true;
@@ -204,30 +204,30 @@ function activate(context) {
 
     // Register Manual Scan Command
     context.subscriptions.push(
-        vscode.commands.registerCommand('autopatch.scanFile', () => {
+        vscode.commands.registerCommand('kavach.scanFile', () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
-                vscode.window.showWarningMessage('AutoPatch AI: No active file to scan.');
+                vscode.window.showWarningMessage('Kavach AI: No active file to scan.');
                 return;
             }
             const diags = analyzeDocument(editor.document);
             if (diags.length === 0) {
-                vscode.window.showInformationMessage('🛡️ AutoPatch AI: 0 flaws detected. Clean file!');
+                vscode.window.showInformationMessage('🛡️ Kavach AI: 0 flaws detected. Clean file ready for merge!');
             } else {
-                vscode.window.showWarningMessage(`🛡️ AutoPatch AI: ${diags.length} issue(s) detected! Check highlighted lines.`);
+                vscode.window.showWarningMessage(`🛡️ Kavach AI: ${diags.length} issue(s) detected! Check highlighted lines for 1-click fixes.`);
             }
         })
     );
 
     // Register Self-Heal Command
     context.subscriptions.push(
-        vscode.commands.registerCommand('autopatch.healFile', async () => {
+        vscode.commands.registerCommand('kavach.healFile', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) return;
 
             const fixes = quickFixStore.get(editor.document.uri.toString()) || [];
             if (fixes.length === 0) {
-                vscode.window.showInformationMessage('AutoPatch AI: File is clean, no patches needed.');
+                vscode.window.showInformationMessage('Kavach AI: File is clean, zero vulnerabilities found.');
                 return;
             }
 
@@ -241,7 +241,7 @@ function activate(context) {
 
             await vscode.workspace.applyEdit(edit);
             await editor.document.save();
-            vscode.window.showInformationMessage(`🛡️ AutoPatch AI: Surgically applied ${fixes.length} fix(es)!`);
+            vscode.window.showInformationMessage(`🛡️ Kavach AI: Surgically auto-healed ${fixes.length} vulnerability(ies)!`);
         })
     );
 }

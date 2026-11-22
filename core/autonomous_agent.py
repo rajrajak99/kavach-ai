@@ -8,6 +8,7 @@ import os
 import subprocess
 import tempfile
 import shutil
+import shlex
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
@@ -85,31 +86,33 @@ class AutonomousSecurityAgent:
                 error=str(e)
             )
 
-        # Run test verification
+        # Run test verification inside try...finally to guarantee clean workspace revert
         tests_passed = True
         test_log = "No test command specified; verified syntax integrity."
         
-        if test_command:
-            try:
-                res = subprocess.run(
-                    test_command,
-                    cwd=str(self.repo_dir),
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=60
-                )
-                test_log = res.stdout + "\n" + res.stderr
-                tests_passed = (res.returncode == 0)
-            except Exception as e:
-                tests_passed = False
-                test_log = f"Test execution failed: {e}"
-
-        # Revert changes to leave workspace clean
         try:
-            full_target.write_text(original_code, encoding="utf-8")
-        except Exception:
-            pass
+            if test_command:
+                try:
+                    cmd_tokens = shlex.split(test_command) if isinstance(test_command, str) else list(test_command)
+                    res = subprocess.run(
+                        cmd_tokens,
+                        cwd=str(self.repo_dir),
+                        shell=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=60
+                    )
+                    test_log = res.stdout + "\n" + res.stderr
+                    tests_passed = (res.returncode == 0)
+                except Exception as e:
+                    tests_passed = False
+                    test_log = f"Test execution failed: {e}"
+        finally:
+            # Revert changes to guarantee workspace stays clean
+            try:
+                full_target.write_text(original_code, encoding="utf-8")
+            except Exception:
+                pass
 
         return RemediationResult(
             success=tests_passed and patch_applied,

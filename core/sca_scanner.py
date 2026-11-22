@@ -245,7 +245,7 @@ class SCAScanner:
                 for line in content.splitlines():
                     clean = line.strip().split("#")[0].strip()
                     if clean and not clean.startswith("-"):
-                        m = re.match(r'^([a-zA-Z0-9_\-\.]+)(?:[=><~^!]+([0-9a-zA-Z_\-\.]+))?', clean)
+                        m = re.match(r'^([a-zA-Z0-9_\-\.]+)\s*(?:[=><~^!]+\s*([0-9a-zA-Z_\-\.]+))?', clean)
                         if m:
                             pkg_name = m.group(1).strip()
                             pkg_ver = m.group(2).strip() if m.group(2) else ""
@@ -261,7 +261,7 @@ class SCAScanner:
                     if in_deps and line.startswith("]"):
                         in_deps = False
                     if in_deps:
-                        m = re.search(r'[\"\']([a-zA-Z0-9_\-\.]+)(?:[=><~^!]+([0-9a-zA-Z_\-\.]+))?[\"\']', line)
+                        m = re.search(r'[\"\']([a-zA-Z0-9_\-\.]+)\s*(?:[=><~^!]+\s*([0-9a-zA-Z_\-\.]+))?[\"\']', line)
                         if m:
                             declared[m.group(1).strip()] = m.group(2).strip() if m.group(2) else ""
 
@@ -402,6 +402,11 @@ class SCAScanner:
             return tuple(nums) or (0,)
 
         try:
-            return to_tuple(installed_ver) < to_tuple(safe_below)
+            t_inst = to_tuple(installed_ver)
+            t_safe = to_tuple(safe_below)
+            max_len = max(len(t_inst), len(t_safe))
+            t_inst_padded = t_inst + (0,) * (max_len - len(t_inst))
+            t_safe_padded = t_safe + (0,) * (max_len - len(t_safe))
+            return t_inst_padded < t_safe_padded
         except Exception:
             return True

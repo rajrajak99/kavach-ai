@@ -35,11 +35,15 @@ def get_master_secret(master_secret: Optional[str] = None) -> str:
         return master_secret
     try:
         import streamlit as st
-        if hasattr(st, "secrets") and "KAVACH_MASTER_SECRET" in st.secrets:
-            return str(st.secrets["KAVACH_MASTER_SECRET"]).strip()
+        if hasattr(st, "secrets"):
+            if "KAVACH_MASTER_SECRET" in st.secrets:
+                return str(st.secrets["KAVACH_MASTER_SECRET"]).strip()
+            if "KAVACH_MASTER_SIGNING_KEY" in st.secrets:
+                return str(st.secrets["KAVACH_MASTER_SIGNING_KEY"]).strip()
     except Exception:
         pass
-    return os.getenv("KAVACH_MASTER_SECRET", DEFAULT_MASTER_SECRET).strip()
+    env_secret = os.getenv("KAVACH_MASTER_SECRET") or os.getenv("KAVACH_MASTER_SIGNING_KEY")
+    return (env_secret or DEFAULT_MASTER_SECRET).strip()
 
 def generate_signed_license(
     email: str,
@@ -346,11 +350,12 @@ class LicenseManager:
                 "Purchase an authentic license at: https://kavach-ai.streamlit.app"
             )
 
-        # 2. Public Repos are 100% Free Forever
-        if ctx["visibility"] == "public" and not key_tier:
-            return True, PlanTier.FREE, "Authorized under Free Community Tier (Unlimited Public Repositories)."
+        # 2. Public Repos are 100% Free Forever (Open Source & Community)
+        if ctx["visibility"] == "public":
+            active = key_tier or PlanTier.FREE
+            return True, active, f"Authorized under {active.value} Tier (Unlimited Public Repositories)."
 
-        # 3. Check Organization boundary (Abuse prevention)
+        # 3. Check Organization boundary on Private Repos (Abuse prevention)
         if ctx["owner_type"] == "Organization":
             if key_tier == PlanTier.TEAM_ENTERPRISE:
                 return True, PlanTier.TEAM_ENTERPRISE, "Authorized under Team / Enterprise Tier ($99/mo)."
@@ -358,7 +363,7 @@ class LicenseManager:
                 return (
                     False,
                     PlanTier.TEAM_ENTERPRISE,
-                    "GitHub Organization detected! Organizations require a Team License ($99/mo). "
+                    "GitHub Organization detected! Private organization repositories require a Team License ($99/mo). "
                     "Developer Pro ($1/mo) is restricted to personal accounts to prevent corporate abuse. "
                     "Upgrade at: https://kavach-ai.streamlit.app"
                 )

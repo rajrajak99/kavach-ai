@@ -71,17 +71,25 @@ class DiffParser:
             # Extract filenames
             fn_old = "unknown"
             fn_new = "unknown"
-            match_header = re.match(r'a/(.*?)\s+b/(.*)', header_line)
-            if match_header:
-                fn_old, fn_new = match_header.groups()
-            else:
-                for line in lines[:5]:
-                    if line.startswith('--- a/'):
-                        fn_old = line[6:]
-                    elif line.startswith('+++ b/'):
-                        fn_new = line[6:]
+            for line in lines[:8]:
+                if line.startswith('--- a/'):
+                    fn_old = line[6:].strip()
+                elif line.startswith('--- /dev/null'):
+                    fn_old = "/dev/null"
+                elif line.startswith('+++ b/'):
+                    fn_new = line[6:].strip()
+                elif line.startswith('+++ /dev/null'):
+                    fn_new = "/dev/null"
 
-            is_noise = cls.is_noise_file(fn_new or fn_old)
+            if fn_old == "unknown" or fn_new == "unknown":
+                match_header = re.match(r'^(?:"?a/)?(.*?)"?\s+"?b/(.*?)"?$', header_line.strip())
+                if match_header:
+                    if fn_old == "unknown":
+                        fn_old = match_header.group(1).strip('"')
+                    if fn_new == "unknown":
+                        fn_new = match_header.group(2).strip('"')
+
+            is_noise = cls.is_noise_file(fn_new if fn_new not in ("unknown", "/dev/null") else fn_old)
             parsed_file = ParsedFileDiff(filename_old=fn_old, filename_new=fn_new, is_noise=is_noise)
             
             if is_noise:

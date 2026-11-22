@@ -85,19 +85,20 @@ class TSScanner:
                     break
 
             # 3. DOM Cross-Site Scripting (CWE-79)
-            for pat in self.XSS_PATTERNS:
-                if pat.search(line):
-                    findings.append(TSFinding(
-                        severity="HIGH",
-                        category="CROSS_SITE_SCRIPTING",
-                        file_path=file_path,
-                        line_number=idx,
-                        cwe_id="CWE-79",
-                        explanation="DOM Cross-Site Scripting (XSS) via unescaped HTML injection. Can allow session hijacking and DOM manipulation.",
-                        vulnerable_snippet=line.strip(),
-                        remediation_patch='dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}'
-                    ))
-                    break
+            if "DOMPurify" not in line and "sanitize" not in line.lower():
+                for pat in self.XSS_PATTERNS:
+                    if pat.search(line):
+                        findings.append(TSFinding(
+                            severity="HIGH",
+                            category="CROSS_SITE_SCRIPTING",
+                            file_path=file_path,
+                            line_number=idx,
+                            cwe_id="CWE-79",
+                            explanation="DOM Cross-Site Scripting (XSS) via unescaped HTML injection. Can allow session hijacking and DOM manipulation.",
+                            vulnerable_snippet=line.strip(),
+                            remediation_patch='dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}'
+                        ))
+                        break
 
             # 4. Hardcoded Secret (CWE-798)
             for pat, sec_name in self.SECRET_PATTERNS:

@@ -131,8 +131,8 @@ class SurgicalAnalyzer:
     ]
 
     PY_COMMAND_INJECTION_PATTERNS = [
-        (r'(?i)os\.system\s*\(\s*f?[\"\'].*?\{.*?\}', "Command Injection via os.system", "CWE-78"),
-        (r'(?i)os\.popen\s*\(\s*f?[\"\'].*?\{.*?\}', "Command Injection via os.popen", "CWE-78"),
+        (r'(?i)os\.system\s*\(\s*(?:f[\"\'].*?\{.*?\}|[\"\'].*?[\"\']\s*\+\s*[a-zA-Z_]|[a-zA-Z_]\w*\s*\+\s*[\"\']|[\"\'].*?%\s*[a-zA-Z_\(]|[a-zA-Z_]\w*(?!\.))', "Command Injection via os.system", "CWE-78"),
+        (r'(?i)os\.popen\s*\(\s*(?:f[\"\'].*?\{.*?\}|[\"\'].*?[\"\']\s*\+\s*[a-zA-Z_]|[a-zA-Z_]\w*\s*\+\s*[\"\']|[\"\'].*?%\s*[a-zA-Z_\(]|[a-zA-Z_]\w*(?!\.))', "Command Injection via os.popen", "CWE-78"),
         (r'(?i)subprocess\.(?:call|Popen|run|check_output)\s*\(\s*f[\"\'].*?\{.*?\}', "Command Injection via subprocess shell", "CWE-78"),
         (r'(?i)subprocess\.(?:call|Popen|run|check_output)\s*\(.*?\bshell\s*=\s*True', "Remote Command Injection via shell=True execution", "CWE-78")
     ]
@@ -446,6 +446,12 @@ class SurgicalAnalyzer:
 
         try:
             tree = ast.parse(full_code)
+        except IndentationError:
+            try:
+                import textwrap
+                tree = ast.parse(textwrap.dedent(full_code))
+            except Exception:
+                return ast_findings, safely_closed_handles, None
         except SyntaxError as se:
             is_c_cpp = bool(re.search(r'(#include\s*<|\bstd::|\bcout\b|\bprintf\b|\bstrcpy\b|\bgets\b|\bint\s+main\b|\bchar\s*\*)', full_code))
             is_js = bool(re.search(r'(\bfunction\b|\bconst\b|\bvar\b|\blet\b|=>|console\.log\b|\bmodule\.exports\b|\brequire\s*\()', full_code))
@@ -852,6 +858,32 @@ class SurgicalAnalyzer:
                                 language="python"
                             ))
 
+                # Feature 10: OS Command Injection via os.system / os.popen (CWE-78)
+                is_os_cmd = False
+                if isinstance(node.func, ast.Attribute) and node.func.attr in ("system", "popen"):
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == "os":
+                        is_os_cmd = True
+
+                if is_os_cmd and node.lineno in changed_line_nums and node.args:
+                    arg0 = node.args[0]
+                    is_pure_static = isinstance(arg0, ast.Constant) and isinstance(arg0.value, str)
+                    if not is_pure_static:
+                        line_str = lines_by_num.get(node.lineno, f"os.{node.func.attr}(...)")
+                        indent = len(line_str) - len(line_str.lstrip())
+                        indent_str = " " * indent
+                        fixed = f"{indent_str}# Safe Process Execution: Avoid os.{node.func.attr}(); use subprocess with shlex.split\n{indent_str}import subprocess, shlex\n{indent_str}subprocess.run(shlex.split(safe_command), check=True)"
+                        ast_findings.append(PatchFinding(
+                            severity="CRITICAL",
+                            category=f"Command Injection via os.{node.func.attr}",
+                            line_number=node.lineno,
+                            problem_code=line_str.strip(),
+                            fixed_code=fixed.strip(),
+                            explanation=f"Direct invocation of os.{node.func.attr}() passes dynamic commands through the shell without argument isolation, permitting arbitrary OS command injection.",
+                            github_suggestion_block=f"```suggestion\n{fixed}\n```",
+                            cwe_id="CWE-78",
+                            language="python"
+                        ))
+
         return ast_findings, safely_closed_handles, None
 
     def analyze_file_diff(self, file_diff: ParsedFileDiff) -> List[PatchFinding]:
@@ -1230,12 +1262,23 @@ class SurgicalAnalyzer:
                         continue
 
                     denom_match = None
+                    path_terms = ('path', 'dir', 'directory', 'folder', 'file', 'filename', 'filepath', 'url', 'route', 'stem', 'suffix', 'root', 'parent', 'base')
+                    if any(k in line_str for k in ("Path(", ".parent", ".resolve", "Path.", "pathlib")):
+                        continue
+
                     if re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str) and not re.search(r'if\s+.*?!=\s*0', line_str):
                         # Ensure not inside a string literal
                         if not (stripped.startswith(('"', "'", 'r"', "r'", 'f"', "f'")) or stripped.endswith(('",', "',", '")', '"', "'"))):
-                            denom_match = re.search(r'\b[a-zA-Z_]\w*\s*/\s*([a-zA-Z_]\w*)\b', line_str)
-                            denom = denom_match.group(1)
-                            if denom not in ['2', '10', '100', '1000', 'len', 'total_count', 'length']:
+                            denom_match = re.search(r'\b([a-zA-Z_]\w*)\s*/\s*([a-zA-Z_]\w*)\b', line_str)
+                            num_var = denom_match.group(1).lower()
+                            denom = denom_match.group(2)
+                            denom_lower = denom.lower()
+
+                            # Exempt path-joining / directory path operations
+                            if any(t in denom_lower for t in path_terms) or any(t in num_var for t in path_terms) or num_var in ('path', 'p', 'root', 'src', 'dst'):
+                                continue
+
+                            if denom not in ['2', '10', '100', '1000', 'len', 'total_count', 'length', 'size', 'count']:
                                 # Check preceding 3 lines for guard on denom
                                 is_guarded = False
                                 for back_idx in range(max(1, line_num - 3), line_num):
@@ -1246,7 +1289,8 @@ class SurgicalAnalyzer:
                                 if is_guarded:
                                     continue
 
-                                fixed = f"{indent_str}safe_{denom} = {denom} if {denom} != 0 else 1e-7\n{indent_str}{line_str.strip().replace(f'/{denom}', f'/safe_{denom}')}"
+                                replaced_line = re.sub(rf'/(\s*){re.escape(denom)}\b', r'/\1safe_' + denom, line_str.strip())
+                                fixed = f"{indent_str}safe_{denom} = {denom} if {denom} != 0 else 1e-7\n{indent_str}{replaced_line}"
                                 findings.append(PatchFinding(
                                     severity="CRITICAL",
                                     category="Unchecked ZeroDivisionError",

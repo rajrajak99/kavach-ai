@@ -215,16 +215,53 @@ class SelfHealingTestRunner:
     def apply_patch_and_verify(
         self,
         target_file: Any,
-        patch_content: str,
+        patch_content: Any,
         test_command: Optional[str] = None
     ) -> Any:
-        """Compatibility wrapper for ci_bot."""
+        """Compatibility wrapper for ci_bot and external runners."""
         class MockResult:
             def __init__(self, success: bool, message: str):
                 self.success = success
                 self.message = message
                 self.status = "VERIFIED_PASSED" if success else "ROLLBACK_TEST_FAILED"
 
-        fpath = str(target_file)
-        res = self.heal_file(fpath, [], test_command=test_command)
-        return MockResult(res.status == "VERIFIED_PASSED", res.message)
+        fpath = Path(str(target_file)).resolve()
+        if not fpath.exists() or not fpath.is_file():
+            return MockResult(False, f"Target file '{fpath}' not found.")
+
+        # If findings were provided as a list of PatchFinding objects
+        if isinstance(patch_content, list):
+            res = self.heal_file(str(fpath), patch_content, test_command=test_command)
+            return MockResult(res.status == "VERIFIED_PASSED", res.message)
+
+        # Otherwise apply content directly with atomic backup and test run
+        backup_path = fpath.with_suffix(fpath.suffix + ".autopatch_bak")
+        shutil.copy2(fpath, backup_path)
+        try:
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write(str(patch_content))
+
+            cmd = test_command or self.default_test_cmd
+            cmd_tokens = shlex.split(cmd) if isinstance(cmd, str) else list(cmd)
+            test_proc = subprocess.run(
+                cmd_tokens,
+                shell=False,
+                cwd=str(fpath.parent),
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds
+            )
+            if test_proc.returncode == 0:
+                if backup_path.exists():
+                    os.remove(backup_path)
+                return MockResult(True, "All tests passed with patch!")
+            else:
+                shutil.copy2(backup_path, fpath)
+                if backup_path.exists():
+                    os.remove(backup_path)
+                return MockResult(False, f"Tests failed (code {test_proc.returncode}). Rolled back.")
+        except Exception as e:
+            if backup_path.exists():
+                shutil.copy2(backup_path, fpath)
+                os.remove(backup_path)
+            return MockResult(False, str(e))

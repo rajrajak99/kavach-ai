@@ -1,9 +1,14 @@
 {
-  "name": "autopatch-ai",
-  "displayName": "AutoPatch AI: Surgical Security & Crash Patcher",
-  "description": "Zero-noise autonomous security inspector, vulnerability highlighter, and 1-click surgical patcher for Python, JavaScript, and C++.",
+  "name": "kavach-ai",
+  "displayName": "Kavach AI: AST Security Gate & 1-Click Self-Healing",
+  "description": "Sub-16ms AST security gate with 0% false positives and 1-click compile-ready self-healing patches for Python, JavaScript, TypeScript, and C++.",
   "version": "1.0.0",
   "publisher": "rajrajak99",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rajrajak99/kavach-ai.git"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -23,38 +28,38 @@
   "contributes": {
     "commands": [
       {
-        "command": "autopatch.scanFile",
-        "title": "AutoPatch AI: Scan Current File",
-        "category": "AutoPatch"
+        "command": "kavach.scanFile",
+        "title": "Kavach AI: Scan Current File",
+        "category": "Kavach AI"
       },
       {
-        "command": "autopatch.healFile",
-        "title": "AutoPatch AI: Self-Heal File (Apply Patches & Run Tests)",
-        "category": "AutoPatch"
+        "command": "kavach.healFile",
+        "title": "Kavach AI: Self-Heal File (Apply Patches & Run Tests)",
+        "category": "Kavach AI"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "autopatch.scanFile",
-          "group": "autopatch@1"
+          "command": "kavach.scanFile",
+          "group": "kavach@1"
         },
         {
-          "command": "autopatch.healFile",
-          "group": "autopatch@2"
+          "command": "kavach.healFile",
+          "group": "kavach@2"
         }
       ]
     },
     "configuration": {
       "type": "object",
-      "title": "AutoPatch AI Configuration",
+      "title": "Kavach AI Configuration",
       "properties": {
-        "autopatch.scanOnSave": {
+        "kavach.scanOnSave": {
           "type": "boolean",
           "default": true,
           "description": "Automatically inspect files for security flaws and crashes upon save."
         },
-        "autopatch.testCommand": {
+        "kavach.testCommand": {
           "type": "string",
           "default": "pytest",
           "description": "Command run during self-healing test verification."
