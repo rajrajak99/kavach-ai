@@ -1742,13 +1742,16 @@ with st.sidebar:
     st.markdown("""
     <div style="margin-top:20px; padding-top:12px; border-top:1px solid #252B35; font-size:11px; color:#667080; line-height:1.6; font-family:'JetBrains Mono',monospace;">
         <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-            <span style="width:6px; height:6px; border-radius:50%; background:#22C58B; display:inline-block;"></span>
-            <span>100% Offline AST Engine</span>
+            <span style="width:6px; height:6px; border-radius:50%; background:#10B981; display:inline-block; box-shadow:0 0 6px #10B981;"></span>
+            <span style="color:#F1F3F5; font-weight:500;">100% Offline AST Engine</span>
         </div>
-        <div style="color:#667080; font-size:10.5px; margin-bottom:6px;">Zero Code Retention • Air-Gapped</div>
-        <div style="background:#11151B; border:1px solid #252B35; border-radius:6px; padding:6px 8px; font-size:10.5px; color:#929BA8;">
+        <div style="color:#667080; font-size:10.5px; margin-bottom:8px;">Zero Code Retention • Air-Gapped</div>
+        <div style="background:#11151B; border:1px solid #252B35; border-radius:6px; padding:6px 8px; font-size:10.5px; color:#929BA8; margin-bottom:8px;">
             <code>kavach --login &lt;KEY&gt;</code>
         </div>
+        <a href="https://kavach-security.vercel.app" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:6px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:6px 8px; color:#10B981; font-size:11px; font-weight:600; text-decoration:none; transition:all 0.2s ease;">
+            ⚡ Next.js Monaco Console &rarr;
+        </a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1860,6 +1863,21 @@ with top_col2:
                     st.error(st.session_state.auth_error)
 
 st.markdown("<div style='border-bottom:1px solid #1E293B; margin-bottom:12px;'></div>", unsafe_allow_html=True)
+
+# ----------------- ENTERPRISE PORTAL ANNOUNCEMENT BANNER -----------------
+st.markdown("""
+<div style="background: linear-gradient(90deg, rgba(16, 185, 129, 0.10) 0%, rgba(15, 23, 42, 0.6) 100%); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 15px rgba(16, 185, 129, 0.08);">
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="background: rgba(16, 185, 129, 0.2); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-family: monospace;">NEW RELEASE</span>
+        <span style="font-size: 13px; color: #F8FAFC; font-weight: 500;">
+            Next-Gen Full <strong style="color: #10B981;">Next.js & Monaco Web Console</strong> is now live with Multi-Language AST & Multi-File SCA!
+        </span>
+    </div>
+    <a href="https://kavach-security.vercel.app" target="_blank" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: #040D0A; font-weight: 700; font-size: 12px; padding: 6px 16px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 14px rgba(16, 185, 129, 0.4); transition: all 0.2s ease;">
+        ⚡ Launch Vercel Portal &rarr;
+    </a>
+</div>
+""", unsafe_allow_html=True)
 
 # ----------------- POST-CHECKOUT CLAIM BANNER -----------------
 if st.session_state.get("pending_activation"):
