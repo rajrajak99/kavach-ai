@@ -232,7 +232,43 @@ ${f.fixed_code}
         <Header activeViewTitle={VIEW_TITLES[activeView]} />
 
         {activeView === "inspector" && (
-          <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Mode Switcher Bar */}
+            <div className="h-10 bg-obsidian-900 border-b border-obsidian-700/80 px-4 sm:px-6 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-semibold text-slateText-muted uppercase tracking-wider text-[10px]">Workspace Mode:</span>
+                <span className="font-bold text-slateText-primary font-mono text-xs">
+                  {inspectorMode === "snippet" ? "Single File / Monaco Editor" : "Multi-File Project & SCA Matrix"}
+                </span>
+              </div>
+
+              {/* Segmented Control */}
+              <div className="flex items-center p-0.5 rounded-lg bg-obsidian-850 border border-obsidian-700 text-xs">
+                <button
+                  onClick={() => setInspectorMode("snippet")}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    inspectorMode === "snippet"
+                      ? "bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 shadow-[0_0_10px_rgba(16,185,129,0.3)] font-bold"
+                      : "text-slateText-muted hover:text-slateText-secondary"
+                  }`}
+                >
+                  Single File / Snippet
+                </button>
+                <button
+                  onClick={() => setInspectorMode("project")}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    inspectorMode === "project"
+                      ? "bg-gradient-to-r from-kavachEmerald to-emerald-600 text-obsidian-950 shadow-[0_0_10px_rgba(16,185,129,0.3)] font-bold"
+                      : "text-slateText-muted hover:text-slateText-secondary"
+                  }`}
+                >
+                  Project / Multi-File (.zip)
+                </button>
+              </div>
+            </div>
+
+            {inspectorMode === "snippet" ? (
+              <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left 60%: Monaco Editor Panel */}
         <section className="w-full lg:w-[60%] border-r border-obsidian-700/80 flex flex-col bg-obsidian-950">
           {/* Editor Header Bar */}
@@ -403,7 +439,11 @@ ${f.fixed_code}
           </div>
         </section>
       </main>
+    ) : (
+      <MultiFileProjectView />
     )}
+  </div>
+)}
 
     {activeView === "posture" && <PostureView />}
     {activeView === "benchmark" && <BenchmarkView />}
