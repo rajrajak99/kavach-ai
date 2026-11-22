@@ -11,10 +11,10 @@ Billion-Dollar Enterprise SaaS Design System (Linear / Stripe / Vercel):
 - Muted Text: #667080 (understated slate)
 - Primary Border: #252B35 (hairline graphite border)
 - Subtle Border: #252B35 (inner divider)
-- Premium Accent: #C9A96E (champagne gold)
-- Accent Hover: #D9B77B (soft gold hover)
-- Accent Soft Background: #211D16 (subtle gold badge/nav tint)
-- Success: #22C58B (emerald green)
+- Premium Accent: #10B981 (electric cyber emerald)
+- Accent Hover: #059669 (deep cyber emerald)
+- Accent Glow: rgba(16, 185, 129, 0.35)
+- Success: #10B981 (emerald green)
 - Warning: #E9A23B (amber)
 - Error / Critical: #F05252 (crimson red)
 """
@@ -478,12 +478,12 @@ def render_paywall_card(feature_name: str, tier_needed: str = "PRO"):
     """
     plan_title = "Kavach Pro ($29/mo)" if tier_needed == "PRO" else "Growth Team ($99/mo)"
     st.markdown(f"""
-    <div style="background: rgba(18, 23, 32, 0.95); border: 1px solid rgba(201, 169, 110, 0.4); border-left: 4px solid #C9A96E; border-radius: 8px; padding: 18px 22px; margin: 12px 0 16px 0;">
+    <div style="background: rgba(18, 23, 32, 0.95); border: 1px solid rgba(16, 185, 129, 0.35); border-left: 4px solid #10B981; border-radius: 8px; padding: 18px 22px; margin: 12px 0 16px 0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-wrap:wrap; gap:8px;">
             <div style="font-size: 14.5px; font-weight: 700; color: #F1F3F5;">
                 🔒 {html.escape(feature_name)} requires {plan_title}
             </div>
-            <span style="background: rgba(201, 169, 110, 0.15); color: #C9A96E; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(201, 169, 110, 0.3);">
+            <span style="background: rgba(16, 185, 129, 0.15); color: #10B981; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3); letter-spacing: 0.04em;">
                 COMMERCIAL LICENSE
             </span>
         </div>
@@ -745,38 +745,43 @@ def get_enterprise_css() -> str:
        1. GLOBAL RESET & ENTERPRISE TOKENS (Linear / Vercel / Stripe Standard)
        ========================================================================= */
     :root {
-        --bg-main: #090B0F;
-        --bg-sidebar: #0D1015;
-        --bg-card: #11151B;
-        --bg-elevated: #171C24;
-        --primary-gold: #C9A96E;
-        --gold-hover: #D9B77B;
-        --text-primary: #F1F3F5;
-        --text-secondary: #929BA8;
-        --text-muted: #667080;
-        --border: #252B35;
-        --border-subtle: #252B35;
+        --bg-main: #080A0E;
+        --bg-sidebar: #0B0E14;
+        --bg-card: #0F131C;
+        --bg-elevated: #151A26;
+        --primary-accent: #10B981;
+        --primary-hover: #059669;
+        --primary-glow: rgba(16, 185, 129, 0.35);
+        --text-primary: #F8FAFC;
+        --text-secondary: #94A3B8;
+        --text-muted: #64748B;
+        --border: #1E293B;
+        --border-subtle: rgba(255, 255, 255, 0.08);
         
         /* Semantic States */
-        --success: #22C58B;
-        --warning: #E9A23B;
-        --critical: #F05252;
-        --information: #579BEB;
+        --success: #10B981;
+        --warning: #F59E0B;
+        --critical: #EF4444;
+        --information: #38BDF8;
     }
 
     html {
         overflow-y: scroll !important;
-        background-color: #090B0F !important;
+        background-color: #080A0E !important;
     }
     html, body, [class*="css"] {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-        color: #F1F3F5 !important;
-        background-color: #090B0F !important;
+        color: #F8FAFC !important;
+        background-color: #080A0E !important;
         -webkit-font-smoothing: antialiased;
         letter-spacing: -0.011em;
     }
     .stApp {
-        background-color: #090B0F !important;
+        background-color: #080A0E !important;
+        background-image: 
+            radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.07) 0%, transparent 45%),
+            radial-gradient(circle at 85% 15%, rgba(56, 189, 248, 0.03) 0%, transparent 35%) !important;
+        background-attachment: fixed !important;
     }
 
     /* =========================================================================
@@ -834,14 +839,14 @@ def get_enterprise_css() -> str:
        3. ENTERPRISE SIDEBAR ARCHITECTURE & NAVIGATION
        ========================================================================= */
     section[data-testid="stSidebar"] {
-        background-color: #0D1015 !important;
-        border-right: 1px solid #252B35 !important;
+        background-color: #0B0E14 !important;
+        border-right: 1px solid #1E293B !important;
     }
     section[data-testid="stSidebar"] > div {
-        background-color: #0D1015 !important;
+        background-color: #0B0E14 !important;
     }
     [data-testid="stSidebarContent"] {
-        background-color: #0D1015 !important;
+        background-color: #0B0E14 !important;
         padding: 1.25rem 0.85rem !important;
     }
 
@@ -849,7 +854,7 @@ def get_enterprise_css() -> str:
     .sidebar-section-label {
         font-size: 10.5px;
         font-weight: 700;
-        color: #667080;
+        color: #64748B;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         margin: 14px 4px 6px 4px;
@@ -868,21 +873,21 @@ def get_enterprise_css() -> str:
         background: transparent !important;
         border-radius: 6px !important;
         padding: 8px 12px !important;
-        color: #929BA8 !important;
+        color: #94A3B8 !important;
         font-size: 13px !important;
         font-weight: 500 !important;
         display: flex !important;
         align-items: center !important;
         cursor: pointer !important;
-        transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
         border: 1px solid transparent !important;
         border-left: 3px solid transparent !important;
-        margin-bottom: 1px !important;
+        margin-bottom: 2px !important;
     }
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {
-        background: #11151B !important;
-        color: #F1F3F5 !important;
-        border-color: #252B35 !important;
+        background: #11151F !important;
+        color: #F8FAFC !important;
+        border-color: #1E293B !important;
     }
     /* Hide native radio circle */
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label > div:first-child {
@@ -890,15 +895,15 @@ def get_enterprise_css() -> str:
     }
     /* Subtle Active Navigation Indicator */
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) {
-        background: #171C24 !important;
-        border-color: #252B35 !important;
-        border-left: 3px solid #C9A96E !important;
-        color: #F1F3F5 !important;
+        background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 20, 30, 0.8) 100%) !important;
+        border-color: rgba(16, 185, 129, 0.3) !important;
+        border-left: 3px solid #10B981 !important;
+        color: #FFFFFF !important;
         font-weight: 600 !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.12) !important;
     }
     section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:checked) span {
-        color: #F1F3F5 !important;
+        color: #FFFFFF !important;
     }
 
     /* Sidebar Collapse Button styling */
@@ -1008,34 +1013,38 @@ def get_enterprise_css() -> str:
         transition: all 0.12s ease !important;
     }
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: #C9A96E !important;
-        color: #090B0F !important;
-        font-weight: 600 !important;
-        padding: 0 16px !important;
-        border: none !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+        color: #040D0A !important;
+        font-weight: 700 !important;
+        padding: 0 18px !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        box-shadow: 0 2px 16px rgba(16, 185, 129, 0.38) !important;
+        letter-spacing: -0.01em !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
-        background: #D9B77B !important;
-        color: #090B0F !important;
-        box-shadow: 0 2px 8px rgba(201, 169, 110, 0.25) !important;
+        background: linear-gradient(135deg, #34D399 0%, #10B981 100%) !important;
+        color: #040D0A !important;
+        box-shadow: 0 4px 24px rgba(16, 185, 129, 0.58) !important;
+        transform: translateY(-1px) !important;
     }
     div[data-testid="stButton"] > button[kind="secondary"] {
-        background: transparent !important;
-        color: #F1F3F5 !important;
-        border: 1px solid #252B35 !important;
+        background: #0F131C !important;
+        color: #F8FAFC !important;
+        border: 1px solid #1E293B !important;
         font-weight: 500 !important;
-        padding: 0 12px !important;
+        padding: 0 14px !important;
+        transition: all 0.15s ease !important;
     }
     div[data-testid="stButton"] > button[kind="secondary"]:hover {
-        background: #171C24 !important;
-        border-color: #667080 !important;
-        color: #F1F3F5 !important;
+        background: #151A26 !important;
+        border-color: #334155 !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
     }
     div[data-testid="stButton"] > button:disabled {
-        background: rgba(34, 197, 139, 0.10) !important;
-        color: #22C58B !important;
-        border: 1px solid rgba(34, 197, 139, 0.25) !important;
+        background: rgba(16, 185, 129, 0.10) !important;
+        color: #10B981 !important;
+        border: 1px solid rgba(16, 185, 129, 0.25) !important;
         opacity: 1 !important;
         font-weight: 600 !important;
         cursor: default !important;
@@ -1071,23 +1080,23 @@ def get_enterprise_css() -> str:
        ========================================================================= */
     div[data-testid="stTextInput"] input,
     div[data-testid="stPasswordInput"] input {
-        background: #11151B !important;
-        border: 1px solid #252B35 !important;
+        background: #0F131C !important;
+        border: 1px solid #1E293B !important;
         border-radius: 6px !important;
-        color: #F1F3F5 !important;
+        color: #F8FAFC !important;
         font-size: 12.5px !important;
     }
     div[data-testid="stTextInput"] input:focus,
     div[data-testid="stPasswordInput"] input:focus,
     div[data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within {
-        border-color: #C9A96E !important;
-        box-shadow: 0 0 0 1px rgba(201, 169, 110, 0.3) !important;
+        border-color: #10B981 !important;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-        background: #171C24 !important;
-        border: 1px solid #252B35 !important;
+        background: #151A26 !important;
+        border: 1px solid #1E293B !important;
         border-radius: 6px !important;
-        color: #F1F3F5 !important;
+        color: #F8FAFC !important;
         font-size: 12px !important;
         height: 34px !important;
         min-height: 34px !important;
@@ -1100,24 +1109,24 @@ def get_enterprise_css() -> str:
     }
     div[data-testid="stCustomComponentV1"] iframe,
     iframe[title*="ace"] {
-        background-color: #11151B !important;
-        border: 1px solid #252B35 !important;
+        background-color: #0F131C !important;
+        border: 1px solid #1E293B !important;
         border-radius: 8px !important;
         color-scheme: dark !important;
     }
     div[data-testid="stTextArea"] textarea {
-        background-color: #11151B !important;
-        color: #F1F3F5 !important;
+        background-color: #0F131C !important;
+        color: #F8FAFC !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 13px !important;
         line-height: 1.6 !important;
-        border: 1px solid #252B35 !important;
+        border: 1px solid #1E293B !important;
         border-radius: 8px !important;
         padding: 12px 14px !important;
     }
     div[data-testid="stTextArea"] textarea:focus {
-        border-color: #C9A96E !important;
-        box-shadow: 0 0 0 1px rgba(201, 169, 110, 0.3) !important;
+        border-color: #10B981 !important;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
     }
 
     /* ACE Editor Tokens */
@@ -1125,25 +1134,25 @@ def get_enterprise_css() -> str:
         font-family: 'JetBrains Mono', monospace !important;
     }
     .ace_editor {
-        background-color: #11151B !important;
-        color: #F1F3F5 !important;
-        border: 1px solid #252B35 !important;
+        background-color: #0F131C !important;
+        color: #F8FAFC !important;
+        border: 1px solid #1E293B !important;
         border-radius: 8px !important;
     }
     .ace_gutter {
-        background-color: #171C24 !important;
-        color: #667080 !important;
-        border-right: 1px solid #252B35 !important;
+        background-color: #151A26 !important;
+        color: #64748B !important;
+        border-right: 1px solid #1E293B !important;
     }
     .ace_cursor {
-        border-left: 2px solid #C9A96E !important;
+        border-left: 2px solid #10B981 !important;
     }
     .ace_keyword, .ace_keyword.ace_operator, .ace_storage, .ace_storage.ace_type {
-        color: #C9A96E !important;
+        color: #38BDF8 !important;
         font-weight: 600 !important;
     }
     .ace_string, .ace_string.ace_regexp {
-        color: #22C58B !important;
+        color: #10B981 !important;
     }
     .ace_comment {
         color: #667080 !important;
@@ -1415,48 +1424,49 @@ def get_enterprise_css() -> str:
         box-sizing: border-box;
     }
     .pricing-card-featured {
-        border-color: rgba(201, 169, 110, 0.45) !important;
-        background: #171C24 !important;
+        border-color: rgba(16, 185, 129, 0.45) !important;
+        background: #151A26 !important;
     }
     .pricing-card-active {
-        border-color: rgba(34, 197, 139, 0.50) !important;
+        border-color: rgba(16, 185, 129, 0.50) !important;
     }
     .popular-badge {
         position: absolute;
         top: -10px;
         right: 16px;
-        background: #C9A96E;
-        color: #090B0F;
+        background: linear-gradient(135deg, #10B981, #059669);
+        color: #040D0A;
         font-size: 10px;
         font-weight: 700;
         padding: 2px 8px;
         border-radius: 4px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
     }
     .card-tier-title {
         font-size: 14px;
         font-weight: 600;
-        color: #F1F3F5;
+        color: #F8FAFC;
         margin-bottom: 8px;
     }
     .card-tier-amt {
         font-size: 26px;
         font-weight: 700;
-        color: #F1F3F5;
+        color: #F8FAFC;
         font-family: 'JetBrains Mono', monospace;
         letter-spacing: -0.02em;
     }
     .card-tier-sub {
         font-size: 11.5px;
-        color: #929BA8;
+        color: #94A3B8;
         margin-bottom: 16px;
         min-height: 32px;
         line-height: 1.4;
     }
     .card-features-list {
         font-size: 12px;
-        color: #929BA8;
+        color: #94A3B8;
         line-height: 2.0;
         flex-grow: 1;
         margin-bottom: 16px;
@@ -1464,26 +1474,26 @@ def get_enterprise_css() -> str:
 
     /* Expanders & Tabs */
     details[data-testid="stExpander"] {
-        background: #11151B !important;
-        border: 1px solid #252B35 !important;
+        background: #0F131C !important;
+        border: 1px solid #1E293B !important;
         border-radius: 8px !important;
         margin-bottom: 8px !important;
     }
     details[data-testid="stExpander"] summary {
-        color: #F1F3F5 !important;
+        color: #F8FAFC !important;
         font-size: 12.5px !important;
         font-weight: 500 !important;
         padding: 8px 12px !important;
     }
     details[data-testid="stExpander"] summary:hover {
-        background: rgba(255, 255, 255, 0.02) !important;
+        background: rgba(255, 255, 255, 0.03) !important;
     }
     details[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {
         padding: 10px 12px 14px 12px !important;
-        border-top: 1px solid #252B35 !important;
+        border-top: 1px solid #1E293B !important;
     }
     div[data-testid="stTabs"] button {
-        color: #929BA8 !important;
+        color: #94A3B8 !important;
         font-size: 12.5px !important;
         font-weight: 500 !important;
         border: none !important;
@@ -1491,8 +1501,8 @@ def get_enterprise_css() -> str:
         background: transparent !important;
     }
     div[data-testid="stTabs"] button[aria-selected="true"] {
-        color: #C9A96E !important;
-        border-bottom: 2px solid #C9A96E !important;
+        color: #10B981 !important;
+        border-bottom: 2px solid #10B981 !important;
         font-weight: 600 !important;
     }
     section[data-testid="stSidebar"] div[data-testid="stTabs"] button {
@@ -1544,19 +1554,19 @@ st.markdown(get_enterprise_css(), unsafe_allow_html=True)
 with st.sidebar:
     # ----------------- REFINED LOGO & BRANDING HEADER -----------------
     st.markdown("""
-    <div style="display:flex; align-items:center; gap:10px; padding:4px 0 14px 0; border-bottom:1px solid #252B35; margin-bottom:14px;">
-        <div style="width:34px; height:34px; border-radius:8px; background:#171C24; border:1px solid #252B35; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+    <div style="display:flex; align-items:center; gap:10px; padding:4px 0 14px 0; border-bottom:1px solid #1E293B; margin-bottom:14px;">
+        <div style="width:34px; height:34px; border-radius:8px; background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L4 5V11C4 16.55 7.42 21.74 12 23C16.58 21.74 20 16.55 20 11V5L12 2Z" fill="#C9A96E" fill-opacity="0.20" stroke="#C9A96E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 8V12M12 16H12.01" stroke="#C9A96E" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 2L4 5V11C4 16.55 7.42 21.74 12 23C16.58 21.74 20 16.55 20 11V5L12 2Z" fill="#10B981" fill-opacity="0.20" stroke="#10B981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 8V12M12 16H12.01" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
             </svg>
         </div>
         <div style="flex-grow:1; min-width:0;">
             <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:15px; font-weight:700; color:#F1F3F5; letter-spacing:-0.02em;">Kavach AI</span>
-                <span style="background:#171C24; color:#929BA8; font-size:10px; font-weight:600; padding:1px 6px; border-radius:4px; border:1px solid #252B35; font-family:'JetBrains Mono',monospace;">v1.4.1</span>
+                <span style="font-size:15px; font-weight:700; color:#F8FAFC; letter-spacing:-0.02em;">Kavach AI</span>
+                <span style="background:rgba(16, 185, 129, 0.12); color:#10B981; font-size:10px; font-weight:700; padding:1px 6px; border-radius:4px; border:1px solid rgba(16, 185, 129, 0.3); font-family:'JetBrains Mono',monospace;">v1.5.0</span>
             </div>
-            <div style="font-size:11px; color:#667080; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Deterministic AST Security</div>
+            <div style="font-size:11px; color:#64748B; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Deterministic AST Security</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1824,30 +1834,15 @@ with top_col2:
                 if st.session_state.get("auth_error"):
                     st.error(st.session_state.auth_error)
 
-st.markdown("<div style='border-bottom:1px solid #252B35; margin-bottom:16px;'></div>", unsafe_allow_html=True)
-
-# ----------------- ENTERPRISE PORTAL ANNOUNCEMENT BANNER -----------------
-st.markdown("""
-<div style="background: linear-gradient(90deg, rgba(34, 197, 139, 0.12) 0%, rgba(17, 21, 27, 0.95) 100%); border: 1px solid rgba(34, 197, 139, 0.4); border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="background: #22C58B; color: #090B0F; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;">ENTERPRISE V2</span>
-        <span style="font-size: 13px; color: #F1F3F5; font-weight: 500;">
-            Next-Gen Sub-16ms Monaco Console is now live with 1-Click Surgical Self-Healing!
-        </span>
-    </div>
-    <a href="https://kavach-security.vercel.app" target="_blank" style="background: #22C58B; color: #090B0F; font-weight: 600; font-size: 12px; padding: 6px 14px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 12px rgba(34,197,139,0.35);">
-        ⚡ Launch Enterprise Portal &rarr;
-    </a>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("<div style='border-bottom:1px solid #1E293B; margin-bottom:12px;'></div>", unsafe_allow_html=True)
 
 # ----------------- POST-CHECKOUT CLAIM BANNER -----------------
 if st.session_state.get("pending_activation"):
     pending = st.session_state.pending_activation
     st.markdown("""
-    <div style="background: rgba(201, 169, 110, 0.12); border: 1.5px solid #C9A96E; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
-        <div style="font-weight: 700; color: #C9A96E; font-size: 15px;">🎉 Payment Verified! Set Up Your Permanent Account</div>
-        <div style="color: #929BA8; font-size: 12.5px; margin-top: 2px;">
+    <div style="background: rgba(16, 185, 129, 0.10); border: 1.5px solid #10B981; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);">
+        <div style="font-weight: 700; color: #10B981; font-size: 15px;">🎉 Payment Verified! Set Up Your Permanent Account</div>
+        <div style="color: #94A3B8; font-size: 12.5px; margin-top: 2px;">
             Set your password below to permanently link your signed license across sessions and browser restarts.
         </div>
     </div>
@@ -2096,22 +2091,28 @@ def render_project_archive_inspector():
 if active_tab == "Inspector":
     # Hero Positioning & Trust Bar
     st.markdown("""
-    <div class="hero-container">
-        <div class="hero-heading">Catch secrets & SQL injection before they ship.</div>
-        <div class="hero-lead">Static Application Security Testing (SAST), AST-based vulnerability detection, taint analysis, and automated code remediation.</div>
-        <div class="trust-strip">
-            <span><span class="trust-dot"></span> Zero Data Retention</span>
-            <span class="trust-sep">·</span>
-            <span>⚡ 100% Offline AST Engine</span>
-            <span class="trust-sep">·</span>
-            <span>🛡️ 1-Click Surgical Remediations</span>
-            <span class="trust-sep">·</span>
+    <div class="hero-container" style="padding: 6px 0 12px 0;">
+        <div class="hero-heading" style="font-size: 24px; font-weight: 700; background: linear-gradient(180deg, #FFFFFF 20%, #94A3B8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.03em; margin-bottom: 6px;">
+            Pre-Merge AST Security Gate & Autonomous Remediation
+        </div>
+        <div class="hero-lead" style="font-size: 13px; color: #94A3B8; max-width: 680px; margin: 0 auto 10px auto; line-height: 1.5;">
+            Sub-16ms deterministic AST analysis with 0% false positives and 1-click compile-ready surgical healing.
+        </div>
+        <div class="trust-strip" style="background: rgba(15, 19, 28, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(8px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);">
+            <span><span class="trust-dot" style="background: #10B981; box-shadow: 0 0 6px #10B981;"></span> Zero Retention</span>
+            <span class="trust-sep" style="color: #334155;">•</span>
+            <span style="color: #F8FAFC;">⚡ 100% Offline AST Engine</span>
+            <span class="trust-sep" style="color: #334155;">•</span>
+            <span style="color: #10B981; font-weight: 600;">🛡️ 1-Click Surgical Fixes</span>
+            <span class="trust-sep" style="color: #334155;">•</span>
             <a href="https://github.com/rajrajak99/kavach-ai" target="_blank" class="trust-link">★ Star on GitHub</a>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    insp_hdr_col1, insp_hdr_col2 = st.columns([2.2, 1.2], gap="small", vertical_alignment="center")
+    insp_hdr_col1, insp_hdr_col2 = st.columns([1.8, 1.2], gap="small", vertical_alignment="center")
+    with insp_hdr_col1:
+        st.markdown("<div style='font-size:12px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.06em;'>WORKSPACE PLAYGROUND</div>", unsafe_allow_html=True)
     with insp_hdr_col2:
         inspector_mode = st.segmented_control(
             "Scan Mode",
@@ -2881,9 +2882,9 @@ elif active_tab == "Pricing":
         growth_active = "pricing-card-active" if is_team else ""
         st.markdown(f"""
         <div class="pricing-card pricing-card-featured {growth_active}">
-            <div class="popular-badge" style="background:#C9A96E; color:#090B0F; font-weight:700; border-color:#C9A96E;">🔥 Most Popular For Startups</div>
+            <div class="popular-badge" style="background:linear-gradient(135deg, #10B981, #059669); color:#040D0A; font-weight:700; border:none; box-shadow:0 2px 8px rgba(16,185,129,0.35);">🔥 Most Popular For Startups</div>
             <div class="card-tier-title">Growth Team</div>
-            <div class="card-tier-amt">{growth_price}<span style="font-size:14px; color:#667080; font-weight:500;">/mo</span></div>
+            <div class="card-tier-amt">{growth_price}<span style="font-size:14px; color:#64748B; font-weight:500;">/mo</span></div>
             <div class="card-tier-sub">{growth_sub}</div>
             <div class="card-features-list">
                 ✓ <b>Up to 15 engineers</b> (Zero per-seat tax)<br>
@@ -2917,7 +2918,7 @@ elif active_tab == "Pricing":
         st.markdown(f"""
         <div class="pricing-card">
             <div class="card-tier-title">Global Enterprise</div>
-            <div class="card-tier-amt">{ent_price}<span style="font-size:14px; color:#667080; font-weight:500;">/mo</span></div>
+            <div class="card-tier-amt">{ent_price}<span style="font-size:14px; color:#64748B; font-weight:500;">/mo</span></div>
             <div class="card-tier-sub">{ent_sub}</div>
             <div class="card-features-list">
                 ✓ <b>Unlimited engineers & orgs</b><br>
@@ -2943,70 +2944,70 @@ elif active_tab == "Pricing":
     # ROI & COMPETITIVE COMPARISON TABLE
     st.markdown("<div style='margin-top:32px;'></div>", unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #11151B; border: 1px solid #252B35; border-radius: 10px; overflow: hidden; margin-bottom: 24px;">
-        <div style="padding: 16px 20px; background: #171C24; border-bottom: 1px solid #252B35; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+    <div style="background: #0F131C; border: 1px solid #1E293B; border-radius: 10px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+        <div style="padding: 16px 20px; background: #151A26; border-bottom: 1px solid #1E293B; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <div>
-                <span style="font-size: 15px; font-weight: 700; color: #F1F3F5;">💰 Transparent ROI: Kavach AI vs Legacy Security Scanners</span>
-                <div style="font-size: 12px; color: #929BA8; margin-top: 2px;">Why modern engineering teams choose Kavach AI over noisy legacy tools.</div>
+                <span style="font-size: 15px; font-weight: 700; color: #F8FAFC;">💰 Transparent ROI: Kavach AI vs Legacy Security Scanners</span>
+                <div style="font-size: 12px; color: #94A3B8; margin-top: 2px;">Why modern engineering teams choose Kavach AI over noisy legacy tools.</div>
             </div>
-            <span style="background: rgba(34, 197, 139, 0.15); color: #22C58B; border: 1px solid rgba(34, 197, 139, 0.3); font-weight: 700; font-size: 11.5px; padding: 4px 10px; border-radius: 6px;">Save $3,810+ Every Single Year</span>
+            <span style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; font-size: 11.5px; padding: 4px 10px; border-radius: 6px; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);">Save $3,810+ Every Single Year</span>
         </div>
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left;">
                 <thead>
-                    <tr style="background: #0D1015; color: #667080; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #252B35;">
+                    <tr style="background: #0B0E14; color: #64748B; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1E293B;">
                         <th style="padding: 12px 16px;">Feature / Metric</th>
-                        <th style="padding: 12px 16px; background: rgba(201, 169, 110, 0.08); color: #C9A96E; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">🛡️ Kavach AI (Growth Team)</th>
+                        <th style="padding: 12px 16px; background: rgba(16, 185, 129, 0.10); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">🛡️ Kavach AI (Growth Team)</th>
                         <th style="padding: 12px 16px;">Semgrep Team</th>
                         <th style="padding: 12px 16px;">Snyk Developer</th>
                     </tr>
                 </thead>
-                <tbody style="color: #929BA8;">
-                    <tr style="border-bottom: 1px solid #252B35;">
-                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F3F5;">Monthly Cost</td>
-                        <td style="padding: 12px 16px; background: rgba(201, 169, 110, 0.05); color: #22C58B; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">$99 / month</td>
+                <tbody style="color: #94A3B8;">
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F8FAFC;">Monthly Cost</td>
+                        <td style="padding: 12px 16px; background: rgba(16, 185, 129, 0.05); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">$99 / month</td>
                         <td style="padding: 12px 16px;">$400 / month</td>
                         <td style="padding: 12px 16px;">$500 / month</td>
                     </tr>
-                    <tr style="border-bottom: 1px solid #252B35;">
-                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F3F5;">Annual Subscription</td>
-                        <td style="padding: 12px 16px; background: rgba(201, 169, 110, 0.05); color: #22C58B; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">$990 / year</td>
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F8FAFC;">Annual Subscription</td>
+                        <td style="padding: 12px 16px; background: rgba(16, 185, 129, 0.05); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">$990 / year</td>
                         <td style="padding: 12px 16px;">$4,800 / year</td>
                         <td style="padding: 12px 16px;">$6,000 / year</td>
                     </tr>
-                    <tr style="border-bottom: 1px solid #252B35;">
-                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F3F5;">Per-Seat Developer Tax</td>
-                        <td style="padding: 12px 16px; background: rgba(201, 169, 110, 0.05); color: #22C58B; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">$0 (Zero Per-Seat Fee)</td>
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F8FAFC;">Per-Seat Developer Tax</td>
+                        <td style="padding: 12px 16px; background: rgba(16, 185, 129, 0.05); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">$0 (Zero Per-Seat Fee)</td>
                         <td style="padding: 12px 16px;">$40 to $65 / seat / mo</td>
                         <td style="padding: 12px 16px;">$50 to $95 / seat / mo</td>
                     </tr>
-                    <tr style="border-bottom: 1px solid #252B35;">
-                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F3F5;">CI/CD Scan Latency</td>
-                        <td style="padding: 12px 16px; background: rgba(201, 169, 110, 0.05); color: #22C58B; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">&lt; 16ms (Instant AST)</td>
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F8FAFC;">CI/CD Scan Latency</td>
+                        <td style="padding: 12px 16px; background: rgba(16, 185, 129, 0.05); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">&lt; 16ms (Instant AST)</td>
                         <td style="padding: 12px 16px;">2 to 8 seconds</td>
                         <td style="padding: 12px 16px;">15 to 45 seconds</td>
                     </tr>
-                    <tr style="border-bottom: 1px solid #252B35;">
-                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F3F5;">False Positive Rate</td>
-                        <td style="padding: 12px 16px; background: rgba(201, 169, 110, 0.05); color: #22C58B; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">0% (Verified AST Taint)</td>
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F8FAFC;">False Positive Rate</td>
+                        <td style="padding: 12px 16px; background: rgba(16, 185, 129, 0.05); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">0% (Verified AST Taint)</td>
                         <td style="padding: 12px 16px;">15% - 25% (High noise)</td>
                         <td style="padding: 12px 16px;">30% - 40% (Very noisy)</td>
                     </tr>
-                    <tr style="border-bottom: 1px solid #252B35;">
-                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F3F5;">1-Click Auto-Remediation</td>
-                        <td style="padding: 12px 16px; background: rgba(201, 169, 110, 0.05); color: #22C58B; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">Included (Direct GitHub Diffs)</td>
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F8FAFC;">1-Click Auto-Remediation</td>
+                        <td style="padding: 12px 16px; background: rgba(16, 185, 129, 0.05); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">Included (Direct GitHub Diffs)</td>
                         <td style="padding: 12px 16px;">Basic (Requires manual edits)</td>
                         <td style="padding: 12px 16px;">PR bot (Frequent breakages)</td>
                     </tr>
-                    <tr style="border-bottom: 1px solid #252B35;">
-                        <td style="padding: 12px 16px; font-weight: 600; color: #F1F3F5;">Pre-Audit Compliance Reports</td>
-                        <td style="padding: 12px 16px; background: rgba(201, 169, 110, 0.05); color: #22C58B; font-weight: 700; border-left: 1px solid rgba(201, 169, 110, 0.3); border-right: 1px solid rgba(201, 169, 110, 0.3);">SOC 2 / ISO 27001 / GDPR PDF</td>
+                    <tr style="border-bottom: 1px solid #1E293B;">
+                        <td style="padding: 12px 16px; font-weight: 600; color: #F8FAFC;">Pre-Audit Compliance Reports</td>
+                        <td style="padding: 12px 16px; background: rgba(16, 185, 129, 0.05); color: #10B981; font-weight: 700; border-left: 1px solid rgba(16, 185, 129, 0.25); border-right: 1px solid rgba(16, 185, 129, 0.25);">SOC 2 / ISO 27001 / GDPR PDF</td>
                         <td style="padding: 12px 16px;">Enterprise ($$$) only</td>
                         <td style="padding: 12px 16px;">Expensive add-on</td>
                     </tr>
-                    <tr style="background: rgba(34, 197, 139, 0.06);">
-                        <td style="padding: 14px 16px; font-weight: 700; color: #F1F3F5;">Annual Team Cost</td>
-                        <td style="padding: 14px 16px; background: rgba(201, 169, 110, 0.12); color: #22C58B; font-weight: 800; font-size: 14px; border-left: 1px solid rgba(201, 169, 110, 0.4); border-right: 1px solid rgba(201, 169, 110, 0.4);">$990 / year</td>
+                    <tr style="background: rgba(16, 185, 129, 0.06);">
+                        <td style="padding: 14px 16px; font-weight: 700; color: #F8FAFC;">Annual Team Cost</td>
+                        <td style="padding: 14px 16px; background: rgba(16, 185, 129, 0.12); color: #10B981; font-weight: 800; font-size: 14px; border-left: 1px solid rgba(16, 185, 129, 0.35); border-right: 1px solid rgba(16, 185, 129, 0.35);">$990 / year</td>
                         <td style="padding: 14px 16px; color: #F05252; font-weight: 700;">$4,800 / year</td>
                         <td style="padding: 14px 16px; color: #F05252; font-weight: 700;">$6,000 / year</td>
                     </tr>
