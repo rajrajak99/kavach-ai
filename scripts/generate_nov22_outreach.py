@@ -187,7 +187,7 @@ leads = [
 md_lines = [
     '# 🛡️ Kavach AI — 25 High-Value Enterprise Outreach Dossier',
     '**Execution Date:** Sunday, Nov 22, 2026',
-    '**Sender Account:** `team.kavachai@gmail.com`',
+    '**Sender Account:** Primary / Default Gmail Account',
     '**Combined Portfolio Value:** $20B+ Market Cap & VC Funding',
     '**Verification Standard:** 100% Brand-New • Zero Overlap with Past Batches • 1-Click Direct Gmail Compose',
     '',
@@ -229,11 +229,11 @@ License Pass: KAVACH-PRO-VIP-{comp.upper()}-PILOT2026
 Would you like us to open a sample 1-click PR review, or would you prefer to test our GitHub Action on a private repo?
 
 Best regards,
-Chandan
+Raja Rajak
 Founder, Kavach AI
-team.kavachai@gmail.com | https://kavach-security.vercel.app'''
+https://kavach-security.vercel.app'''
 
-    gmail_link = f'https://mail.google.com/mail/u/2/?view=cm&fs=1&to={urllib.parse.quote(email_to)}&su={urllib.parse.quote(subj)}&body={urllib.parse.quote(body_text)}'
+    gmail_link = f'https://mail.google.com/mail/?view=cm&fs=1&to={urllib.parse.quote(email_to)}&su={urllib.parse.quote(subj)}&body={urllib.parse.quote(body_text)}'
 
     md_lines.extend([
         f'### #{lead["num"]}: {comp} ({focus})',
@@ -242,7 +242,7 @@ team.kavachai@gmail.com | https://kavach-security.vercel.app'''
         f'- **Current Legacy Alternative:** {competitor}',
         f'- **Core Value Prop:** Save 80%+ with $0 seat tax, sub-16ms deterministic AST analysis, and 1-click PR healing.',
         '',
-        f'👉 **[⚡ 1-Click Direct Send via Gmail (team.kavachai@gmail.com)]({gmail_link})**',
+        f'👉 **[⚡ 1-Click Direct Send via Gmail]({gmail_link})**',
         '',
         '---',
         ''
@@ -291,7 +291,12 @@ ledger_addition.extend([
 for l in leads[18:]:
     ledger_addition.append(f'| {l["num"]} | {l["company"]} ({l["val"]}) | {l["focus"]} | `{l["email"]}` | {l["focus"]} | 📤 Dispatched (1-Click Gmail) |')
 
-with open('leads/CONTACTED_LEDGER.md', 'a', encoding='utf-8') as f:
-    f.write('\n'.join(ledger_addition))
+with open('leads/CONTACTED_LEDGER.md', 'r', encoding='utf-8') as f:
+    existing_ledger = f.read()
 
-print('Updated leads/CONTACTED_LEDGER.md successfully!')
+if 'Batches #25, #26, #27 (Executed Sunday Nov 22)' not in existing_ledger:
+    with open('leads/CONTACTED_LEDGER.md', 'a', encoding='utf-8') as f:
+        f.write('\n'.join(ledger_addition))
+    print('Updated leads/CONTACTED_LEDGER.md successfully!')
+else:
+    print('CONTACTED_LEDGER.md already has Batches #25-27 recorded, skipped duplicate append.')
