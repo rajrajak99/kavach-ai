@@ -1,0 +1,43 @@
+name: 🛡️ Propose New AST Security Rule
+description: Suggest a new CWE vulnerability pattern or self-healing patch
+labels: ["security-rule", "ast-engine"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Kavach AI maintains a strict **0% false positive** policy. Every rule must be deterministic and AST-validated.
+  - type: input
+    id: cwe-id
+    attributes:
+      label: Target CWE ID & Classification
+      description: e.g. CWE-22 (Path Traversal), CWE-918 (SSRF), CWE-502 (Insecure Deserialization)
+      placeholder: CWE-22: Improper Limitation of a Pathname to a Restricted Directory
+    validations:
+      required: true
+  - type: dropdown
+    id: target-language
+    attributes:
+      label: Target Language
+      options:
+        - Python (AST / libcst)
+        - JavaScript / TypeScript
+        - Go
+        - Multi-language
+    validations:
+      required: true
+  - type: textarea
+    id: vulnerable-example
+    attributes:
+      label: Vulnerable Code Pattern (Trigger)
+      description: Provide an exact code snippet showing the vulnerability.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: patched-example
+    attributes:
+      label: 1-Click Surgical Patch (Remediation)
+      description: Provide the exact, safe code replacement that does not break existing logic.
+      render: python
+    validations:
+      required: true

@@ -1,0 +1,48 @@
+name: 🐛 Bug Report
+description: Create a report to help us improve Kavach AI
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Before filing, please make sure you are using the latest version of Kavach AI (`v1.4.1`).
+  - type: input
+    id: version
+    attributes:
+      label: Kavach AI Version
+      description: What version of Kavach AI are you using? (e.g., v1.4.1, commit hash)
+      placeholder: v1.4.1
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Execution Environment
+      options:
+        - GitHub Actions (uses: rajrajak99/kavach-ai)
+        - Standalone CLI (kavach / python cli.py)
+        - Streamlit Web Console
+        - Next.js Web Console (kavach-security.vercel.app)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is.
+      placeholder: Kavach AI crashed when parsing a file containing...
+    validations:
+      required: true
+  - type: textarea
+    id: code-sample
+    attributes:
+      label: Minimal Reproducible Code Sample
+      description: Please provide a minimal code snippet that triggers the issue.
+      render: python
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
