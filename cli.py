@@ -66,7 +66,7 @@ def clear_credentials() -> bool:
 
 IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
-    '.pytest_cache', 'dist', 'build', '.idea', '.vscode'
+    '.pytest_cache', 'dist', 'build', '.idea', '.vscode', '.next', 'out', 'kavach-web'
 }
 
 SUPPORTED_EXTS = {

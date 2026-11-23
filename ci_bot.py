@@ -29,7 +29,7 @@ IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
     '.pytest_cache', 'dist', 'build', '.idea', '.vscode', 'samples',
     'tests', 'test', 'scratch', 'leads', 'docs', 'assets', 'benchmarks',
-    'scripts', 'marketing', '.user_uploaded', 'brain'
+    'scripts', 'marketing', '.user_uploaded', 'brain', '.next', 'out', 'kavach-web'
 }
 SUPPORTED_EXTS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.c'}
 
