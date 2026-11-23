@@ -55,7 +55,7 @@ jobs:
 ```
 
 #### Live Interactive Studio:
-Try the zero-install web console: **[kavach-ai.streamlit.app](https://kavach-ai.streamlit.app)**
+Try the zero-install web console: **[kavach-security.vercel.app](https://kavach-security.vercel.app)**
 ```
 
 ---
@@ -92,7 +92,7 @@ Your source code never leaves your runner. Zero LLM training on private codebase
 
 7/7 Try it now:
 📦 `pip install --upgrade kavach-ai`
-🌐 Web Studio: https://kavach-ai.streamlit.app
+🌐 Web Studio: https://kavach-security.vercel.app
 ⭐ GitHub: https://github.com/rajrajak99/kavach-ai
 
 Built for developers who ship fast without leaking keys. Feedback welcome!
@@ -118,7 +118,7 @@ Kavach AI v1.4.0 solves this with an offline, deterministic approach:
 - Atomic Self-Healing: Tests fixes against your test suite (pytest/jest) and auto-rollbacks if a regression occurs.
 - Zero Data Retention: Runs 100% offline in CI under 16ms without external network telemetry.
 
-Web Console (live interactive demo): https://kavach-ai.streamlit.app
+Web Console (live interactive demo): https://kavach-security.vercel.app
 PyPI: `pip install kavach-ai`
 
 Would love your feedback on the taint-tracking rules and benchmark results!
@@ -175,7 +175,7 @@ Today we're releasing Kavach AI v1.4.0 — an enterprise-grade AppSec & Supply-C
 
 Check out the open-source repository or test the live studio:
 ⭐ GitHub: https://github.com/rajrajak99/kavach-ai
-🌐 Live Web Studio: https://kavach-ai.streamlit.app
+🌐 Live Web Studio: https://kavach-security.vercel.app
 
 #CyberSecurity #AppSec #DevSecOps #Python #SoftwareEngineering #SOC2 #OpenSource
 ```
