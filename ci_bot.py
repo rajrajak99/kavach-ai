@@ -29,7 +29,8 @@ IGNORE_DIRS = {
     'node_modules', '.git', 'venv', 'env', '.env', '__pycache__',
     '.pytest_cache', 'dist', 'build', '.idea', '.vscode', 'samples',
     'tests', 'test', 'scratch', 'leads', 'docs', 'assets', 'benchmarks',
-    'scripts', 'marketing', '.user_uploaded', 'brain', '.next', 'out', 'kavach-web'
+    'scripts', 'marketing', '.user_uploaded', 'brain', '.next', 'out', 'kavach-web',
+    '.github'
 }
 SUPPORTED_EXTS = {'.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.cpp', '.cc', '.cxx', '.h', '.hpp', '.c'}
 
@@ -296,6 +297,7 @@ def main():
             fd for fd in raw_diffs
             if not is_ignored_path(fd.filename_new or fd.filename_old, extra_excludes)
             and not DiffParser.is_noise_file(fd.filename_new or fd.filename_old)
+            and Path(fd.filename_new or fd.filename_old).suffix.lower() in SUPPORTED_EXTS
         ]
         ignored_count = len(raw_diffs) - len(file_diffs)
         if ignored_count > 0:

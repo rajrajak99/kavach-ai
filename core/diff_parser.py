@@ -36,7 +36,8 @@ class DiffParser:
     NOISE_EXTENSIONS = {
         '.lock', '.json.lock', '.min.js', '.min.css', '.map',
         '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico',
-        '.woff', '.woff2', '.ttf', '.eot', '.pdf', '.csv'
+        '.woff', '.woff2', '.ttf', '.eot', '.pdf', '.csv',
+        '.md', '.markdown', '.txt', '.rst', '.yml', '.yaml', '.toml'
     }
     
     NOISE_FILENAMES = {
