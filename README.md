@@ -19,6 +19,17 @@
 
 Kavach AI is an autonomous, high-speed static security inspector and surgical code repair engine. Operating like an impenetrable armor across your **GitHub Pull Requests (CI/CD)**, local CLI, VS Code editor, and Web Console, it eliminates critical security hazards (CWE-89 SQLi, CWE-798 Secret Leaks, CWE-120 Buffer Overflows) and generates **1-click ready-to-merge patches** with zero-regression self-healing verification.
 
+```bash
+$ kavach scan --diff HEAD~1
+🔍 [AST Engine] Inspecting PR unified diff (14 files)...
+⚡ [Benchmark] AST differential analysis completed in 14.8ms
+🚨 [Vulnerability Detected] CWE-89: SQL Injection in api/v1/auth.py:42
+   Sink: cursor.execute(f"SELECT * FROM users WHERE email = '{email}'")
+🩹 [Self-Healing] Generating surgical parameterized patch...
+✅ [Patch Verified] 128/128 tests passed. Zero regressions detected.
+🚀 [PR Review Posted] 1-Click ready-to-merge GitHub suggestion emitted!
+```
+
 ---
 
 ## ⚡ Core Philosophy: Zero-Noise Precision
