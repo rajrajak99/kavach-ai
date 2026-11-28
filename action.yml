@@ -1,5 +1,5 @@
 name: 'Kavach AI Security Inspector'
-description: 'Autonomous zero-noise PR security reviewer, self-healing test runner, and 1-click surgical patcher'
+description: 'Sub-16ms zero-noise SAST & secret scanner with 1-click PR auto-patches for Python, JS/TS, Go, Terraform. 100% offline.'
 author: 'Raja Rajak (@rajrajak99)'
 inputs:
   github-token:

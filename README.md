@@ -7,7 +7,7 @@
 > **Autonomous High-Precision Code Armor & 1-Click Surgical Patcher**
 
 [![GitHub Stars](https://img.shields.io/github/stars/rajrajak99/kavach-ai?style=social)](https://github.com/rajrajak99/kavach-ai/stargazers)
-[![Release: v1.4.1](https://img.shields.io/github/v/release/rajrajak99/kavach-ai?color=purple)](https://github.com/rajrajak99/kavach-ai/releases)
+[![Release: v1.5.0](https://img.shields.io/github/v/release/rajrajak99/kavach-ai?color=purple)](https://github.com/rajrajak99/kavach-ai/releases)
 [![CI Status](https://github.com/rajrajak99/kavach-ai/actions/workflows/kavach.yml/badge.svg)](https://github.com/rajrajak99/kavach-ai/actions)
 [![Tests: 128/128 Passing](https://img.shields.io/badge/Tests-128%2F128%20Passing-brightgreen.svg)](tests/)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blue.svg)](LICENSE)
@@ -16,6 +16,7 @@
 [![AST Speed: Sub-16ms](https://img.shields.io/badge/AST%20Speed-Sub--16ms-blueviolet.svg)](#-105k-loc-enterprise-benchmark)
 [![Compliance: SOC 2 Ready](https://img.shields.io/badge/Compliance-SOC%202%20Ready-success.svg)](#-enterprise-trust--zero-data-retention-soc-2-ready)
 [![Web Console](https://img.shields.io/badge/Web%20Console-Live%20(Next.js)-brightgreen.svg)](https://kavach-security.vercel.app)
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Install%20Kavach%20AI-purple?logo=github)](https://github.com/marketplace/actions/kavach-ai-security-inspector)
 
 Kavach AI is an autonomous, high-speed static security inspector and surgical code repair engine. Operating like an impenetrable armor across your **GitHub Pull Requests (CI/CD)**, local CLI, VS Code editor, and Web Console, it eliminates critical security hazards (CWE-89 SQLi, CWE-798 Secret Leaks, CWE-120 Buffer Overflows) and generates **1-click ready-to-merge patches** with zero-regression self-healing verification.
 
@@ -61,7 +62,7 @@ For high-growth startups and enterprise teams, **code privacy is non-negotiable*
 
 Tested on an enterprise codebase consisting of **105,024 lines of Python code** across 100 enterprise modules:
 
-| Metric | Kavach AI (v1.4.1) | Traditional Scanners (Bandit / Flake8) | Cloud SAST (Snyk / SonarQube) |
+| Metric | Kavach AI (v1.5.0) | Traditional Scanners (Bandit / Flake8) | Cloud SAST (Snyk / SonarQube) |
 |---|---|---|---|
 | **Scan Duration (105k LOC)** | **46.7 seconds** | 12.4 seconds | 3+ minutes (cloud queue) |
 | **Throughput** | **2,249 LOC / second** | ~8,000 LOC/sec (Regex only) | Cloud-limited |
@@ -105,7 +106,7 @@ jobs:
           python-version: '3.11'
 
       - name: Run Kavach AI Security Gate
-        uses: rajrajak99/kavach-ai@v1.4.1
+        uses: rajrajak99/kavach-ai@v1.5.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on: 'CRITICAL'
