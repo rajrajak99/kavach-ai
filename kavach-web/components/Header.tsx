@@ -43,14 +43,15 @@ export default function Header({ activeViewTitle = "Code Inspector" }: HeaderPro
           <ExternalLink className="w-3 h-3 text-zinc-500" />
         </a>
 
-        {/* Enterprise Portal CTA */}
+        {/* Marketplace Install CTA */}
         <a
-          href="https://github.com/rajrajak99/kavach-ai#enterprise"
+          href="https://github.com/marketplace/actions/kavach-ai-security-inspector"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs font-semibold px-3 py-1.5 rounded-md bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-sm transition-all active:scale-[0.98] inline-flex items-center gap-1"
         >
-          Enterprise Portal
+          <span>Install GitHub Action</span>
+          <ExternalLink className="w-3 h-3" />
         </a>
       </div>
     </header>

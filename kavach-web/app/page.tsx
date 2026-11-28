@@ -81,6 +81,58 @@ void authenticate(const char* input_key) {
 }
 `,
   },
+  go_sqli: {
+    filename: "ledger_repo.go",
+    language: "go",
+    code: `package main
+
+import (
+    "database/sql"
+    "fmt"
+)
+
+func getUserOrders(db *sql.DB, userID string) (*sql.Rows, error) {
+    // Vulnerable SQL Injection in Go (CWE-89)
+    return db.Query(fmt.Sprintf("SELECT * FROM orders WHERE user_id = '%s'", userID))
+}
+`,
+  },
+  ts_xss_sqli: {
+    filename: "admin_panel.tsx",
+    language: "typescript",
+    code: `import React from "react";
+import { PrismaClient } from "@prisma/client";
+
+const db = new PrismaClient();
+
+export async function fetchTenant(tenantId: string) {
+    // Raw ORM SQL Injection (CWE-89)
+    return db.$queryRawUnsafe(\`SELECT * FROM tenants WHERE id = '\${tenantId}'\`);
+}
+
+export function ProfileBio({ htmlBio }: { htmlBio: string }) {
+    // DOM XSS Vulnerability (CWE-79)
+    return <div dangerouslySetInnerHTML={{ __html: htmlBio }} />;
+}
+`,
+  },
+  tf_open_infra: {
+    filename: "main.tf",
+    language: "terraform",
+    code: `resource "aws_s3_bucket" "audit_logs" {
+  bucket = "prod-fintech-audit-logs"
+  acl    = "public-read"
+}
+
+resource "aws_security_group_rule" "allow_all_ssh" {
+  type        = "ingress"
+  from_port   = 22
+  to_port     = 22
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+`,
+  },
 };
 
 export default function Home() {
@@ -149,6 +201,16 @@ export default function Home() {
   useEffect(() => {
     runScan(code, filename);
   }, [runScan]);
+
+  // Debounced live scan as user types or pastes code
+  const [liveAutoScan, setLiveAutoScan] = useState(true);
+  useEffect(() => {
+    if (!liveAutoScan) return;
+    const timer = setTimeout(() => {
+      runScan(code, filename);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [code, filename, liveAutoScan, runScan]);
 
   const [currentTier, setCurrentTier] = useState("FREE");
 
@@ -377,6 +439,7 @@ ${f.fixed_code}
                           <option value="typescript" className="bg-[#111114] text-zinc-200">TypeScript</option>
                           <option value="cpp" className="bg-[#111114] text-zinc-200">C / C++</option>
                           <option value="go" className="bg-[#111114] text-zinc-200">Go</option>
+                          <option value="terraform" className="bg-[#111114] text-zinc-200">Terraform</option>
                           <option value="rust" className="bg-[#111114] text-zinc-200">Rust</option>
                           <option value="java" className="bg-[#111114] text-zinc-200">Java</option>
                         </select>
@@ -390,12 +453,27 @@ ${f.fixed_code}
                         className="bg-[#09090B] border border-white/[0.08] text-zinc-300 hover:text-white rounded px-2 py-0.5 text-xs font-medium cursor-pointer outline-none focus:border-emerald-500/50 transition-colors"
                         defaultValue=""
                       >
-                        <option value="" disabled>Demos ▾</option>
+                        <option value="" disabled>Live Demos ▾</option>
                         <option value="fastapi_sqli" className="bg-[#111114]">FastAPI SQLi (Py)</option>
                         <option value="secrets_leak" className="bg-[#111114]">Secret Leaks (Py)</option>
                         <option value="node_cmd_inj" className="bg-[#111114]">Command Inj (JS)</option>
+                        <option value="ts_xss_sqli" className="bg-[#111114]">Prisma SQLi + XSS (TS)</option>
+                        <option value="go_sqli" className="bg-[#111114]">Go SQL Injection (Go)</option>
+                        <option value="tf_open_infra" className="bg-[#111114]">Terraform Open S3/SG (TF)</option>
                         <option value="cpp_buffer" className="bg-[#111114]">Buffer Overflow (C++)</option>
                       </select>
+
+                      <button
+                        onClick={() => setLiveAutoScan((v) => !v)}
+                        title="Toggle automatic live scan while typing"
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors ${
+                          liveAutoScan
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                            : "bg-white/[0.04] text-zinc-400 border-white/[0.08]"
+                        }`}
+                      >
+                        {liveAutoScan ? "Live: ON" : "Live: OFF"}
+                      </button>
 
                       <button
                         onClick={handleClear}
@@ -467,7 +545,7 @@ ${f.fixed_code}
                         Surgical Findings & 1-Click Auto-Fixes ({findings.length})
                       </span>
                       <span className="text-[11px] font-mono text-emerald-400">
-                        Zero False Alarms
+                        {scanResult?.latency_ms ? `⚡ ${scanResult.latency_ms}ms • Zero False Alarms` : "Zero False Alarms"}
                       </span>
                     </div>
 

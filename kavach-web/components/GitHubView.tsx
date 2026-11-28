@@ -15,10 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: rajrajak99/kavach-ai@v1
+        with:
+          fetch-depth: 0
+      - uses: rajrajak99/kavach-ai@v1.5.0
         with:
           github-token: \${{ secrets.GITHUB_TOKEN }}
-          fail-on: critical`;
+          fail-on: CRITICAL`;
 
   const cliSnippet = `# 1. Install Kavach AI via pip
 pip install kavach-ai
